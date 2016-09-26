@@ -1,0 +1,256 @@
+{{/* GOLANG FUNCTION TEMPLATES */}}
+
+{{- define "typeof" }}
+{{- if eq .Type "text" -}}          string
+{{- else if eq .Type "int" -}}      int
+{{- else if eq .Type "int64" -}}    int64
+{{- else if eq .Type "serial" -}}   int
+{{- else if eq .Type "serial64" -}} int64
+{{- else if eq .Type "blob" -}}     []byte
+{{- else -}}                        UNHANDLED TYPE {{.Type}}
+{{- end -}}
+{{- end -}}
+
+{{- define "funcnameargs" -}}
+{{- if eq (len .Args) 1 -}}By
+    {{- $arg := index .Args 0 -}}
+    {{- if eq $arg.Table.Name .Table.Name -}}
+        {{camelize $arg.Name}}
+    {{- else -}}
+        {{camelize $arg.Table.Name}}{{camelize $arg.Name}}
+    {{- end -}}
+{{- end -}}
+{{ if gt (len .Args) 1 -}}By
+{{- range .Args -}}{{camelize .Table.Name}}{{camelize .Name}}{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "argname" -}}
+{{printf "%s_%s" .Table.Name .Name | underscore }}
+{{- end -}}
+
+{{- define "argnames" -}}
+{{ range $i, $e := . }}{{if $i}}, {{end}}{{ template "argname" $e }}{{end}}
+{{- end -}}
+
+{{- define "arglist" -}}
+{{ range $i, $e := . }}{{if $i}}, {{end}}{{ template "argname" $e }} {{template "typeof" $e}}{{end}}
+{{- end -}}
+
+{{- define "tabletype" -}}{{ singularize .Name | camelize }}{{- end -}}
+
+{{- define "field" }}	{{ camelize .Name }}	{{ template "typeof" . }}   `db:"{{ underscore .Name}}"`{{- end -}}
+
+{{define "struct"}}
+type {{ template "tabletype" . }} struct {
+{{ range .Columns }}{{ template "field" . }}
+{{ end -}}
+}
+{{end}}
+
+{{- define "header" -}}
+package {{ .Package }}
+
+import (
+    "fmt"
+	"sync"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/hashicorp/golang-lru/simplelru"
+)
+
+{{ range .Schema.Tables }}{{template "struct" .}}{{end}}
+
+type DB struct {
+	*sqlx.DB
+
+	lru_mu sync.RWMutex
+	lru *simplelru.LRU
+}
+
+var WrapErr = func(err error) error {return err}
+var Logger func(format string, args ...interface{})
+
+func Open(source string, lru_size int) (*DB, error) {
+	lru, err := simplelru.NewLRU(lru_size, evictStmt)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+
+	db, err := sqlx.Connect({{ .Dialect | printf "%q" }}, source)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+
+	return &DB{
+		DB: db,
+		lru: lru,
+	}, nil
+}
+
+func (db *DB) Close() (err error) {
+	db.lru.Purge()
+	return WrapErr(db.DB.Close())
+}
+
+func evictStmt(key, value interface{}) {
+	value.(*sql.Stmt).Close()
+}
+
+func (db *DB) prepare(stmt string) (out *sqlx.Stmt, err error) {
+	db.lru_mu.RLock()
+	defer db.lru_mu.RUnlock()
+	entry, ok := db.lru.Get(stmt)
+	if ok {
+		return out, nil
+	}
+	return nil, nil
+}
+
+func (db *DB) log(stmt string, args... interface{}) {
+	// TODO: render placeholders
+	if Logger != nil {
+		Logger(stmt, args)
+	}
+}
+
+{{- end -}}
+
+{{- define "select" }}
+// Select
+func (db *DB) Get{{- singularize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
+    {{template "arglist" .Args}}) (
+    result *{{template "tabletype" .Table -}}, err error) {
+
+    const stmt=`{{ .SQL }}`
+
+    prepared, err := db.prepare(stmt)
+    if err != nil {
+    	return nil, WrapErr(err)
+    }
+    db.log(stmt, {{template "argnames" .Args}})
+
+    result = &{{template "tabletype" .Table }}{}
+    err = prepared.QueryRowx(stmt, {{template "argnames" .Args}}).StructScan(result)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return nil, nil
+        }
+        return nil, WrapErr(err)
+    }
+    return result, nil
+}
+{{- end -}}
+
+{{- define "select-all" }}
+// Select all
+func (db *DB) Get{{- pluralize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
+    {{template "arglist" .Args}}) (
+    result []*{{template "tabletype" .Table -}}, err error) {
+    
+    const stmt=`{{ .SQL }}`
+    
+    prepared, err := db.prepare(stmt)
+    if err != nil {
+    	return nil, WrapErr(err)
+    }
+    db.log(stmt, {{template "argnames" .Args}})
+
+    err = prepared.Select(&result, stmt, {{template "argnames" .Args}})
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    return result, nil
+}
+{{- end -}}
+
+{{- define "select-paged" }}
+// Select all via paging
+func (db *DB) Get{{- pluralize .Table.Name | camelize -}}{{template "funcnameargs" .}}PagedBy{{camelize .PagingOn.Name}}(
+    {{template "arglist" .Args}}{{if .Args}}, {{end}}ctoken string, limit int) (
+    result []*{{template "tabletype" .Table -}}, ctokenout string, err error) {
+    
+    const stmt=`{{ .SQL }}`
+    
+    prepared, err := db.prepare(stmt)
+    if err != nil {
+    	return nil, "", WrapErr(err)
+    }
+    db.log(stmt, {{template "argnames" .Args}})
+
+    limitarg := "ALL"
+    if limit > 0 {
+      limitarg = fmt.Sprint(limit)
+    }
+
+    err = prepared.Select(&result, stmt, {{template "argnames" .Args}}{{if .Args}}, {{end}}ctoken, limitarg)
+    if err != nil {
+        return nil, "", WrapErr(err)
+    }
+
+    if len(result) == limit {
+        ctokenout = fmt.Sprint(result[limit-1].{{camelize .PagingOn.Name}})
+    }
+
+    return result, ctokenout, nil
+}
+{{- end -}}
+
+{{- define "delete" }}
+// Delete
+func (db *DB) Delete{{- singularize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
+    {{template "arglist" .Args}}) (deleted bool, err error) {
+
+    const stmt=`{{ .SQL }}`
+
+    prepared, err := db.prepare(stmt)
+    if err != nil {
+    	return false, WrapErr(err)
+    }
+    db.log(stmt, {{template "argnames" .Args}})
+
+    result, err := prepared.Exec(stmt, {{template "argnames" .Args}})
+    if err != nil {
+        return false, WrapErr(err)
+    }
+
+    affected, err := result.RowsAffected()
+    if err != nil {
+        return false, WrapErr(err)
+    }
+
+    return affected > 0, nil
+}
+{{- end -}}
+
+{{- define "delete-all" }}
+// Delete all
+func (db *DB) Delete{{- pluralize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
+    {{template "arglist" .Args}}) (
+    deleted int64, err error) {
+    
+    const stmt=`{{ .SQL }}`
+    
+    prepared, err := db.prepare(stmt)
+    if err != nil {
+    	return 0, WrapErr(err)
+    }
+    db.log(stmt, {{template "argnames" .Args}})
+
+    result, err := prepared.Exec(stmt, {{template "argnames" .Args}})
+    if err != nil {
+        return 0, WrapErr(err)
+    }
+
+    affected, err := result.RowsAffected()
+    if err != nil {
+        return 0, WrapErr(err)
+    }
+
+    return affected, nil
+}
+{{- end -}}
+
+
+{{- define "exec" }}
+{{- end -}}

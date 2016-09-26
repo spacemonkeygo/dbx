@@ -1,0 +1,50 @@
+{{/* POSTGRESQL STATEMENT TEMPLATES  */}}
+
+{{- define "cname" -}} {{ underscore .Name }} {{- end -}}
+{{- define "tname" -}}{{ underscore .Table.Name }}{{- end -}}
+{{- define "dotname" -}}
+{{ template "tname" .}}.{{ template "cname" .}}
+{{- end -}}
+
+{{- define "leftjoin" -}}
+LEFT JOIN {{ template "tname" .Right }} ON {{ template "tname" .Left}}.{{ template "cname" .Left}} = {{ template "cname" .Right }}
+{{- end -}}
+
+{{- define "condition" -}}
+{{ template "dotname" .Left}} {{.Operator}} {{if .Right}}{{ template "dotname" .Right}}{{else}}?{{end}}
+{{- end -}}
+
+{{- define "where" -}}
+WHERE {{range $i, $cond := .Conditions -}}
+        {{if $i}} AND {{end}}{{template "condition" $cond -}}
+{{- end -}}
+{{- if .PagingOn -}}
+    {{if .Conditions}} AND {{end}}{{template "cname" .PagingOn}} > ? ORDER BY {{template "cname" .PagingOn}} LIMIT ?
+{{- end -}}
+{{- end -}}
+
+{{- define "pageon" -}}
+{{ .if not .Where }}WHERE {{range $i, $cond := .}}{{if $i}} AND {{end}}{{template "condition" $cond}}{{end}}
+{{- end -}}
+
+{{- define "select" -}}
+SELECT {{ template "tname" . }}.* FROM {{ template "tname" . }}
+	{{- range .LeftJoins }}
+		{{template "leftjoin" .}}
+	{{- end -}}
+	{{- with .Where}}
+		{{template "where" .}}
+	{{- end -}}
+	;
+{{- end -}}
+
+{{- define "delete" -}}
+DELETE FROM {{template "tname" .}}
+	{{- range .LeftJoins }}
+		{{template "leftjoin" .}}
+	{{- end -}}
+	{{- with .Where}}
+		{{template "where" .}}
+	{{- end -}}
+	;
+{{- end -}}
