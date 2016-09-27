@@ -1,4 +1,4 @@
-package internal
+package dbx
 
 import (
 	"text/template"
@@ -124,5 +124,21 @@ func (lang *Language) RenderDelete(params *DeleteParams) (
 			"SQL":   sql,
 			"Table": params.Table,
 			"Args":  args,
+		})
+}
+
+func (lang *Language) RenderInsert(params *InsertParams) (
+	string, error) {
+
+	sql, err := lang.sql.RenderInsert(params)
+	if err != nil {
+		return "", err
+	}
+
+	return RenderTemplate(lang.tmpl, "insert",
+		map[string]interface{}{
+			"SQL":     sql,
+			"Table":   params.Table,
+			"Columns": params.Columns,
 		})
 }

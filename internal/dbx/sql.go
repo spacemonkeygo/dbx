@@ -1,4 +1,4 @@
-package internal
+package dbx
 
 import (
 	"text/template"
@@ -11,12 +11,15 @@ type LeftJoinParams struct {
 
 func LeftJoin(relation *Relation) *LeftJoinParams {
 	return &LeftJoinParams{
-		Left:  relation.Column,
-		Right: relation.ForeignColumn,
+		Left:  relation.Left,
+		Right: relation.Right,
 	}
 }
 
 func Where(conditions ...*ConditionParams) *WhereParams {
+	if len(conditions) == 0 {
+		return nil
+	}
 	return &WhereParams{Conditions: conditions}
 }
 
@@ -57,6 +60,11 @@ type DeleteParams struct {
 	Where     *WhereParams
 }
 
+type InsertParams struct {
+	Table   *Table
+	Columns []*Column
+}
+
 type SQL struct {
 	tmpl *template.Template
 }
@@ -76,6 +84,12 @@ func NewSQL(loader Loader, name string) (*SQL, error) {
 	}, nil
 }
 
+func (s *SQL) RenderSchema(schema *Schema) (
+	string, error) {
+
+	return RenderTemplate(s.tmpl, "schema", schema)
+}
+
 func (s *SQL) RenderSelect(params *SelectParams) (
 	string, error) {
 
@@ -86,4 +100,10 @@ func (s *SQL) RenderDelete(params *DeleteParams) (
 	string, error) {
 
 	return RenderTemplate(s.tmpl, "delete", params)
+}
+
+func (s *SQL) RenderInsert(params *InsertParams) (
+	string, error) {
+
+	return RenderTemplate(s.tmpl, "insert", params)
 }

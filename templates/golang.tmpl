@@ -41,6 +41,125 @@
 
 {{- define "field" }}	{{ camelize .Name }}	{{ template "typeof" . }}   `db:"{{ underscore .Name}}"`{{- end -}}
 
+{{- define "lru" }}
+type entry struct {
+    Stmt *sqlx.Stmt
+
+    next, prev *entry
+    key        string
+    refs       int
+}
+
+type lru struct {
+    mu       sync.Mutex
+    db       *sqlx.DB
+    capacity int
+    root     entry
+    index    map[string]*entry
+}
+
+// newLRU returns an initialized lru.
+func newLRU(db *sqlx.DB, capacity int) *lru {
+    l := &lru{
+        db:       db,
+        capacity: capacity,
+        index:    make(map[string]*entry),
+    }
+    l.root.next = &l.root
+    l.root.prev = &l.root
+    return l
+}
+
+// insert inserts e after at, increments l.len.
+func (l *lru) insert(e, at *entry) {
+    n := at.next
+    at.next = e
+    e.prev = at
+    e.next = n
+    n.prev = e
+}
+
+// remove removes e from its list, decrements l.len
+func (l *lru) remove(e *entry) {
+    e.prev.next = e.next
+    e.next.prev = e.prev
+    e.next = nil // avoid memory leaks
+    e.prev = nil // avoid memory leaks
+}
+
+func (l *lru) evict(capacity int) {
+    if capacity < 0 {
+        return
+    }
+
+    to_evict := len(l.index) - capacity
+    current := &l.root
+    for i := 0; i < to_evict; i++ {
+        current = current.prev
+        if current == &l.root {
+            panic("index out of whack. race conditions?")
+        }
+        if current.refs > 0 {
+            continue
+        }
+        // whoa boy is this subtle. l.remove blows away current.next and
+        // current.prev. but current.next.prev will be mutated to be
+        // current.prev for the next iteration!
+        next_current := current.next
+
+        l.remove(current)
+        delete(l.index, current.key)
+        loge(current.Stmt.Close())
+
+        current = next_current
+    }
+}
+
+func (l *lru) Get(key string) (*entry, error) {
+    l.mu.Lock()
+    defer l.mu.Unlock()
+
+    e, ok := l.index[key]
+    if ok {
+        l.remove(e)
+        l.insert(e, &l.root)
+        e.refs++
+
+        return e, nil
+    }
+
+    stmt, err := l.db.Preparex(key)
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+
+    e = &entry{
+        Stmt: stmt,
+        key:   key,
+    }
+    l.insert(e, &l.root)
+    l.index[key] = e
+    e.refs++
+
+    return e, nil
+}
+
+func (l *lru) Replace(e *entry) {
+    l.mu.Lock()
+    defer l.mu.Unlock()
+
+    e.refs--
+    l.evict(l.capacity)
+}
+
+func (l *lru) Purge() {
+    l.mu.Lock()
+    defer l.mu.Unlock()
+
+    l.evict(0)
+}
+{{- end -}}
+
 {{define "struct"}}
 type {{ template "tabletype" . }} struct {
 {{ range .Columns }}{{ template "field" . }}
@@ -54,29 +173,31 @@ package {{ .Package }}
 import (
     "fmt"
 	"sync"
+    "database/sql"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/hashicorp/golang-lru/simplelru"
 )
 
 {{ range .Schema.Tables }}{{template "struct" .}}{{end}}
 
+func loge(err error) {
+    if Logger != nil && err != nil {
+        Logger("error closing statement: %v", err)
+    }
+}
+
+{{ template "lru" }}
+
 type DB struct {
 	*sqlx.DB
 
-	lru_mu sync.RWMutex
-	lru *simplelru.LRU
+	lru *lru
 }
 
 var WrapErr = func(err error) error {return err}
 var Logger func(format string, args ...interface{})
 
 func Open(source string, lru_size int) (*DB, error) {
-	lru, err := simplelru.NewLRU(lru_size, evictStmt)
-	if err != nil {
-		return nil, WrapErr(err)
-	}
-
 	db, err := sqlx.Connect({{ .Dialect | printf "%q" }}, source)
 	if err != nil {
 		return nil, WrapErr(err)
@@ -84,7 +205,7 @@ func Open(source string, lru_size int) (*DB, error) {
 
 	return &DB{
 		DB: db,
-		lru: lru,
+		lru: newLRU(db, lru_size),
 	}, nil
 }
 
@@ -93,21 +214,15 @@ func (db *DB) Close() (err error) {
 	return WrapErr(db.DB.Close())
 }
 
-func evictStmt(key, value interface{}) {
-	value.(*sql.Stmt).Close()
+func (db *DB) prepare(stmt string) (prepared *sqlx.Stmt, replace func(), err error) {
+	entry, err := db.lru.Get(stmt)
+    if err != nil {
+        return nil, nil, err
+    }
+    return entry.Stmt, func() { db.lru.Replace(entry) }, nil
 }
 
-func (db *DB) prepare(stmt string) (out *sqlx.Stmt, err error) {
-	db.lru_mu.RLock()
-	defer db.lru_mu.RUnlock()
-	entry, ok := db.lru.Get(stmt)
-	if ok {
-		return out, nil
-	}
-	return nil, nil
-}
-
-func (db *DB) log(stmt string, args... interface{}) {
+func (db *DB) logStmt(stmt string, args... interface{}) {
 	// TODO: render placeholders
 	if Logger != nil {
 		Logger(stmt, args)
@@ -124,11 +239,12 @@ func (db *DB) Get{{- singularize .Table.Name | camelize -}}{{template "funcnamea
 
     const stmt=`{{ .SQL }}`
 
-    prepared, err := db.prepare(stmt)
+    prepared, replace, err := db.prepare(stmt)
     if err != nil {
     	return nil, WrapErr(err)
     }
-    db.log(stmt, {{template "argnames" .Args}})
+    defer replace()
+    db.logStmt(stmt, {{template "argnames" .Args}})
 
     result = &{{template "tabletype" .Table }}{}
     err = prepared.QueryRowx(stmt, {{template "argnames" .Args}}).StructScan(result)
@@ -150,11 +266,12 @@ func (db *DB) Get{{- pluralize .Table.Name | camelize -}}{{template "funcnamearg
     
     const stmt=`{{ .SQL }}`
     
-    prepared, err := db.prepare(stmt)
+    prepared, replace, err := db.prepare(stmt)
     if err != nil {
     	return nil, WrapErr(err)
     }
-    db.log(stmt, {{template "argnames" .Args}})
+    defer replace()
+    db.logStmt(stmt, {{template "argnames" .Args}})
 
     err = prepared.Select(&result, stmt, {{template "argnames" .Args}})
     if err != nil {
@@ -172,11 +289,12 @@ func (db *DB) Get{{- pluralize .Table.Name | camelize -}}{{template "funcnamearg
     
     const stmt=`{{ .SQL }}`
     
-    prepared, err := db.prepare(stmt)
+    prepared, replace, err := db.prepare(stmt)
     if err != nil {
     	return nil, "", WrapErr(err)
     }
-    db.log(stmt, {{template "argnames" .Args}})
+    defer replace()
+    db.logStmt(stmt, {{template "argnames" .Args}})
 
     limitarg := "ALL"
     if limit > 0 {
@@ -203,11 +321,12 @@ func (db *DB) Delete{{- singularize .Table.Name | camelize -}}{{template "funcna
 
     const stmt=`{{ .SQL }}`
 
-    prepared, err := db.prepare(stmt)
+    prepared, replace, err := db.prepare(stmt)
     if err != nil {
     	return false, WrapErr(err)
     }
-    db.log(stmt, {{template "argnames" .Args}})
+    defer replace()
+    db.logStmt(stmt, {{template "argnames" .Args}})
 
     result, err := prepared.Exec(stmt, {{template "argnames" .Args}})
     if err != nil {
@@ -231,11 +350,12 @@ func (db *DB) Delete{{- pluralize .Table.Name | camelize -}}{{template "funcname
     
     const stmt=`{{ .SQL }}`
     
-    prepared, err := db.prepare(stmt)
+    prepared, replace, err := db.prepare(stmt)
     if err != nil {
     	return 0, WrapErr(err)
     }
-    db.log(stmt, {{template "argnames" .Args}})
+    defer replace()
+    db.logStmt(stmt, {{template "argnames" .Args}})
 
     result, err := prepared.Exec(stmt, {{template "argnames" .Args}})
     if err != nil {
@@ -251,6 +371,26 @@ func (db *DB) Delete{{- pluralize .Table.Name | camelize -}}{{template "funcname
 }
 {{- end -}}
 
+{{- define "insert" }}
+// Insert
+func (db *DB) Insert{{- singularize .Table.Name | camelize -}}(
+    {{template "arglist" .Columns}}) (
+    result *{{template "tabletype" .Table -}}, err error) {
 
-{{- define "exec" }}
+    const stmt=`{{ .SQL }}`
+
+    prepared, replace, err := db.prepare(stmt)
+    if err != nil {
+        return WrapErr(err)
+    }
+    defer replace()
+    db.logStmt(stmt, {{template "argnames" .Columns}})
+
+    result = &{{template "tabletype" .Table }}{}
+    err = prepared.QueryRowx(stmt, {{template "argnames" .Args}}).StructScan(result)
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    return result, nil
+}
 {{- end -}}

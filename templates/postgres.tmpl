@@ -1,13 +1,44 @@
 {{/* POSTGRESQL STATEMENT TEMPLATES  */}}
 
+{{- define "typeof" }}
+{{- if eq .Type "text" -}}          text
+{{- else if eq .Type "int" -}}      integer
+{{- else if eq .Type "int64" -}}    bigint
+{{- else if eq .Type "serial" -}}   serial
+{{- else if eq .Type "serial64" -}} bigserial
+{{- else if eq .Type "blob" -}}     blob
+{{- else -}}                        UNHANDLED TYPE {{.Type}}
+{{- end -}}
+{{- end -}}
+
+{{- define "schema" -}}
+{{- range .Tables }}
+CREATE TABLE {{ pluralize .Name | underscore }} (
+{{- range $i, $col := .Columns }}
+{{if $i}},{{end}}	{{ with $col -}}
+	{{ underscore .Name }} {{ template "typeof" . -}}
+	{{- if .NotNull }} NOT NULL {{- end -}}
+	{{- if .Relation }} REFERENCES {{ template "tname" .Relation }}({{ template "cname" .Relation}}) ON DELETE CASCADE {{- end -}}
+{{- end -}}
+{{- end -}}
+{{ if .PrimaryKey }}
+,	PRIMARY KEY ({{- range $i, $col := .PrimaryKey }}{{if $i}}, {{end}}{{ template "cname" $col }}{{ end }})
+{{- end -}}
+{{ range .Unique }}
+,	UNIQUE ({{- range $i, $col := . }}{{if $i}}, {{end}}{{ template "cname" $col }}{{ end }})
+{{- end}}
+);
+{{ end }}
+{{ end }}
+
 {{- define "cname" -}} {{ underscore .Name }} {{- end -}}
-{{- define "tname" -}}{{ underscore .Table.Name }}{{- end -}}
+{{- define "tname" -}}{{ pluralize .Table.Name | underscore }}{{- end -}}
 {{- define "dotname" -}}
 {{ template "tname" .}}.{{ template "cname" .}}
 {{- end -}}
 
 {{- define "leftjoin" -}}
-LEFT JOIN {{ template "tname" .Right }} ON {{ template "tname" .Left}}.{{ template "cname" .Left}} = {{ template "cname" .Right }}
+LEFT JOIN {{ template "tname" .Right }} ON {{ template "tname" .Left}}.{{ template "cname" .Left}} = {{ template "tname" .Right}}.{{ template "cname" .Right }}
 {{- end -}}
 
 {{- define "condition" -}}
@@ -19,12 +50,8 @@ WHERE {{range $i, $cond := .Conditions -}}
         {{if $i}} AND {{end}}{{template "condition" $cond -}}
 {{- end -}}
 {{- if .PagingOn -}}
-    {{if .Conditions}} AND {{end}}{{template "cname" .PagingOn}} > ? ORDER BY {{template "cname" .PagingOn}} LIMIT ?
+    {{if .Conditions}} AND {{end}}{{template "cname" .PagingOn}} > ? ORDER BY {{template "cname" .PagingOn}} ASC LIMIT ?
 {{- end -}}
-{{- end -}}
-
-{{- define "pageon" -}}
-{{ .if not .Where }}WHERE {{range $i, $cond := .}}{{if $i}} AND {{end}}{{template "condition" $cond}}{{end}}
 {{- end -}}
 
 {{- define "select" -}}
@@ -47,4 +74,24 @@ DELETE FROM {{template "tname" .}}
 		{{template "where" .}}
 	{{- end -}}
 	;
+{{- end -}}
+
+
+{{- define "column-names" -}}
+{{- range $i, $col := .Columns -}}
+{{- if $i -}}, {{end -}}{{ template "cname" .}}
+{{- end -}}
+{{- end -}}
+
+{{- define "column-values" -}}
+{{- range $i, $col := .Columns -}}
+{{- if $i -}}, {{end -}}:{{ template "cname" .}}
+{{- end -}}
+{{- end -}}
+
+{{- define "insert" -}}
+INSERT INTO {{ template "tname" . }} ({{ template "column-names" . }}) VALUES (
+{{- range $i, $unused := .Columns -}}
+{{- if $i -}}, {{end -}}?
+{{- end -}}) RETURNING {{ template "tname" . }}.*;
 {{- end -}}

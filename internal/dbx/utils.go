@@ -1,11 +1,11 @@
-package internal
+package dbx
 
 import (
 	"bytes"
 	"text/template"
 )
 
-func RenderToString(tmpl *template.Template, name string, data interface{}) (
+func RenderTemplate(tmpl *template.Template, name string, data interface{}) (
 	string, error) {
 
 	var buf bytes.Buffer
