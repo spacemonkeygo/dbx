@@ -61,6 +61,7 @@ type printerState struct {
 	indention string
 	padding   string
 	err       error
+	visited   map[uintptr]bool
 }
 
 func (pp Printer) Print(x interface{}) error {
@@ -72,7 +73,10 @@ func (pp Printer) Println(x interface{}) error {
 }
 
 func (pp Printer) print(x interface{}, nl bool) error {
-	pps := &printerState{pp: pp}
+	pps := &printerState{
+		pp:      pp,
+		visited: map[uintptr]bool{},
+	}
 	xtype := reflect.TypeOf(x)
 	if xtype.Kind() == reflect.Struct {
 		pps.printf("%s ", xtype.Name())
@@ -107,7 +111,18 @@ func (pps *printerState) printValue(value reflect.Value, n int) {
 		if value.IsNil() {
 			pps.printf("<nil>")
 		} else {
-			pps.printValue(reflect.Indirect(value), n)
+			indirect := reflect.Indirect(value)
+			if indirect.Type().Kind() == reflect.Struct {
+				key := value.Pointer()
+				if pps.visited[key] {
+					pps.printf("<CYCLIC REFERENCE: [%08x] %s>",
+						value.Pointer(), indirect.Type())
+					return
+				}
+				pps.printf("[%08x] %s", value.Pointer(), indirect.Type())
+				pps.visited[key] = true
+			}
+			pps.printValue(indirect, n)
 		}
 	case reflect.Struct:
 		var nfields int

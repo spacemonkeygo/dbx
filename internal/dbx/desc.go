@@ -1,11 +1,38 @@
 package dbx
 
+import "fmt"
+
+type RelationKind string
+
+const (
+	HasA    RelationKind = "has_a"
+	OwnedBy RelationKind = "owned_by"
+)
+
+type Relation struct {
+	Column *Column
+	Kind   RelationKind
+}
+
 type Column struct {
-	Table    *Table
-	Name     string
-	Type     string
-	NotNull  bool
-	Relation *Column
+	Table      *Table
+	Name       string
+	Type       string
+	NotNull    bool
+	Relation   *Relation
+	AutoInsert bool
+}
+
+func (c *Column) String() string {
+	return fmt.Sprintf("%s.%s", c.Table.Name, c.Name)
+}
+
+func (c *Column) IsInt() bool {
+	switch c.Type {
+	case "serial", "serial64", "int", "int64":
+		return true
+	}
+	return false
 }
 
 type Table struct {
@@ -13,34 +40,89 @@ type Table struct {
 	Columns    []*Column
 	Unique     [][]*Column
 	PrimaryKey []*Column
-	Queries    []*Query
+}
+
+func (t *Table) Depth() (depth int) {
+	for _, table := range t.Columns {
+		if table.Relation != nil {
+			reldepth := table.Relation.Column.Table.Depth() + 1
+			if reldepth > depth {
+				depth = reldepth
+			}
+		}
+	}
+	return depth
 }
 
 type Query struct {
+	Table *Table
 	Start []*Column
-	Joins []*Relation
+	Joins []*Join
 	End   []*Column
 }
 
-type Relation struct {
+func (q *Query) String() (s string) {
+	s += q.Table.Name + "("
+	if len(q.Start) > 0 {
+		s += "start=("
+		for i, start := range q.Start {
+			if i != 0 {
+				s += ", "
+			}
+			s += start.String()
+		}
+		s += ")"
+	}
+	if len(q.Joins) > 0 {
+		s += "joins=("
+		for i, join := range q.Joins {
+			if i != 0 {
+				s += ", "
+			}
+			s += join.Left.String() + "|" + join.Right.String()
+		}
+		s += ")"
+	}
+	if len(q.End) > 0 {
+		s += "end=("
+		for i, end := range q.End {
+			if i != 0 {
+				s += ", "
+			}
+			s += end.String()
+		}
+		s += ")"
+	}
+	s += ")"
+	return s
+}
+
+type Join struct {
 	Left  *Column
 	Right *Column
 }
 
 type Schema struct {
-	Tables []*Table
+	Tables  []*Table
+	Queries []*Query
 }
 
-func (c *Column) RelationLeft() *Relation {
-	return &Relation{
+func (c *Column) RelationLeft() *Join {
+	if c.Relation == nil {
+		return nil
+	}
+	return &Join{
 		Left:  c,
-		Right: c.Relation,
+		Right: c.Relation.Column,
 	}
 }
 
-func (c *Column) RelationRight() *Relation {
-	return &Relation{
-		Left:  c.Relation,
+func (c *Column) RelationRight() *Join {
+	if c.Relation == nil {
+		return nil
+	}
+	return &Join{
+		Left:  c.Relation.Column,
 		Right: c,
 	}
 }
@@ -97,6 +179,21 @@ lcols:
 		return false
 	}
 	return true
+}
+
+// returns true if left and right are equivalent (order agnostic)
+func columnSetEquivalent(left, right []*Column) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	return columnSetSubset(left, right)
+}
+
+func (t *Table) BasicPrimaryKey() *Column {
+	if len(t.PrimaryKey) == 1 && t.PrimaryKey[0].IsInt() {
+		return t.PrimaryKey[0]
+	}
+	return nil
 }
 
 func (t *Table) ColumnSetUnique(columns []*Column) bool {

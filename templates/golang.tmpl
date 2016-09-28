@@ -1,396 +1,249 @@
 {{/* GOLANG FUNCTION TEMPLATES */}}
 
-{{- define "typeof" }}
-{{- if eq .Type "text" -}}          string
-{{- else if eq .Type "int" -}}      int
-{{- else if eq .Type "int64" -}}    int64
-{{- else if eq .Type "serial" -}}   int
-{{- else if eq .Type "serial64" -}} int64
-{{- else if eq .Type "blob" -}}     []byte
-{{- else -}}                        UNHANDLED TYPE {{.Type}}
+{{- define "params" -}}
+{{- range $i, $arg := . -}}
+	{{ if $i }}, {{end}}{{ $arg.Name }} {{ $arg.Type }}
 {{- end -}}
 {{- end -}}
 
-{{- define "funcnameargs" -}}
-{{- if eq (len .Args) 1 -}}By
-    {{- $arg := index .Args 0 -}}
-    {{- if eq $arg.Table.Name .Table.Name -}}
-        {{camelize $arg.Name}}
-    {{- else -}}
-        {{camelize $arg.Table.Name}}{{camelize $arg.Name}}
-    {{- end -}}
-{{- end -}}
-{{ if gt (len .Args) 1 -}}By
-{{- range .Args -}}{{camelize .Table.Name}}{{camelize .Name}}{{- end -}}
+{{- define "args" -}}
+{{- range $i, $arg := . -}}
+	{{ if $i }}, {{ end }}{{ $arg.Name }}
 {{- end -}}
 {{- end -}}
 
-{{- define "argname" -}}
-{{printf "%s_%s" .Table.Name .Name | underscore }}
+{{- define "nil-args" -}}
+{{- range $i, $arg := . -}}
+	{{ if $i }}, {{ end }}nil
+{{- end -}}
 {{- end -}}
 
-{{- define "argnames" -}}
-{{ range $i, $e := . }}{{if $i}}, {{end}}{{ template "argname" $e }}{{end}}
-{{- end -}}
+{{- define "func-header" }}
+	const stmt=`{{ .SQL }}`
 
-{{- define "arglist" -}}
-{{ range $i, $e := . }}{{if $i}}, {{end}}{{ template "argname" $e }} {{template "typeof" $e}}{{end}}
-{{- end -}}
-
-{{- define "tabletype" -}}{{ singularize .Name | camelize }}{{- end -}}
-
-{{- define "field" }}	{{ camelize .Name }}	{{ template "typeof" . }}   `db:"{{ underscore .Name}}"`{{- end -}}
-
-{{- define "lru" }}
-type entry struct {
-    Stmt *sqlx.Stmt
-
-    next, prev *entry
-    key        string
-    refs       int
-}
-
-type lru struct {
-    mu       sync.Mutex
-    db       *sqlx.DB
-    capacity int
-    root     entry
-    index    map[string]*entry
-}
-
-// newLRU returns an initialized lru.
-func newLRU(db *sqlx.DB, capacity int) *lru {
-    l := &lru{
-        db:       db,
-        capacity: capacity,
-        index:    make(map[string]*entry),
-    }
-    l.root.next = &l.root
-    l.root.prev = &l.root
-    return l
-}
-
-// insert inserts e after at, increments l.len.
-func (l *lru) insert(e, at *entry) {
-    n := at.next
-    at.next = e
-    e.prev = at
-    e.next = n
-    n.prev = e
-}
-
-// remove removes e from its list, decrements l.len
-func (l *lru) remove(e *entry) {
-    e.prev.next = e.next
-    e.next.prev = e.prev
-    e.next = nil // avoid memory leaks
-    e.prev = nil // avoid memory leaks
-}
-
-func (l *lru) evict(capacity int) {
-    if capacity < 0 {
-        return
-    }
-
-    to_evict := len(l.index) - capacity
-    current := &l.root
-    for i := 0; i < to_evict; i++ {
-        current = current.prev
-        if current == &l.root {
-            panic("index out of whack. race conditions?")
-        }
-        if current.refs > 0 {
-            continue
-        }
-        // whoa boy is this subtle. l.remove blows away current.next and
-        // current.prev. but current.next.prev will be mutated to be
-        // current.prev for the next iteration!
-        next_current := current.next
-
-        l.remove(current)
-        delete(l.index, current.key)
-        loge(current.Stmt.Close())
-
-        current = next_current
-    }
-}
-
-func (l *lru) Get(key string) (*entry, error) {
-    l.mu.Lock()
-    defer l.mu.Unlock()
-
-    e, ok := l.index[key]
-    if ok {
-        l.remove(e)
-        l.insert(e, &l.root)
-        e.refs++
-
-        return e, nil
-    }
-
-    stmt, err := l.db.Preparex(key)
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-
-    e = &entry{
-        Stmt: stmt,
-        key:   key,
-    }
-    l.insert(e, &l.root)
-    l.index[key] = e
-    e.refs++
-
-    return e, nil
-}
-
-func (l *lru) Replace(e *entry) {
-    l.mu.Lock()
-    defer l.mu.Unlock()
-
-    e.refs--
-    l.evict(l.capacity)
-}
-
-func (l *lru) Purge() {
-    l.mu.Lock()
-    defer l.mu.Unlock()
-
-    l.evict(0)
-}
-{{- end -}}
-
-{{define "struct"}}
-type {{ template "tabletype" . }} struct {
-{{ range .Columns }}{{ template "field" . }}
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ template "args" .Args }})
 {{ end -}}
-}
-{{end}}
 
-{{- define "header" -}}
-package {{ .Package }}
+{{/* SELECT STATEMENT */}}
+{{ define "select" }}
+/* {{ pretty . }} */
+func (obj *DB) {{ template "select-func" . }}
 
-import (
-    "fmt"
-	"sync"
-    "database/sql"
+func (obj *Tx) {{ template "select-func" . }}
+{{ end }}
 
-	"github.com/jmoiron/sqlx"
-)
-
-{{ range .Schema.Tables }}{{template "struct" .}}{{end}}
-
-func loge(err error) {
-    if Logger != nil && err != nil {
-        Logger("error closing statement: %v", err)
-    }
-}
-
-{{ template "lru" }}
-
-type DB struct {
-	*sqlx.DB
-
-	lru *lru
-}
-
-var WrapErr = func(err error) error {return err}
-var Logger func(format string, args ...interface{})
-
-func Open(source string, lru_size int) (*DB, error) {
-	db, err := sqlx.Connect({{ .Dialect | printf "%q" }}, source)
+{{- define "select-func" -}}
+Get{{ .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}) (result *{{ .Struct }}, err error) {
+{{- template "func-header" . }}
+	result = &{{ .Struct }}{}
+	err = prepared.QueryRowx({{template "args" .Args }}).StructScan(result)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, WrapErr(err)
 	}
-
-	return &DB{
-		DB: db,
-		lru: newLRU(db, lru_size),
-	}, nil
+	return result, nil
 }
+{{- end -}}
 
-func (db *DB) Close() (err error) {
-	db.lru.Purge()
-	return WrapErr(db.DB.Close())
-}
+{{/* SELECT ALL STATEMENT */}}
 
-func (db *DB) prepare(stmt string) (prepared *sqlx.Stmt, replace func(), err error) {
-	entry, err := db.lru.Get(stmt)
-    if err != nil {
-        return nil, nil, err
-    }
-    return entry.Stmt, func() { db.lru.Replace(entry) }, nil
-}
+{{ define "select-all" }}
+func (obj *DB) {{ template "select-all-func" . }}
 
-func (db *DB) logStmt(stmt string, args... interface{}) {
-	// TODO: render placeholders
-	if Logger != nil {
-		Logger(stmt, args)
+func (obj *Tx) {{ template "select-all-func" . }}
+{{ end }}
+
+{{- define "select-all-func" -}}
+Get{{ pluralize .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}) (result []*{{ .Struct }}, err error) {
+{{- template "func-header" . }}
+	err = prepared.Select(&result, {{template "args" .Args }})
+	if err != nil {
+		return nil, WrapErr(err)
 	}
-}
-
-{{- end -}}
-
-{{- define "select" }}
-// Select
-func (db *DB) Get{{- singularize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
-    {{template "arglist" .Args}}) (
-    result *{{template "tabletype" .Table -}}, err error) {
-
-    const stmt=`{{ .SQL }}`
-
-    prepared, replace, err := db.prepare(stmt)
-    if err != nil {
-    	return nil, WrapErr(err)
-    }
-    defer replace()
-    db.logStmt(stmt, {{template "argnames" .Args}})
-
-    result = &{{template "tabletype" .Table }}{}
-    err = prepared.QueryRowx(stmt, {{template "argnames" .Args}}).StructScan(result)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return nil, nil
-        }
-        return nil, WrapErr(err)
-    }
-    return result, nil
+	return result, nil
 }
 {{- end -}}
 
-{{- define "select-all" }}
-// Select all
-func (db *DB) Get{{- pluralize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
-    {{template "arglist" .Args}}) (
-    result []*{{template "tabletype" .Table -}}, err error) {
-    
-    const stmt=`{{ .SQL }}`
-    
-    prepared, replace, err := db.prepare(stmt)
-    if err != nil {
-    	return nil, WrapErr(err)
-    }
-    defer replace()
-    db.logStmt(stmt, {{template "argnames" .Args}})
+{{/* SELECT PAGED STATEMENT */}}
 
-    err = prepared.Select(&result, stmt, {{template "argnames" .Args}})
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-    return result, nil
+{{ define "select-paged" }}
+func (obj *DB) {{ template "select-paged-func" . }}
+
+func (obj *Tx) {{ template "select-paged-func" . }}
+{{ end }}
+
+{{- define "select-paged-func" -}}
+PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}(
+{{- if .Args }}{{- template "params" .Args }}, {{ end -}}
+    ctoken string, limit int) (result []*{{ .Struct }}, ctokenout string, err error) {
+{{- template "func-header" . }}
+
+	limitarg := "ALL"
+	if limit > 0 {
+		limitarg = fmt.Sprint(limit)
+	}
+
+	err = prepared.Select(&result, {{ if .Args }}{{ template "args" .Args }}, {{end}} ctoken, limitarg)
+	if err != nil {
+		return nil, "", WrapErr(err)
+	}
+
+	if len(result) == limit {
+		ctokenout = fmt.Sprint(result[limit-1].{{ .PagedOn }})
+	}
+
+	return result, "", nil
 }
 {{- end -}}
 
-{{- define "select-paged" }}
-// Select all via paging
-func (db *DB) Get{{- pluralize .Table.Name | camelize -}}{{template "funcnameargs" .}}PagedBy{{camelize .PagingOn.Name}}(
-    {{template "arglist" .Args}}{{if .Args}}, {{end}}ctoken string, limit int) (
-    result []*{{template "tabletype" .Table -}}, ctokenout string, err error) {
-    
-    const stmt=`{{ .SQL }}`
-    
-    prepared, replace, err := db.prepare(stmt)
-    if err != nil {
-    	return nil, "", WrapErr(err)
-    }
-    defer replace()
-    db.logStmt(stmt, {{template "argnames" .Args}})
+{{/* COUNT STATEMENT */}}
 
-    limitarg := "ALL"
-    if limit > 0 {
-      limitarg = fmt.Sprint(limit)
-    }
+{{ define "count" }}
+func (obj *DB) {{ template "count-func" . }}
 
-    err = prepared.Select(&result, stmt, {{template "argnames" .Args}}{{if .Args}}, {{end}}ctoken, limitarg)
-    if err != nil {
-        return nil, "", WrapErr(err)
-    }
+func (obj *Tx) {{ template "count-func" . }}
 
-    if len(result) == limit {
-        ctokenout = fmt.Sprint(result[limit-1].{{camelize .PagingOn.Name}})
-    }
+func (obj *DB) {{ template "has-func" . }}
 
-    return result, ctokenout, nil
+func (obj *Tx) {{ template "has-func" . }}
+{{ end }}
+
+{{- define "count-func" -}}
+Count{{ .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}) (result int, err error) {
+{{- template "func-header" . }}
+	err = prepared.QueryRowx({{template "args" .Args }}).Scan(&result)
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+	return result, nil
 }
 {{- end -}}
 
-{{- define "delete" }}
-// Delete
-func (db *DB) Delete{{- singularize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
-    {{template "arglist" .Args}}) (deleted bool, err error) {
+{{- define "has-func" -}}
+Has{{ .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}) (result bool, err error) {
+	count, err :=  obj.Count{{ .Struct }}{{ .FuncSuffix }}({{template "args" .Args }})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+{{- end -}}
 
-    const stmt=`{{ .SQL }}`
+{{/* DELETE STATEMENT */}}
+{{ define "delete" }}
+func (obj *DB) {{ template "delete-func" . }}
 
-    prepared, replace, err := db.prepare(stmt)
-    if err != nil {
-    	return false, WrapErr(err)
-    }
-    defer replace()
-    db.logStmt(stmt, {{template "argnames" .Args}})
+func (obj *Tx) {{ template "delete-func" . }}
+{{ end }}
 
-    result, err := prepared.Exec(stmt, {{template "argnames" .Args}})
+{{- define "delete-func" -}}
+Delete{{ .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}) (deleted bool, err error) {
+{{- template "func-header" . }}
+	res, err := prepared.Exec({{template "args" .Args }})
+	if err != nil {
+		return false, WrapErr(err)
+	}
+    count, err := res.RowsAffected()
     if err != nil {
         return false, WrapErr(err)
     }
-
-    affected, err := result.RowsAffected()
-    if err != nil {
-        return false, WrapErr(err)
-    }
-
-    return affected > 0, nil
+    return count > 0, nil
 }
 {{- end -}}
 
-{{- define "delete-all" }}
-// Delete all
-func (db *DB) Delete{{- pluralize .Table.Name | camelize -}}{{template "funcnameargs" .}}(
-    {{template "arglist" .Args}}) (
-    deleted int64, err error) {
-    
-    const stmt=`{{ .SQL }}`
-    
-    prepared, replace, err := db.prepare(stmt)
-    if err != nil {
-    	return 0, WrapErr(err)
-    }
-    defer replace()
-    db.logStmt(stmt, {{template "argnames" .Args}})
+{{/* SELECT ALL STATEMENT */}}
 
-    result, err := prepared.Exec(stmt, {{template "argnames" .Args}})
-    if err != nil {
-        return 0, WrapErr(err)
-    }
+{{ define "delete-all" }}
+func (obj *DB) {{ template "delete-all-func" . }}
 
-    affected, err := result.RowsAffected()
+func (obj *Tx) {{ template "delete-all-func" . }}
+{{ end }}
+
+{{- define "delete-all-func" -}}
+Delete{{ pluralize .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}) (count int, err error) {
+{{- template "func-header" . }}
+	res, err := prepared.Exec({{template "args" .Args }})
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+    count, err = res.RowsAffected()
     if err != nil {
         return 0, WrapErr(err)
     }
-
-    return affected, nil
+    return count, nil
 }
 {{- end -}}
 
-{{- define "insert" }}
-// Insert
-func (db *DB) Insert{{- singularize .Table.Name | camelize -}}(
-    {{template "arglist" .Columns}}) (
-    result *{{template "tabletype" .Table -}}, err error) {
+{{/* INSERT STATEMENT */}}
+{{ define "insert" }}
+func (obj *DB) {{ template "insert-func" . }}
 
-    const stmt=`{{ .SQL }}`
+func (obj *Tx) {{ template "insert-func" . }}
+{{ end }}
 
-    prepared, replace, err := db.prepare(stmt)
-    if err != nil {
-        return WrapErr(err)
-    }
-    defer replace()
-    db.logStmt(stmt, {{template "argnames" .Columns}})
+{{- define "insert-func" -}}
+Create{{ .Struct }}(
+{{- template "params" .Args }}) (result *{{ .Struct }}, err error) {
+{{- template "func-header" . }}
+{{- template "insert-auto-init" . }}
 
-    result = &{{template "tabletype" .Table }}{}
-    err = prepared.QueryRowx(stmt, {{template "argnames" .Args}}).StructScan(result)
+    result = &{{ .Struct }}{}
+{{- if not .ReturnBy }}
+    err = prepared.QueryRowx({{template "args" .Inserts}}).StructScan(result)
     if err != nil {
         return nil, WrapErr(err)
     }
     return result, nil
+{{- else }}
+    res, err := prepared.Exec({{template "args" .Inserts}})
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    pk, err := res.LastInsertId()
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    return obj.Get{{ .Struct }}By{{ .ReturnBy }}(pk)
+{{- end -}}
 }
+{{- end -}}
+
+{{ define "insert-no-return" }}
+func (obj *DB) {{ template "insert-no-return-func" . }}
+
+func (obj *Tx) {{ template "insert-no-return-func" . }}
+{{ end }}
+
+{{- define "insert-no-return-func" -}}
+Create{{ .Struct }}(
+{{- template "params" .Args }}) (err error) {
+{{- template "func-header" . }}
+{{- template "insert-auto-init" . }}
+
+    _, err = prepared.Exec({{template "args" .Inserts}})
+    return WrapErr(err)
+}
+{{- end -}}
+
+{{- define "insert-auto-init" -}}
+{{- if .NeedsNow }}
+    now := Now()
+{{- end -}}
+{{- range .Autos }}
+    {{ .Name }} := {{ .Init }}
+{{- end -}}
 {{- end -}}

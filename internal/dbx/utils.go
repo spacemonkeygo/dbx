@@ -2,13 +2,29 @@ package dbx
 
 import (
 	"bytes"
+	"io"
 	"text/template"
+
+	"github.com/spacemonkeygo/errors"
 )
 
-func RenderTemplate(tmpl *template.Template, name string, data interface{}) (
-	string, error) {
+var Error = errors.NewClass("dbx")
+
+func RenderTemplateString(tmpl *template.Template, name string,
+	data interface{}) (string, error) {
 
 	var buf bytes.Buffer
-	err := tmpl.ExecuteTemplate(&buf, name, data)
-	return buf.String(), err
+	if err := RenderTemplate(tmpl, &buf, name, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func RenderTemplate(tmpl *template.Template, w io.Writer, name string,
+	data interface{}) error {
+
+	if name == "" {
+		return Error.Wrap(tmpl.Execute(w, data))
+	}
+	return Error.Wrap(tmpl.ExecuteTemplate(w, name, data))
 }
