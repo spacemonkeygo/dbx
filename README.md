@@ -4,7 +4,7 @@ DBX is a tool to generate database schemas and code to operate with it. It
 is in very early stages of release and so documentation and features are
 lacking.
 
-See documentation at https://godoc.org/gopkg.in/spacemonkeygo/dbx.v0
+See documentation at https://godoc.org/gopkg.in/spacemonkeygo/dbx.v0/bin/dbx
 
 ## License
 

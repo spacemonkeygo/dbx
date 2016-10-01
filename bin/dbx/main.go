@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// DBX implements code generation for database schemas and accessors.
 package main // import "gopkg.in/spacemonkeygo/dbx.v0/bin/dbx"
 
 import (
