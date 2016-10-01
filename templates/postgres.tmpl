@@ -5,9 +5,9 @@
 CREATE TABLE {{ .Name }} (
 {{- range $i, $col := .Columns }}
 {{if $i}},{{end}}	{{ with $col -}}
-    {{ .Name }} {{ .Type -}}
+	{{ .Name }} {{ .Type -}}
 	{{- if .NotNull }} NOT NULL {{- end -}}
-    {{- if .Reference }} REFERENCES {{ .Reference.Table }}({{ .Reference.Column }}) ON DELETE {{ .Reference.OnDelete }}{{- end -}}
+	{{- if .Reference }} REFERENCES {{ .Reference.Table }}({{ .Reference.Column }}) ON DELETE {{ .Reference.OnDelete }}{{- end -}}
 {{- end -}}
 {{- end -}}
 {{ if .PrimaryKey }}
@@ -36,22 +36,22 @@ LEFT JOIN {{ .Right.Table }} ON {{ template "dotname" .Left }} = {{ template "do
 	{{ template "dotname" .ColumnCmpColumn.Left }} {{ .ColumnCmpColumn.Operator }} {{ template "dotname" .ColumnCmpColumn.Right }}
 {{- end -}}
 {{- if .ColumnIn -}}
-    {{ template "dotname" .ColumnIn.Left }} IN ({{ template "select" .ColumnIn.In }})
+	{{ template "dotname" .ColumnIn.Left }} IN ({{ template "select" .ColumnIn.In }})
 {{- end -}}
 {{- end -}}
 
 {{- define "where" -}}
 {{- range $i, $cond := . -}}
-    {{ if not $i }}WHERE {{ else }} AND {{ end }}{{ template "condition" $cond -}}
+	{{ if not $i }}WHERE {{ else }} AND {{ end }}{{ template "condition" $cond -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "select-what" -}}
 {{ $table := .Table }}
 {{- if len .What -}}
-    {{ range $i, $what := .What }}{{ if $i }}, {{ end }}{{ $table }}.{{ $what }}{{ end }}
+	{{ range $i, $what := .What }}{{ if $i }}, {{ end }}{{ $table }}.{{ $what }}{{ end }}
 {{- else -}}
-    {{ $table }}.*
+	{{ $table }}.*
 {{- end -}}
 {{- end -}}
 
@@ -60,15 +60,15 @@ SELECT {{ template "select-what" .}} FROM {{ .Table }}
 	{{- range .LeftJoins }}
 		{{ template "leftjoin" . }}
 	{{- end -}}
-    {{- if .Conditions }}
+	{{- if .Conditions }}
 		{{ template "where" .Conditions }}
 	{{- end -}}
-    {{- if .OrderBy }}
-        ORDER BY {{ template "dotname" .OrderBy.Column }} ASC
-    {{- end -}}
-    {{- if .Limit }}
-        LIMIT ?
-    {{- end -}}
+	{{- if .OrderBy }}
+		ORDER BY {{ template "dotname" .OrderBy.Column }} ASC
+	{{- end -}}
+	{{- if .Limit }}
+		LIMIT ?
+	{{- end -}}
 {{- end -}}
 
 {{- define "count" -}}
@@ -76,7 +76,7 @@ SELECT count(*) FROM {{ .Table }}
 	{{- range .LeftJoins }}
 		{{ template "leftjoin" . }}
 	{{- end -}}
-    {{- if .Conditions }}
+	{{- if .Conditions }}
 		{{ template "where" .Conditions }}
 	{{- end -}}
 {{- end -}}
@@ -93,8 +93,8 @@ DELETE FROM {{ .Table }}
 
 {{- define "insert" -}}
 INSERT INTO {{ .Table }}
-    {{- if .Columns -}}
-        ({{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}{{ $col }}{{ end }}) VALUES(
-        {{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}:{{ $col }}{{ end }})
-    {{- end }} RETURNING *
+	{{- if .Columns -}}
+		({{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}{{ $col }}{{ end }}) VALUES(
+		{{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}:{{ $col }}{{ end }})
+	{{- end }} RETURNING *
 {{- end -}}

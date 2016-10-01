@@ -32,7 +32,6 @@
 
 {{/* SELECT STATEMENT */}}
 {{ define "select" }}
-/* {{ pretty . }} */
 func (obj *DB) {{ template "select-func" . }}
 
 func (obj *Tx) {{ template "select-func" . }}
@@ -156,11 +155,11 @@ Delete{{ .Struct }}{{ .FuncSuffix }}(
 	if err != nil {
 		return false, WrapErr(err)
 	}
-    count, err := res.RowsAffected()
-    if err != nil {
-        return false, WrapErr(err)
-    }
-    return count > 0, nil
+	count, err := res.RowsAffected()
+	if err != nil {
+		return false, WrapErr(err)
+	}
+	return count > 0, nil
 }
 {{- end -}}
 
@@ -180,11 +179,11 @@ Delete{{ pluralize .Struct }}{{ .FuncSuffix }}(
 	if err != nil {
 		return 0, WrapErr(err)
 	}
-    count, err = res.RowsAffected()
-    if err != nil {
-        return 0, WrapErr(err)
-    }
-    return count, nil
+	count, err = res.RowsAffected()
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+	return count, nil
 }
 {{- end -}}
 
@@ -201,23 +200,23 @@ Create{{ .Struct }}(
 {{- template "func-header" . }}
 {{- template "insert-auto-init" . }}
 
-    result = &{{ .Struct }}{}
+	result = &{{ .Struct }}{}
 {{- if not .ReturnBy }}
-    err = prepared.QueryRowx({{template "args" .Inserts}}).StructScan(result)
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-    return result, nil
+	err = prepared.QueryRowx({{template "args" .Inserts}}).StructScan(result)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return result, nil
 {{- else }}
-    res, err := prepared.Exec({{template "args" .Inserts}})
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-    pk, err := res.LastInsertId()
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-    return obj.Get{{ .Struct }}By{{ .ReturnBy }}(pk)
+	res, err := prepared.Exec({{template "args" .Inserts}})
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	pk, err := res.LastInsertId()
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return obj.Get{{ .Struct }}By{{ .ReturnBy }}(pk)
 {{- end -}}
 }
 {{- end -}}
@@ -234,16 +233,16 @@ Create{{ .Struct }}(
 {{- template "func-header" . }}
 {{- template "insert-auto-init" . }}
 
-    _, err = prepared.Exec({{template "args" .Inserts}})
-    return WrapErr(err)
+	_, err = prepared.Exec({{template "args" .Inserts}})
+	return WrapErr(err)
 }
 {{- end -}}
 
 {{- define "insert-auto-init" -}}
 {{- if .NeedsNow }}
-    now := Now()
+	now := Now()
 {{- end -}}
 {{- range .Autos }}
-    {{ .Name }} := {{ .Init }}
+	{{ .Name }} := {{ .Init }}
 {{- end -}}
 {{- end -}}

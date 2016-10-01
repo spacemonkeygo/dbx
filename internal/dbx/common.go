@@ -1,6 +1,12 @@
 package dbx
 
-import "io"
+import (
+	"io"
+
+	"github.com/spacemonkeygo/errors"
+)
+
+var Error = errors.NewClass("dbx")
 
 type Language interface {
 	Name() string

@@ -6,7 +6,6 @@ import (
 	"text/template"
 
 	"bitbucket.org/pkg/inflect"
-	"github.com/spacemonkeygo/dbx/internal/prettyprint"
 )
 
 type Loader interface {
@@ -45,7 +44,6 @@ func loadTemplate(name string, data []byte) (*template.Template, error) {
 		"singularize": inflect.Singularize,
 		"camelize":    inflect.Camelize,
 		"underscore":  inflect.Underscore,
-		"pretty":      prettyprint.Sprint,
 	}
 
 	tmpl, err := template.New(name).Funcs(globalFuncs).Parse(string(data))

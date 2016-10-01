@@ -4,11 +4,7 @@ import (
 	"bytes"
 	"io"
 	"text/template"
-
-	"github.com/spacemonkeygo/errors"
 )
-
-var Error = errors.NewClass("dbx")
 
 func RenderTemplateString(tmpl *template.Template, name string,
 	data interface{}) (string, error) {
