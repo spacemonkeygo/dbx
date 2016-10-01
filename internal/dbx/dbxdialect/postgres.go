@@ -33,7 +33,7 @@ func PostgresColumnType(column *dbx.Column) string {
 	case "int64":
 		return "bigint"
 	case "serial64":
-		return "serial64"
+		return "bigserial"
 	case "blob":
 		return "bytea"
 	case "timestamp":
@@ -106,6 +106,7 @@ func PostgresReferenceFromRelation(relation *dbx.Relation) *PostgresReference {
 
 type PostgresColumn struct {
 	Name      string
+	Type      string
 	NotNull   bool
 	Reference *PostgresReference
 }
@@ -113,6 +114,7 @@ type PostgresColumn struct {
 func PostgresColumnFromColumn(column *dbx.Column) PostgresColumn {
 	return PostgresColumn{
 		Name:      PostgresColumnName(column),
+		Type:      PostgresColumnType(column),
 		NotNull:   column.NotNull,
 		Reference: PostgresReferenceFromRelation(column.Relation),
 	}
