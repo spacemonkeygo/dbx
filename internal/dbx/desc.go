@@ -34,7 +34,9 @@ type Column struct {
 	Type       string
 	NotNull    bool
 	Relation   *Relation
+	Updatable  bool
 	AutoInsert bool
+	AutoUpdate bool
 }
 
 func (c *Column) String() string {
@@ -175,6 +177,22 @@ func (t *Table) InsertableColumns() (out []*Column) {
 		}
 		out = append(out, column)
 	}
+	return columnSetPrune(out, t.PrimaryKey)
+}
+
+func (t *Table) UpdatableBy() (out [][]*Column) {
+	out = append(out, t.PrimaryKey)
+	out = append(out, t.Unique...)
+	return out
+}
+
+func (t *Table) UpdatableColumns() (out []*Column) {
+	for _, column := range t.Columns {
+		if !column.Updatable {
+			continue
+		}
+		out = append(out, column)
+	}
 	return out
 }
 
@@ -201,6 +219,17 @@ func columnSetEquivalent(left, right []*Column) bool {
 		return false
 	}
 	return columnSetSubset(left, right)
+}
+
+// returns true if left is a subset of right
+func columnSetPrune(all, bad []*Column) (out []*Column) {
+	for i := range all {
+		if columnSetSubset(all[i:i+1], bad) {
+			continue
+		}
+		out = append(out, all[i])
+	}
+	return out
 }
 
 func (t *Table) BasicPrimaryKey() *Column {

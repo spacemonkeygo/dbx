@@ -29,15 +29,18 @@ type Language interface {
 	RenderCount(w io.Writer, sql string, params *SelectParams) error
 	RenderDelete(w io.Writer, sql string, params *DeleteParams) error
 	RenderInsert(w io.Writer, sql string, params *InsertParams) error
+	RenderUpdate(w io.Writer, sql string, params *UpdateParams) error
 	Format([]byte) ([]byte, error)
 }
 
 type Dialect interface {
 	Name() string
+	ColumnName(column *Column) string
 	RenderSchema(schema *Schema) (string, error)
 	RenderSelect(params *SelectParams) (string, error)
 	RenderCount(params *SelectParams) (string, error)
 	RenderDelete(params *DeleteParams) (string, error)
 	RenderInsert(params *InsertParams) (string, error)
-	InsertReturns() bool
+	RenderUpdate(params *UpdateParams) (string, error)
+	SupportsReturning() bool
 }

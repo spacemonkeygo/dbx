@@ -46,7 +46,9 @@ func LoadSchema(path string) (schema *Schema, err error) {
 		Name       string `yaml:"name"`
 		Type       string `yaml:"type"`
 		Nullable   bool   `yaml:"nullable"`
+		Updatable  bool   `yaml:"updatable"`
 		AutoInsert bool   `yaml:"auto_insert"`
+		AutoUpdate bool   `yaml:"auto_update"`
 	}
 
 	type YTable struct {
@@ -90,12 +92,19 @@ func LoadSchema(path string) (schema *Schema, err error) {
 				return nil, fmt.Errorf("%s.%s already defined",
 					ytable.Name, ycolumn.Name)
 			}
+			if ycolumn.AutoUpdate && !ycolumn.Updatable {
+				return nil, fmt.Errorf(
+					"%s.%s is marked to auto-update but is not updatable",
+					ytable.Name, ycolumn.Name)
+			}
 			table.Columns = append(table.Columns, &Column{
 				Table:      table,
 				Name:       ycolumn.Name,
 				Type:       ycolumn.Type,
 				NotNull:    !ycolumn.Nullable,
+				Updatable:  ycolumn.Updatable,
 				AutoInsert: ycolumn.AutoInsert,
+				AutoUpdate: ycolumn.AutoUpdate,
 			})
 		}
 		tables[ytable.Name] = table

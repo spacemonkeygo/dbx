@@ -114,42 +114,16 @@ func GolangFieldTag(column *dbx.Column) string {
 }
 
 type GolangStruct struct {
-	Name   string
-	Fields []GolangField
-}
-
-func GolangStructFromTable(table *dbx.Table) GolangStruct {
-	return GolangStruct{
-		Name:   GolangStructName(table),
-		Fields: GolangFieldsFromColumns(table.Columns),
-	}
-}
-
-func GolangStructsFromTables(tables []*dbx.Table) (structs []GolangStruct) {
-	for _, table := range tables {
-		structs = append(structs, GolangStructFromTable(table))
-	}
-	return structs
+	Name            string
+	Fields          []GolangField
+	UpdatableFields []GolangField
 }
 
 type GolangField struct {
-	Name string
-	Type string
-	Tag  string
-}
-
-func GolangFieldFromColumn(column *dbx.Column) GolangField {
-	return GolangField{Name: GolangFieldName(column),
-		Type: GolangFieldType(column),
-		Tag:  GolangFieldTag(column),
-	}
-}
-
-func GolangFieldsFromColumns(columns []*dbx.Column) (fields []GolangField) {
-	for _, column := range columns {
-		fields = append(fields, GolangFieldFromColumn(column))
-	}
-	return fields
+	Name   string
+	Type   string
+	Tag    string
+	Column string
 }
 
 type GolangOptions struct {
@@ -166,34 +140,34 @@ type Golang struct {
 func NewGolang(loader dbx.Loader, dialect dbx.Dialect, options *GolangOptions) (
 	*Golang, error) {
 
-	tmpl, err := loader.Load("golang.tmpl")
-	if err != nil {
-		return nil, err
-	}
-
 	header_tmpl, err := loader.Load("golang.header.tmpl")
 	if err != nil {
 		return nil, err
 	}
 
+	funcs_tmpl, err := loader.Load("golang.funcs.tmpl")
+	if err != nil {
+		return nil, err
+	}
+
 	return &Golang{
-		tmpl:        tmpl,
+		tmpl:        funcs_tmpl,
 		dialect:     dialect,
 		header_tmpl: header_tmpl,
 		options:     options,
 	}, nil
 }
 
-func (lang *Golang) Name() string {
+func (g *Golang) Name() string {
 	return "golang"
 }
 
-func (lang *Golang) Format(in []byte) (out []byte, err error) {
+func (g *Golang) Format(in []byte) (out []byte, err error) {
 	out, err = format.Source(in)
 	return out, Error.Wrap(err)
 }
 
-func (lang *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
+func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
 
 	type headerParams struct {
 		Package string
@@ -202,12 +176,12 @@ func (lang *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
 	}
 
 	params := headerParams{
-		Package: lang.options.Package,
-		Dialect: lang.dialect.Name(),
-		Structs: GolangStructsFromTables(schema.Tables),
+		Package: g.options.Package,
+		Dialect: g.dialect.Name(),
+		Structs: g.structsFromTables(schema.Tables),
 	}
 
-	return dbx.RenderTemplate(lang.header_tmpl, w, "", params)
+	return dbx.RenderTemplate(g.header_tmpl, w, "", params)
 }
 
 func GolangArgsFromConditions(conditions []*dbx.ConditionParams) (
@@ -265,31 +239,9 @@ func GolangFuncSuffix(table *dbx.Table, args []GolangArg) (suffix string) {
 }
 
 type GolangAutoParam struct {
-	Name string
-	Init string
-}
-
-func GolangInsertParamsFromTable(columns []*dbx.Column) (
-	all, params []GolangArg, autos []GolangAutoParam) {
-
-	for _, column := range columns {
-		param := GolangArgFromColumn(column)
-		all = append(all, param)
-		if column.AutoInsert {
-			init := GolangFieldInit(column)
-			if init != "" {
-				autos = append(autos, GolangAutoParam{
-					Name: param.Name,
-					Init: init,
-				})
-			} else {
-				params = append(params, param)
-			}
-		} else {
-			params = append(params, param)
-		}
-	}
-	return all, params, autos
+	Name   string
+	Init   string
+	Column string
 }
 
 type GolangArg struct {
@@ -318,7 +270,14 @@ type GolangInsert struct {
 	Autos    []GolangAutoParam
 }
 
-func (lang *Golang) RenderSelect(w io.Writer, sql string,
+type GolangUpdate struct {
+	GolangFunc
+	ReturnBy *string
+	NeedsNow bool
+	Autos    []GolangAutoParam
+}
+
+func (g *Golang) RenderSelect(w io.Writer, sql string,
 	params *dbx.SelectParams) (err error) {
 
 	var tmpl string
@@ -331,7 +290,7 @@ func (lang *Golang) RenderSelect(w io.Writer, sql string,
 		tmpl = "select-paged"
 	}
 
-	return dbx.RenderTemplate(lang.tmpl, w, tmpl, GolangSelect{
+	return dbx.RenderTemplate(g.tmpl, w, tmpl, GolangSelect{
 		GolangFunc: MakeGolangFunc(
 			params.Table, sql,
 			GolangArgsFromConditions(params.Conditions),
@@ -349,10 +308,10 @@ func MakeGolangFunc(table *dbx.Table, sql string, args []GolangArg) GolangFunc {
 	}
 }
 
-func (lang *Golang) RenderCount(w io.Writer, sql string,
+func (g *Golang) RenderCount(w io.Writer, sql string,
 	params *dbx.SelectParams) (err error) {
 
-	return dbx.RenderTemplate(lang.tmpl, w, "count",
+	return dbx.RenderTemplate(g.tmpl, w, "count",
 		MakeGolangFunc(
 			params.Table,
 			sql,
@@ -360,7 +319,7 @@ func (lang *Golang) RenderCount(w io.Writer, sql string,
 		))
 }
 
-func (lang *Golang) RenderDelete(w io.Writer, sql string,
+func (g *Golang) RenderDelete(w io.Writer, sql string,
 	params *dbx.DeleteParams) error {
 
 	tmpl := "delete"
@@ -368,7 +327,7 @@ func (lang *Golang) RenderDelete(w io.Writer, sql string,
 		tmpl = "delete-all"
 	}
 
-	return dbx.RenderTemplate(lang.tmpl, w, tmpl,
+	return dbx.RenderTemplate(g.tmpl, w, tmpl,
 		MakeGolangFunc(
 			params.Table,
 			sql,
@@ -376,30 +335,129 @@ func (lang *Golang) RenderDelete(w io.Writer, sql string,
 		))
 }
 
-func (lang *Golang) RenderInsert(w io.Writer, sql string,
+func (g *Golang) RenderInsert(w io.Writer, sql string,
 	params *dbx.InsertParams) error {
 
-	all, args, autos := GolangInsertParamsFromTable(params.Columns)
+	var all []GolangArg
+	var args []GolangArg
+	var autos []GolangAutoParam
+	var needs_now bool
+	for _, column := range params.Columns {
+		arg := GolangArgFromColumn(column)
+		all = append(all, arg)
+		if column.AutoInsert {
+			if init := GolangFieldInit(column); init != "" {
+				if init == "now" {
+					needs_now = true
+				}
+				autos = append(autos, GolangAutoParam{
+					Name:   arg.Name,
+					Init:   init,
+					Column: g.dialect.ColumnName(column),
+				})
+			} else {
+				args = append(args, arg)
+			}
+		} else {
+			args = append(args, arg)
+		}
+	}
 
 	insert := GolangInsert{
 		GolangFunc: MakeGolangFunc(params.Table, sql, args),
 		Inserts:    all,
 		Autos:      autos,
+		NeedsNow:   needs_now,
 	}
 
-	for _, auto := range autos {
-		if auto.Init == "now" {
-			insert.NeedsNow = true
-		}
-	}
-
-	if lang.dialect.InsertReturns() {
-		return dbx.RenderTemplate(lang.tmpl, w, "insert", insert)
+	if g.dialect.SupportsReturning() {
+		return dbx.RenderTemplate(g.tmpl, w, "insert", insert)
 	} else if pk := params.Table.BasicPrimaryKey(); pk != nil {
 		by := GolangFieldName(pk)
 		insert.ReturnBy = &by
-		return dbx.RenderTemplate(lang.tmpl, w, "insert", insert)
+		return dbx.RenderTemplate(g.tmpl, w, "insert", insert)
 	} else {
-		return dbx.RenderTemplate(lang.tmpl, w, "insert-no-return", insert)
+		return dbx.RenderTemplate(g.tmpl, w, "insert-no-return", insert)
 	}
+}
+
+func (g *Golang) RenderUpdate(w io.Writer, sql string,
+	params *dbx.UpdateParams) error {
+
+	// For updates, the only thing we need to know is which fields to
+	// auto generate. The rest will be passed in via ColumnUpdate interfaces
+	// passed variadically to the update function.
+	var autos []GolangAutoParam
+	var needs_now bool
+	for _, column := range params.Table.Columns {
+		if !column.AutoUpdate {
+			continue
+		}
+		arg := GolangArgFromColumn(column)
+		if init := GolangFieldInit(column); init != "" {
+			if init == "now" {
+				needs_now = true
+			}
+			autos = append(autos, GolangAutoParam{
+				Name:   arg.Name,
+				Init:   init,
+				Column: g.dialect.ColumnName(column),
+			})
+		}
+	}
+
+	update := GolangUpdate{
+		GolangFunc: MakeGolangFunc(
+			params.Table,
+			sql,
+			GolangArgsFromConditions(params.Conditions),
+		),
+		Autos:    autos,
+		NeedsNow: needs_now,
+	}
+
+	if g.dialect.SupportsReturning() {
+		return dbx.RenderTemplate(g.tmpl, w, "update", update)
+	} else if pk := params.Table.BasicPrimaryKey(); pk != nil {
+		by := GolangFieldName(pk)
+		update.ReturnBy = &by
+		return dbx.RenderTemplate(g.tmpl, w, "update", update)
+	} else {
+		return dbx.RenderTemplate(g.tmpl, w, "update-no-return", update)
+	}
+}
+
+func (g *Golang) fieldsFromColumns(columns []*dbx.Column, updatabe_only bool) (
+	fields []GolangField) {
+
+	for _, column := range columns {
+		if !updatabe_only || column.Updatable && !column.AutoUpdate {
+			fields = append(fields, g.fieldFromColumn(column))
+		}
+	}
+	return fields
+}
+
+func (g *Golang) fieldFromColumn(column *dbx.Column) GolangField {
+	return GolangField{
+		Name:   GolangFieldName(column),
+		Type:   GolangFieldType(column),
+		Tag:    GolangFieldTag(column),
+		Column: g.dialect.ColumnName(column),
+	}
+}
+
+func (g *Golang) structFromTable(table *dbx.Table) GolangStruct {
+	return GolangStruct{
+		Name:            GolangStructName(table),
+		Fields:          g.fieldsFromColumns(table.Columns, false),
+		UpdatableFields: g.fieldsFromColumns(table.Columns, true),
+	}
+}
+
+func (g *Golang) structsFromTables(tables []*dbx.Table) (structs []GolangStruct) {
+	for _, table := range tables {
+		structs = append(structs, g.structFromTable(table))
+	}
+	return structs
 }

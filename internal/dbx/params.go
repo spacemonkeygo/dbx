@@ -107,3 +107,8 @@ type InsertParams struct {
 	Table   *Table
 	Columns []*Column
 }
+
+type UpdateParams struct {
+	Table      *Table
+	Conditions []*ConditionParams
+}

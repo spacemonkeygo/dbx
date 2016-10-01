@@ -74,6 +74,14 @@ func (r *codeRenderer) renderTable(table *Table) {
 		Table:   table,
 		Columns: table.InsertableColumns(),
 	})
+	if len(table.UpdatableColumns()) > 0 {
+		for _, columns := range table.UpdatableBy() {
+			r.renderUpdate(&UpdateParams{
+				Table:      table,
+				Conditions: equalsConditionsForColumns(columns),
+			})
+		}
+	}
 	r.renderQuery(&Query{
 		Table: table,
 		Start: table.PrimaryKey,
@@ -166,6 +174,17 @@ func (r *codeRenderer) renderInsert(params *InsertParams) {
 		return
 	}
 	r.setError(r.lang.RenderInsert(r.w, sql, params))
+}
+
+func (r *codeRenderer) renderUpdate(params *UpdateParams) {
+	if r.err != nil {
+		return
+	}
+	sql, err := r.dialect.RenderUpdate(params)
+	if !r.setError(err) {
+		return
+	}
+	r.setError(r.lang.RenderUpdate(r.w, sql, params))
 }
 
 func (r *codeRenderer) renderSelect(params *SelectParams) {

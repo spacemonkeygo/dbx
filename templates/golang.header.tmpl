@@ -6,6 +6,7 @@ package {{ .Package }}
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,7 +29,24 @@ type {{ .Name }} struct {
 	{{ .Name }} {{ .Type }} {{ .Tag }}
 {{- end }}
 }
-{{end}}
+
+{{- if .UpdatableFields }}
+{{ $struct := .Name }}
+type {{ $struct }}Update interface {
+	columnName() string
+	value() interface{}
+	private{{ $struct }}()
+}
+{{ range .UpdatableFields }}
+{{ $upstruct := printf "%s%s" (cameldown $struct) .Name }}
+type {{ $upstruct }} {{ .Type }}
+func {{ $struct }}{{ .Name }}(v {{ .Type }}) {{ $struct }}Update { return {{ $upstruct }}(v) }
+func (u {{ $upstruct }}) columnName() string { return "{{ .Column }}" }
+func (u {{ $upstruct }}) value() interface{} { return {{ .Type }}(u) }
+func (u {{ $upstruct }}) private{{ $struct }}() {}
+{{- end -}}
+{{- end -}}
+{{- end }}
 
 type DB struct {
 	*sqlx.DB

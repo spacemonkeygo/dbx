@@ -160,6 +160,10 @@ func (s *Postgres) Name() string {
 	return "postgres"
 }
 
+func (s *Postgres) ColumnName(column *dbx.Column) string {
+	return PostgresColumnName(column)
+}
+
 func (s *Postgres) RenderSchema(schema *dbx.Schema) (
 	string, error) {
 
@@ -174,8 +178,8 @@ type PostgresColumnRef struct {
 
 func PostgresColumnRefFromColumn(column *dbx.Column) PostgresColumnRef {
 	return PostgresColumnRef{
-		Table:  column.Table.Name,
-		Column: column.Name,
+		Table:  PostgresTableName(column.Table),
+		Column: PostgresColumnName(column),
 	}
 }
 
@@ -331,7 +335,7 @@ type PostgresDelete struct {
 
 func PostgresDeleteFromDelete(params *dbx.DeleteParams) PostgresDelete {
 	return PostgresDelete{
-		Table:      params.Table.Name,
+		Table:      PostgresTableName(params.Table),
 		Conditions: PostgresConditionsFromConditions(params.Conditions),
 	}
 }
@@ -350,7 +354,7 @@ type PostgresInsert struct {
 
 func PostgresInsertFromInsert(params *dbx.InsertParams) PostgresInsert {
 	return PostgresInsert{
-		Table:   params.Table.Name,
+		Table:   PostgresTableName(params.Table),
 		Columns: PostgresColumnNames(params.Columns),
 	}
 }
@@ -362,6 +366,25 @@ func (s *Postgres) RenderInsert(params *dbx.InsertParams) (
 		PostgresInsertFromInsert(params))
 }
 
-func (s *Postgres) InsertReturns() bool {
+type PostgresUpdate struct {
+	Table      string
+	Conditions []PostgresCondition
+}
+
+func PostgresUpdateFromUpdate(params *dbx.UpdateParams) PostgresUpdate {
+	return PostgresUpdate{
+		Table:      PostgresTableName(params.Table),
+		Conditions: PostgresConditionsFromConditions(params.Conditions),
+	}
+}
+
+func (s *Postgres) RenderUpdate(params *dbx.UpdateParams) (
+	string, error) {
+
+	return dbx.RenderTemplateString(s.tmpl, "update",
+		PostgresUpdateFromUpdate(params))
+}
+
+func (s *Postgres) SupportsReturning() bool {
 	return true
 }

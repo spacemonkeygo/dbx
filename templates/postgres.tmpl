@@ -98,3 +98,10 @@ INSERT INTO {{ .Table }}
 		{{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}:{{ $col }}{{ end }})
 	{{- end }} RETURNING *
 {{- end -}}
+
+{{- define "update" -}}
+UPDATE {{ .Table }}(|||NAMES|||) VALUES (|||VALUES|||)
+	{{- if .Conditions }}
+		{{template "where" .Conditions }}
+	{{- end }} RETURNING *
+{{- end -}}

@@ -20,7 +20,6 @@
 
 {{- define "func-header" }}
 	const stmt=`{{ .SQL }}`
-
 	prepared, replace, err := obj.prepare(stmt)
 	if err != nil {
 		err = WrapErr(err)
@@ -197,8 +196,8 @@ func (obj *Tx) {{ template "insert-func" . }}
 {{- define "insert-func" -}}
 Create{{ .Struct }}(
 {{- template "params" .Args }}) (result *{{ .Struct }}, err error) {
-{{- template "func-header" . }}
 {{- template "insert-auto-init" . }}
+{{- template "func-header" . }}
 
 	result = &{{ .Struct }}{}
 {{- if not .ReturnBy }}
@@ -230,8 +229,8 @@ func (obj *Tx) {{ template "insert-no-return-func" . }}
 {{- define "insert-no-return-func" -}}
 Create{{ .Struct }}(
 {{- template "params" .Args }}) (err error) {
-{{- template "func-header" . }}
 {{- template "insert-auto-init" . }}
+{{- template "func-header" . }}
 
 	_, err = prepared.Exec({{template "args" .Inserts}})
 	return WrapErr(err)
@@ -246,3 +245,87 @@ Create{{ .Struct }}(
 	{{ .Name }} := {{ .Init }}
 {{- end -}}
 {{- end -}}
+
+{{/* UPDATE STATEMENT */}}
+{{ define "update" }}
+func (obj *DB) {{ template "update-func" . }}
+
+func (obj *Tx) {{ template "update-func" . }}
+{{ end }}
+
+{{- define "update-func" -}}
+Update{{ .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}, updates ...{{ .Struct }}Update) (result *{{ .Struct }}, err error) {
+{{- template "update-func-header" . -}}
+
+    result = &{{ .Struct }}{}
+{{- if not .ReturnBy }}
+    err = prepared.QueryRowx(args...).StructScan(result)
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    return result, nil
+{{- else }}
+    res, err := prepared.Exec(args...)
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    pk, err := res.LastInsertId()
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    return obj.Get{{ .Struct }}By{{ .ReturnBy }}(pk)
+{{- end -}}
+}
+{{- end -}}
+
+{{ define "update-no-return" }}
+func (obj *DB) {{ template "update-no-return-func" . }}
+
+func (obj *Tx) {{ template "update-no-return-func" . }}
+{{ end }}
+
+{{- define "update-no-return-func" -}}
+Update{{ .Struct }}{{ .FuncSuffix }}(
+{{- template "params" .Args }}, updates ...{{ .Struct }}Update) (err error) {
+{{- template "update-func-header" . -}}
+    _, err = prepared.Exec(args...)
+    return WrapErr(err)
+}
+{{- end -}}
+
+{{- define "update-func-header" -}}
+	var names []string
+	var values []interface{}
+	seen := map[string]int{}
+	addvalue := func(name string, value interface{}) {
+		if idx, ok := seen[name]; ok{
+			values[idx] = value
+		}
+		seen[name] = len(names)
+		names = append(names, name)
+		values = append(values, value)
+	}
+{{- if .NeedsNow }}
+	now := Now()
+{{- end -}}
+{{- range .Autos }}
+	addvalue("{{ .Column }}", {{ .Init }})
+{{- end }}
+	for _, update := range updates {
+		addvalue(update.columnName(), update.value())
+	}
+
+	stmt := strings.NewReplacer(
+		"|||NAMES|||", strings.Join(names, ", "),
+		"|||VALUES|||", strings.Repeat(", ?", len(values))[2:]).Replace(
+		`{{.SQL}}`)
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	args := append(values, {{- template "args" .Args -}})	
+	obj.logStmt(stmt, args...)
+{{ end -}}

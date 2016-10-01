@@ -57,6 +57,7 @@ func loadTemplate(name string, data []byte) (*template.Template, error) {
 		"pluralize":   inflect.Pluralize,
 		"singularize": inflect.Singularize,
 		"camelize":    inflect.Camelize,
+		"cameldown":   inflect.CamelizeDownFirst,
 		"underscore":  inflect.Underscore,
 	}
 
