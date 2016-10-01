@@ -1,4 +1,4 @@
-package main
+package main // import "gopkg.in/spacemonkeygo/dbx.v0/bin/dbx"
 
 import (
 	"bufio"
@@ -7,10 +7,10 @@ import (
 	"os"
 
 	cli "github.com/jawher/mow.cli"
-	"github.com/spacemonkeygo/dbx/internal/dbx"
-	"github.com/spacemonkeygo/dbx/internal/dbx/dbxdialect"
-	"github.com/spacemonkeygo/dbx/internal/dbx/dbxlanguage"
-	"github.com/spacemonkeygo/dbx/templates"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/dbxdialect"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/dbxlanguage"
+	"gopkg.in/spacemonkeygo/dbx.v0/templates"
 )
 
 func main() {

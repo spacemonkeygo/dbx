@@ -4,7 +4,7 @@ import (
 	"text/template"
 
 	"bitbucket.org/pkg/inflect"
-	"github.com/spacemonkeygo/dbx/internal/dbx"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx"
 )
 
 func PostgresTableName(table *dbx.Table) string {

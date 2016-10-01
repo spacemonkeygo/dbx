@@ -7,8 +7,8 @@ import (
 	"text/template"
 
 	"bitbucket.org/pkg/inflect"
-	"github.com/spacemonkeygo/dbx/internal/dbx"
 	"github.com/spacemonkeygo/errors"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx"
 )
 
 var (
