@@ -16,8 +16,9 @@ import (
 func main() {
 	app := cli.App("dbx", "generate SQL schema and matching code")
 
-	template_dir := app.StringOpt("t templates", "", "templates directory")
-	in := app.StringArg("IN", "", "path to the yaml description")
+	template_dir_arg := app.StringOpt("t templates", "", "templates directory")
+	in_arg := app.StringArg("IN", "", "path to the yaml description")
+	out_arg := app.StringArg("OUT", "", "output file (- for stdout)")
 
 	var err error
 	die := func(err error) {
@@ -31,11 +32,11 @@ func main() {
 	var loader dbx.Loader
 
 	app.Before = func() {
-		schema, err = dbx.LoadSchema(*in)
+		schema, err = dbx.LoadSchema(*in_arg)
 		die(err)
 
-		if *template_dir != "" {
-			loader = dbx.DirLoader(*template_dir)
+		if *template_dir_arg != "" {
+			loader = dbx.DirLoader(*template_dir_arg)
 		} else {
 			loader = dbx.BinLoader(templates.Asset)
 		}
@@ -45,7 +46,7 @@ func main() {
 		cmd.Action = func() {
 			dialect, err := dbxdialect.NewPostgres(loader)
 			die(err)
-			die(generateSQLSchema(schema, dialect))
+			die(generateSQLSchema(*out_arg, schema, dialect))
 		}
 	})
 
@@ -63,24 +64,25 @@ func main() {
 				})
 			die(err)
 
-			die(generateCode(schema, dialect, lang, *format_code))
+			die(generateCode(*out_arg, schema, dialect, lang, *format_code))
 		}
 	})
 
 	app.Run(os.Args)
 }
 
-func generateSQLSchema(schema *dbx.Schema, dialect dbx.Dialect) (err error) {
+func generateSQLSchema(out string, schema *dbx.Schema, dialect dbx.Dialect) (
+	err error) {
+
 	sql, err := dialect.RenderSchema(schema)
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(os.Stdout, sql)
-	return err
+	return writeOut(out, []byte(sql))
 }
 
-func generateCode(schema *dbx.Schema, dialect dbx.Dialect, lang dbx.Language,
-	format_code bool) (err error) {
+func generateCode(out string, schema *dbx.Schema, dialect dbx.Dialect,
+	lang dbx.Language, format_code bool) (err error) {
 
 	var buf bytes.Buffer
 	if err := dbx.RenderCode(&buf, schema, dialect, lang); err != nil {
@@ -96,7 +98,19 @@ func generateCode(schema *dbx.Schema, dialect dbx.Dialect, lang dbx.Language,
 		}
 		rendered = formatted
 	}
-	_, err = os.Stdout.Write(rendered)
+	return writeOut(out, rendered)
+}
+
+func writeOut(out string, data []byte) (err error) {
+	w := os.Stdout
+	if out != "-" {
+		w, err = os.Create(out)
+		if err != nil {
+			return fmt.Errorf("unable to open output file: %s", err)
+		}
+		defer w.Close()
+	}
+	_, err = w.Write(data)
 	return err
 }
 
