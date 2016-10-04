@@ -95,7 +95,7 @@ DELETE FROM {{ .Table }}
 INSERT INTO {{ .Table }}
 	{{- if .Columns -}}
 		({{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}{{ $col }}{{ end }}) VALUES(
-		{{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}:{{ $col }}{{ end }})
+		{{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}?{{ end }})
 	{{- end }} RETURNING *
 {{- end -}}
 

@@ -86,12 +86,11 @@ PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}(
     ctoken string, limit int) (result []*{{ .Struct }}, ctokenout string, err error) {
 {{- template "func-header" . }}
 
-	limitarg := "ALL"
-	if limit > 0 {
-		limitarg = fmt.Sprint(limit)
-	}
+    if ctoken == "" {
+        ctoken = "0"
+    }
 
-	err = prepared.Select(&result, {{ if .Args }}{{ template "args" .Args }}, {{end}} ctoken, limitarg)
+	err = prepared.Select(&result, {{ if .Args }}{{ template "args" .Args }}, {{end}} ctoken, limit)
 	if err != nil {
 		return nil, "", WrapErr(err)
 	}
@@ -100,7 +99,7 @@ PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}(
 		ctokenout = fmt.Sprint(result[limit-1].{{ .PagedOn }})
 	}
 
-	return result, "", nil
+	return result, ctokenout, nil
 }
 {{- end -}}
 
