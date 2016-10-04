@@ -23,8 +23,8 @@ import (
 
 	cli "github.com/jawher/mow.cli"
 	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/dbxdialect"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/dbxlanguage"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/dialect"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/language"
 	"gopkg.in/spacemonkeygo/dbx.v0/templates"
 )
 
@@ -59,7 +59,7 @@ func main() {
 
 	app.Command("schema", "generate SQL schema", func(cmd *cli.Cmd) {
 		cmd.Action = func() {
-			dialect, err := dbxdialect.NewPostgres(loader)
+			dialect, err := dialect.NewPostgres(loader)
 			die(err)
 			die(generateSQLSchema(*out_arg, schema, dialect))
 		}
@@ -71,10 +71,10 @@ func main() {
 		format_code := cmd.BoolOpt("f format", true,
 			"format the code")
 		cmd.Action = func() {
-			dialect, err := dbxdialect.NewPostgres(loader)
+			dialect, err := dialect.NewPostgres(loader)
 			die(err)
-			lang, err := dbxlanguage.NewGolang(loader, dialect,
-				&dbxlanguage.GolangOptions{
+			lang, err := language.NewGolang(loader, dialect,
+				&language.GolangOptions{
 					Package: *pkg_name,
 				})
 			die(err)

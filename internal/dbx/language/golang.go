@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dbxlanguage
+package language
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	Error = errors.NewClass("dbxlang")
+	Error = errors.NewClass("language")
 )
 
 func GolangStructName(table *dbx.Table) string {
