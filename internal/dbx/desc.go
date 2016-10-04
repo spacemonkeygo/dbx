@@ -177,7 +177,7 @@ func (t *Table) InsertableColumns() (out []*Column) {
 		}
 		out = append(out, column)
 	}
-	return columnSetPrune(out, t.PrimaryKey)
+	return out
 }
 
 func (t *Table) UpdatableBy() (out [][]*Column) {

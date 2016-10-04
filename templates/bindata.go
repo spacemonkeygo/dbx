@@ -85,7 +85,7 @@ func golangFuncsTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "golang.funcs.tmpl", size: 7861, mode: os.FileMode(420), modTime: time.Unix(1475607626, 0)}
+	info := bindataFileInfo{name: "golang.funcs.tmpl", size: 7861, mode: os.FileMode(420), modTime: time.Unix(1475611702, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
