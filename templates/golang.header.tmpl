@@ -30,7 +30,7 @@ type {{ .Name }} struct {
 {{- end }}
 }
 
-{{- if .UpdatableFields }}
+{{- if .Updatable }}
 {{ $struct := .Name }}
 type {{ $struct }}Update interface {
 	columnName() string

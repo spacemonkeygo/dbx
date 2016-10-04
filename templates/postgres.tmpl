@@ -100,7 +100,7 @@ INSERT INTO {{ .Table }}
 {{- end -}}
 
 {{- define "update" -}}
-UPDATE {{ .Table }}(|||NAMES|||) VALUES (|||VALUES|||)
+UPDATE {{ .Table }} SET |||QS|||
 	{{- if .Conditions }}
 		{{template "where" .Conditions }}
 	{{- end }} RETURNING *

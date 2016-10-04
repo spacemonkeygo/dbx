@@ -294,15 +294,15 @@ Update{{ .Struct }}{{ .FuncSuffix }}(
 {{- end -}}
 
 {{- define "update-func-header" -}}
-	var names []string
+	var qs []string
 	var values []interface{}
 	seen := map[string]int{}
 	addvalue := func(name string, value interface{}) {
 		if idx, ok := seen[name]; ok{
 			values[idx] = value
 		}
-		seen[name] = len(names)
-		names = append(names, name)
+		seen[name] = len(values)
+        qs = append(qs, name + " = ?")
 		values = append(values, value)
 	}
 {{- if .NeedsNow }}
@@ -315,10 +315,9 @@ Update{{ .Struct }}{{ .FuncSuffix }}(
 		addvalue(update.columnName(), update.value())
 	}
 
-	stmt := strings.NewReplacer(
-		"|||NAMES|||", strings.Join(names, ", "),
-		"|||VALUES|||", strings.Repeat(", ?", len(values))[2:]).Replace(
-		`{{.SQL}}`)
+    stmt := strings.Replace(`{{.SQL}}`,
+        "|||QS|||",
+        strings.Join(qs, ", "), 1)
 	prepared, replace, err := obj.prepare(stmt)
 	if err != nil {
 		err = WrapErr(err)

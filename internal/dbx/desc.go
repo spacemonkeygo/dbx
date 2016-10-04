@@ -196,6 +196,15 @@ func (t *Table) UpdatableColumns() (out []*Column) {
 	return out
 }
 
+func (t *Table) Updatable() bool {
+	for _, column := range t.Columns {
+		if column.Updatable {
+			return true
+		}
+	}
+	return false
+}
+
 // returns true if left is a subset of right
 func columnSetSubset(left, right []*Column) bool {
 	if len(left) > len(right) {

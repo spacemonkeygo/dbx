@@ -116,6 +116,7 @@ func GolangFieldTag(column *dbx.Column) string {
 type GolangStruct struct {
 	Name            string
 	Fields          []GolangField
+	Updatable       bool
 	UpdatableFields []GolangField
 }
 
@@ -451,6 +452,7 @@ func (g *Golang) structFromTable(table *dbx.Table) GolangStruct {
 	return GolangStruct{
 		Name:            GolangStructName(table),
 		Fields:          g.fieldsFromColumns(table.Columns, false),
+		Updatable:       table.Updatable(),
 		UpdatableFields: g.fieldsFromColumns(table.Columns, true),
 	}
 }
