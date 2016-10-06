@@ -74,14 +74,6 @@ func (r *codeRenderer) renderTable(table *Table) {
 		Table:   table,
 		Columns: table.InsertableColumns(),
 	})
-	if len(table.UpdatableColumns()) > 0 {
-		for _, columns := range table.UpdatableBy() {
-			r.renderUpdate(&UpdateParams{
-				Table:      table,
-				Conditions: equalsConditionsForColumns(columns),
-			})
-		}
-	}
 	r.renderQuery(&Query{
 		Table: table,
 		Start: table.PrimaryKey,
@@ -143,6 +135,20 @@ func deletesFromQuery(query *Query) (out []*DeleteParams) {
 	return append(out, params)
 }
 
+func updatesFromQuery(query *Query) (out []*UpdateParams) {
+	if !query.Table.Updatable() ||
+		!query.Table.ColumnSetUnique(query.Start) ||
+		len(query.Joins) > 0 ||
+		len(query.End) > 0 {
+		return nil
+	}
+	out = append(out, &UpdateParams{
+		Table:      query.Table,
+		Conditions: equalsConditionsForColumns(query.Start),
+	})
+	return out
+}
+
 func (r *codeRenderer) querySeen(query *Query) bool {
 	key := query.String()
 	if r.queries_seen[key] {
@@ -157,6 +163,9 @@ func (r *codeRenderer) renderQuery(query *Query) {
 		return
 	}
 
+	for _, params := range updatesFromQuery(query) {
+		r.renderUpdate(params)
+	}
 	for _, params := range selectsFromQuery(query) {
 		r.renderSelect(params)
 	}
