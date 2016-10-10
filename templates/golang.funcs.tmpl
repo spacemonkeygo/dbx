@@ -271,6 +271,9 @@ Update{{ .Struct }}{{ .FuncSuffix }}(
     result = &{{ .Struct }}{}
 {{- if not .ReturnBy }}
     err = prepared.QueryRowx(args...).StructScan(result)
+    if err == sql.ErrNoRows {
+        return nil, nil
+    }
     if err != nil {
         return nil, WrapErr(err)
     }
