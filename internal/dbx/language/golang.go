@@ -169,17 +169,23 @@ func (g *Golang) Format(in []byte) (out []byte, err error) {
 }
 
 func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
+	rendered_schema, err := g.dialect.RenderSchema(schema)
+	if err != nil {
+		return err
+	}
 
 	type headerParams struct {
 		Package string
 		Dialect string
 		Structs []GolangStruct
+		Schema  string
 	}
 
 	params := headerParams{
 		Package: g.options.Package,
 		Dialect: g.dialect.Name(),
 		Structs: g.structsFromTables(schema.Tables),
+		Schema:  rendered_schema,
 	}
 
 	return dbx.RenderTemplate(g.header_tmpl, w, "", params)
