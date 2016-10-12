@@ -175,11 +175,12 @@ func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
 	}
 
 	type headerParams struct {
-		Package       string
-		Dialect       string
-		Structs       []GolangStruct
-		Schema        string
-		ListTablesSQL string
+		Package        string
+		Dialect        string
+		Structs        []GolangStruct
+		Schema         string
+		ListTablesSQL  string
+		StructsReverse []GolangStruct
 	}
 
 	params := headerParams{
@@ -188,6 +189,10 @@ func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
 		Structs:       g.structsFromTables(schema.Tables),
 		Schema:        rendered_schema,
 		ListTablesSQL: g.dialect.ListTablesSQL(),
+	}
+
+	for i := len(params.Structs) - 1; i >= 0; i-- {
+		params.StructsReverse = append(params.StructsReverse, params.Structs[i])
 	}
 
 	return dbx.RenderTemplate(g.header_tmpl, w, "", params)

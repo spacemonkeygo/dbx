@@ -95,8 +95,9 @@ func (db *DB) ListTables() (tables []string, err error) {
     return tables, WrapErr(err)
 }
 
+
 func (db *DB) DeleteAll() (total int64, err error) {
-{{- range .Structs }}
+{{- range .StructsReverse }}
     if n, err := db.Delete{{ pluralize .Name }}(); err == nil {
         total += n
     } else {
@@ -132,7 +133,7 @@ func (tx *Tx) Rollback() (err error) {
 }
 
 func (tx *Tx) DeleteAll() (total int64, err error) {
-{{- range .Structs }}
+{{- range .StructsReverse }}
     if n, err := tx.Delete{{ pluralize .Name }}(); err == nil {
         total += n
     } else {
