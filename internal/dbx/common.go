@@ -36,6 +36,7 @@ type Language interface {
 type Dialect interface {
 	Name() string
 	ColumnName(column *Column) string
+	ListTablesSQL() string
 	RenderSchema(schema *Schema) (string, error)
 	RenderSelect(params *SelectParams) (string, error)
 	RenderCount(params *SelectParams) (string, error)

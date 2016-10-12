@@ -90,6 +90,22 @@ func (db *DB) logStmt(stmt string, args... interface{}) {
 	}
 }
 
+func (db *DB) ListTables() (tables []string, err error) {
+    err = db.Select(&tables, `{{ .ListTablesSQL }}`)
+    return tables, WrapErr(err)
+}
+
+func (db *DB) DeleteAll() (total int64, err error) {
+{{- range .Structs }}
+    if n, err := db.Delete{{ pluralize .Name }}(); err == nil {
+        total += n
+    } else {
+        return total, WrapErr(err)
+    }
+{{- end }}
+    return total, nil
+}
+
 type Tx struct {
 	*sqlx.Tx
 	db *DB
@@ -113,6 +129,17 @@ func (tx *Tx) Commit() (err error) {
 
 func (tx *Tx) Rollback() (err error) {
 	return WrapErr(tx.Tx.Rollback())
+}
+
+func (tx *Tx) DeleteAll() (total int64, err error) {
+{{- range .Structs }}
+    if n, err := tx.Delete{{ pluralize .Name }}(); err == nil {
+        total += n
+    } else {
+        return total, WrapErr(err)
+    }
+{{- end }}
+    return total, nil
 }
 
 func (tx *Tx) prepare(stmt string) (prepared *sqlx.Stmt, replace func(), err error) {

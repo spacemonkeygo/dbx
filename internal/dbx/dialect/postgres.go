@@ -164,6 +164,10 @@ func (s *Postgres) ColumnName(column *dbx.Column) string {
 	return PostgresColumnName(column)
 }
 
+func (s *Postgres) ListTablesSQL() string {
+	return `SELECT tablename FROM pg_tables WHERE schemaname = 'public';`
+}
+
 func (s *Postgres) RenderSchema(schema *dbx.Schema) (
 	string, error) {
 

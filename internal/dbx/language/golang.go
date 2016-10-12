@@ -175,17 +175,19 @@ func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
 	}
 
 	type headerParams struct {
-		Package string
-		Dialect string
-		Structs []GolangStruct
-		Schema  string
+		Package       string
+		Dialect       string
+		Structs       []GolangStruct
+		Schema        string
+		ListTablesSQL string
 	}
 
 	params := headerParams{
-		Package: g.options.Package,
-		Dialect: g.dialect.Name(),
-		Structs: g.structsFromTables(schema.Tables),
-		Schema:  rendered_schema,
+		Package:       g.options.Package,
+		Dialect:       g.dialect.Name(),
+		Structs:       g.structsFromTables(schema.Tables),
+		Schema:        rendered_schema,
+		ListTablesSQL: g.dialect.ListTablesSQL(),
 	}
 
 	return dbx.RenderTemplate(g.header_tmpl, w, "", params)

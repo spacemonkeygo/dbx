@@ -76,6 +76,9 @@ func (r *codeRenderer) renderTable(table *Table) {
 	})
 	r.renderQuery(&Query{
 		Table: table,
+	})
+	r.renderQuery(&Query{
+		Table: table,
 		Start: table.PrimaryKey,
 	})
 }
@@ -112,12 +115,9 @@ func selectsFromQuery(query *Query) (out []*SelectParams) {
 
 func deletesFromQuery(query *Query) (out []*DeleteParams) {
 	params := &DeleteParams{
-		Table: query.Table,
-	}
-
-	many := !query.Table.ColumnSetUnique(query.Start)
-	if !many {
-		params.Conditions = equalsConditionsForColumns(query.Start)
+		Table:      query.Table,
+		Many:       !query.Table.ColumnSetUnique(query.Start),
+		Conditions: equalsConditionsForColumns(query.Start),
 	}
 
 	if len(query.Joins) > 0 {

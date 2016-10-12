@@ -178,7 +178,7 @@ func (obj *Tx) {{ template "delete-all-func" . }}
 
 {{- define "delete-all-func" -}}
 Delete{{ pluralize .Struct }}{{ .FuncSuffix }}(
-{{ template "params" .Args }}) (count int, err error) {
+{{ template "params" .Args }}) (count int64, err error) {
 
 {{ template "func-header" . }}
 	res, err := prepared.Exec({{template "args" .Args }})
