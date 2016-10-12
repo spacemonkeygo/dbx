@@ -85,7 +85,7 @@ func golangFuncsTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "golang.funcs.tmpl", size: 7864, mode: os.FileMode(420), modTime: time.Unix(1476288932, 0)}
+	info := bindataFileInfo{name: "golang.funcs.tmpl", size: 7864, mode: os.FileMode(420), modTime: time.Unix(946710000, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -105,7 +105,7 @@ func golangHeaderTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "golang.header.tmpl", size: 5177, mode: os.FileMode(420), modTime: time.Unix(1476288961, 0)}
+	info := bindataFileInfo{name: "golang.header.tmpl", size: 5177, mode: os.FileMode(420), modTime: time.Unix(946710000, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -125,7 +125,7 @@ func postgresTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "postgres.tmpl", size: 2820, mode: os.FileMode(420), modTime: time.Unix(1476286914, 0)}
+	info := bindataFileInfo{name: "postgres.tmpl", size: 2820, mode: os.FileMode(420), modTime: time.Unix(946710000, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
