@@ -43,17 +43,17 @@ func SQLite3ColumnType(column *dbx.Column) string {
 	case "int":
 		return "integer"
 	case "serial":
-		return "serial"
+		return "integer"
 	case "int64":
-		return "bigint"
+		return "integer"
 	case "serial64":
-		return "bigserial"
+		return "integer"
 	case "blob":
-		return "bytea"
+		return "blob"
 	case "timestamp":
-		return "timestamp with time zone"
+		return "timestamp"
 	case "bool":
-		return "boolean"
+		return "integer"
 	}
 	panic("unhandled column type " + "%s")
 }

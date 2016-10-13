@@ -339,7 +339,7 @@ Update{{ .Struct }}{{ .FuncSuffix }}(
     }
     return result, nil
 {{- else }}
-    res, err := prepared.Exec(args...)
+    _, err = prepared.Exec(args...)
     if err != nil {
         return nil, WrapErr(err)
     }
