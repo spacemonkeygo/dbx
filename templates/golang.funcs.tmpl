@@ -37,9 +37,13 @@ func (obj *DB) {{ template "select-func" . }}
 func (obj *Tx) {{ template "select-func" . }}
 {{ end }}
 
-{{- define "select-func" -}}
+{{- define "select-func-sig" -}}
 Get{{ .Struct }}{{ .FuncSuffix }}(
 {{ template "params" .Args }}) (result *{{ .Struct }}, err error) {
+{{ end }}
+
+{{- define "select-func" -}}
+{{- template "select-func-sig" . -}}
 
 {{ template "func-header" . }}
 	result = &{{ .Struct }}{}
@@ -62,9 +66,13 @@ func (obj *DB) {{ template "select-all-func" . }}
 func (obj *Tx) {{ template "select-all-func" . }}
 {{ end }}
 
-{{- define "select-all-func" -}}
+{{- define "select-all-func-sig" -}}
 Get{{ pluralize .Struct }}{{ .FuncSuffix }}(
 {{ template "params" .Args }}) (result []*{{ .Struct }}, err error) {
+{{ end }}
+
+{{- define "select-all-func" -}}
+{{- template "select-all-func-sig" . -}}
 
 {{ template "func-header" . }}
 	err = prepared.Select(&result, {{template "args" .Args }})
@@ -83,10 +91,14 @@ func (obj *DB) {{ template "select-paged-func" . }}
 func (obj *Tx) {{ template "select-paged-func" . }}
 {{ end }}
 
-{{- define "select-paged-func" -}}
+{{- define "select-paged-func-sig" -}}
 PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}(
 {{ if .Args }}{{- template "params" .Args }}, {{ end -}}
     ctoken string, limit int) (result []*{{ .Struct }}, ctokenout string, err error) {
+{{ end }}
+
+{{- define "select-paged-func" -}}
+{{- template "select-paged-func-sig" . -}}
 
 {{ template "func-header" . }}
 
@@ -119,9 +131,13 @@ func (obj *DB) {{ template "has-func" . }}
 func (obj *Tx) {{ template "has-func" . }}
 {{ end }}
 
-{{- define "count-func" -}}
+{{- define "count-func-sig" -}}
 Count{{ .Struct }}{{ .FuncSuffix }}(
 {{ template "params" .Args }}) (result int, err error) {
+{{ end }}
+
+{{- define "count-func" -}}
+{{- template "count-func-sig" -}}
 
 {{ template "func-header" . }}
 	err = prepared.QueryRowx({{template "args" .Args }}).Scan(&result)
@@ -132,10 +148,13 @@ Count{{ .Struct }}{{ .FuncSuffix }}(
 }
 {{- end -}}
 
-{{- define "has-func" -}}
+{{- define "has-func-sig" -}}
 Has{{ .Struct }}{{ .FuncSuffix }}(
 {{ template "params" .Args }}) (result bool, err error) {
+{{ end }}
 
+{{- define "has-func" -}}
+{{- template "has-func-sig" -}}
 	count, err :=  obj.Count{{ .Struct }}{{ .FuncSuffix }}({{template "args" .Args }})
 	if err != nil {
 		return false, err
@@ -151,9 +170,13 @@ func (obj *DB) {{ template "delete-func" . }}
 func (obj *Tx) {{ template "delete-func" . }}
 {{ end }}
 
-{{- define "delete-func" -}}
+{{- define "delete-func-sig" -}}
 Delete{{ .Struct }}{{ .FuncSuffix }}(
-{{ template "params" .Args }}) (deleted bool, err error) {
+{{ template "params" .Args }}) (deleted bool, err error)
+{{- end }}
+
+{{- define "delete-func" -}}
+{{ template "delete-func-sig" . }} {
 
 {{ template "func-header" . }}
 	res, err := prepared.Exec({{template "args" .Args }})

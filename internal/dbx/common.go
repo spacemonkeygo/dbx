@@ -24,12 +24,12 @@ var Error = errors.NewClass("dbx")
 
 type Language interface {
 	Name() string
-	RenderHeader(w io.Writer, schema *Schema) error
-	RenderSelect(w io.Writer, sql string, params *SelectParams) error
-	RenderCount(w io.Writer, sql string, params *SelectParams) error
-	RenderDelete(w io.Writer, sql string, params *DeleteParams) error
-	RenderInsert(w io.Writer, sql string, params *InsertParams) error
-	RenderUpdate(w io.Writer, sql string, params *UpdateParams) error
+	Render(w io.Writer, schema *Schema) error
+	AddSelect(w io.Writer, sql string, params *SelectParams)
+	AddCount(w io.Writer, sql string, params *SelectParams)
+	AddDelete(w io.Writer, sql string, params *DeleteParams)
+	AddInsert(w io.Writer, sql string, params *InsertParams)
+	AddUpdate(w io.Writer, sql string, params *UpdateParams)
 	Format([]byte) ([]byte, error)
 }
 
