@@ -198,6 +198,10 @@ Delete{{ pluralize .Struct }}{{ .FuncSuffix }}(
 func (obj *DB) {{ template "insert-func" . }}
 
 func (obj *Tx) {{ template "insert-func" . }}
+
+func (obj *DB) {{ template "raw-insert-func" . }}
+
+func (obj *Tx) {{ template "raw-insert-func" . }}
 {{ end }}
 
 {{- define "insert-func" -}}
@@ -232,6 +236,10 @@ Create{{ .Struct }}(
 func (obj *DB) {{ template "insert-no-return-func" . }}
 
 func (obj *Tx) {{ template "insert-no-return-func" . }}
+
+func (obj *DB) {{ template "raw-insert-no-return-func" . }}
+
+func (obj *Tx) {{ template "raw-insert-no-return-func" . }}
 {{ end }}
 
 {{- define "insert-no-return-func" -}}
@@ -245,6 +253,46 @@ Create{{ .Struct }}(
 	return WrapErr(err)
 }
 {{- end -}}
+
+{{- define "raw-insert-func" -}}
+RawCreate{{ .Struct }}(
+{{ template "params" .Inserts }}) (result *{{ .Struct }}, err error) {
+
+{{- template "func-header" . }}
+
+	result = &{{ .Struct }}{}
+{{- if not .ReturnBy }}
+	err = prepared.QueryRowx({{template "args" .Inserts}}).StructScan(result)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return result, nil
+{{- else }}
+	res, err := prepared.Exec({{template "args" .Inserts}})
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	pk, err := res.LastInsertId()
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return obj.Get{{ .Struct }}By{{ .ReturnBy }}(pk)
+{{- end -}}
+}
+{{- end -}}
+
+
+{{- define "raw-insert-no-return-func" -}}
+RawCreate{{ .Struct }}(
+{{ template "params" .Inserts }}) (err error) {
+
+{{- template "func-header" . }}
+
+	_, err = prepared.Exec({{template "args" .Inserts}})
+	return WrapErr(err)
+}
+{{- end -}}
+
 
 {{- define "insert-auto-init" -}}
 {{- if .NeedsNow }}
