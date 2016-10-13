@@ -255,7 +255,7 @@ Create{{ .Struct }}(
 {{- end -}}
 
 {{- define "raw-insert-func" -}}
-RawCreate{{ .Struct }}(
+CreateRaw{{ .Struct }}(
 {{ template "params" .Inserts }}) (result *{{ .Struct }}, err error) {
 
 {{- template "func-header" . }}
@@ -283,7 +283,7 @@ RawCreate{{ .Struct }}(
 
 
 {{- define "raw-insert-no-return-func" -}}
-RawCreate{{ .Struct }}(
+CreateRaw{{ .Struct }}(
 {{ template "params" .Inserts }}) (err error) {
 
 {{- template "func-header" . }}
