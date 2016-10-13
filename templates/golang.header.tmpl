@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+
+	_ "{{ .Driver }}"
 )
 
 var WrapErr = func(err error) error {return err}

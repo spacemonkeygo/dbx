@@ -174,7 +174,18 @@ func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
 		return err
 	}
 
+	var driver string
+	switch g.dialect.Name() {
+	case "postgres":
+		driver = "github.com/lib/pq"
+	case "sqlite3":
+		driver = "github.com/mattn/go-sqlite3"
+	default:
+		return Error.New("unsupported dialect %q", g.dialect.Name())
+	}
+
 	type headerParams struct {
+		Driver         string
 		Package        string
 		Dialect        string
 		Structs        []GolangStruct
@@ -184,6 +195,7 @@ func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
 	}
 
 	params := headerParams{
+		Driver:        driver,
 		Package:       g.options.Package,
 		Dialect:       g.dialect.Name(),
 		Structs:       g.structsFromTables(schema.Tables),

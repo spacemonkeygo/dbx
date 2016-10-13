@@ -254,11 +254,20 @@ Create{{ .Struct }}(
 }
 {{- end -}}
 
+{{- define "insert-auto-init" -}}
+{{- if .NeedsNow }}
+	now := Now()
+{{- end -}}
+{{- range .Autos }}
+	{{ .Name }} := {{ .Init }}
+{{- end -}}
+{{- end -}}
+
 {{- define "raw-insert-func" -}}
 CreateRaw{{ .Struct }}(
 {{ template "params" .Inserts }}) (result *{{ .Struct }}, err error) {
 
-{{- template "func-header" . }}
+{{- template "raw-func-header" . }}
 
 	result = &{{ .Struct }}{}
 {{- if not .ReturnBy }}
@@ -286,22 +295,25 @@ CreateRaw{{ .Struct }}(
 CreateRaw{{ .Struct }}(
 {{ template "params" .Inserts }}) (err error) {
 
-{{- template "func-header" . }}
+{{- template "raw-func-header" . }}
 
 	_, err = prepared.Exec({{template "args" .Inserts}})
 	return WrapErr(err)
 }
 {{- end -}}
 
+{{- define "raw-func-header" }}
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ template "args" .Inserts }})
+{{ end -}}
 
-{{- define "insert-auto-init" -}}
-{{- if .NeedsNow }}
-	now := Now()
-{{- end -}}
-{{- range .Autos }}
-	{{ .Name }} := {{ .Init }}
-{{- end -}}
-{{- end -}}
+
 
 {{/* UPDATE STATEMENT */}}
 {{ define "update" }}
@@ -331,11 +343,7 @@ Update{{ .Struct }}{{ .FuncSuffix }}(
     if err != nil {
         return nil, WrapErr(err)
     }
-    pk, err := res.LastInsertId()
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-    return obj.Get{{ .Struct }}By{{ .ReturnBy }}(pk)
+    return obj.Get{{ .Struct }}{{ .FuncSuffix }}({{ template "args" .Args}})
 {{- end -}}
 }
 {{- end -}}

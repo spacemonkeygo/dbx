@@ -35,6 +35,8 @@ func main() {
 	in_arg := app.StringArg("IN", "", "path to the yaml description")
 	out_arg := app.StringArg("OUT", "", "output file (- for stdout)")
 
+	dialect_opt := app.StringOpt("d dialect", "postgres", "SQL dialect to use")
+
 	var err error
 	die := func(err error) {
 		if err != nil {
@@ -59,7 +61,7 @@ func main() {
 
 	app.Command("schema", "generate SQL schema", func(cmd *cli.Cmd) {
 		cmd.Action = func() {
-			dialect, err := dialect.NewPostgres(loader)
+			dialect, err := createDialect(*dialect_opt, loader)
 			die(err)
 			die(generateSQLSchema(*out_arg, schema, dialect))
 		}
@@ -71,7 +73,7 @@ func main() {
 		format_code := cmd.BoolOpt("f format", true,
 			"format the code")
 		cmd.Action = func() {
-			dialect, err := dialect.NewPostgres(loader)
+			dialect, err := createDialect(*dialect_opt, loader)
 			die(err)
 			lang, err := language.NewGolang(loader, dialect,
 				&language.GolangOptions{
@@ -84,6 +86,17 @@ func main() {
 	})
 
 	app.Run(os.Args)
+}
+
+func createDialect(which string, loader dbx.Loader) (dbx.Dialect, error) {
+	switch which {
+	case "postgres":
+		return dialect.NewPostgres(loader)
+	case "sqlite3":
+		return dialect.NewSQLite3(loader)
+	default:
+		return nil, fmt.Errorf("unknown dialect %q", which)
+	}
 }
 
 func generateSQLSchema(out string, schema *dbx.Schema, dialect dbx.Dialect) (

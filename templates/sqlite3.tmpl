@@ -1,0 +1,107 @@
+{{/* SQLITE3 STATEMENT TEMPLATES  */}}
+
+{{- define "schema" -}}
+{{- range .Tables }}
+CREATE TABLE {{ .Name }} (
+{{- range $i, $col := .Columns }}
+{{if $i}},{{end}}	{{ with $col -}}
+	{{ .Name }} {{ .Type -}}
+	{{- if .NotNull }} NOT NULL {{- end -}}
+	{{- if .Reference }} REFERENCES {{ .Reference.Table }}({{ .Reference.Column }}) ON DELETE {{ .Reference.OnDelete }}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{ if .PrimaryKey }}
+,	PRIMARY KEY ({{- range $i, $col := .PrimaryKey }}{{if $i}}, {{end}}{{ $col }}{{ end }})
+{{- end -}}
+{{ range .Unique }}
+,	UNIQUE ({{- range $i, $col := . }}{{if $i}}, {{end}}{{ $col }}{{ end }})
+{{- end}}
+);
+{{ end }}
+{{ end }}
+
+{{- define "dotname" -}}
+{{ .Table }}.{{ .Column }}
+{{- end -}}
+
+{{- define "leftjoin" -}}
+LEFT JOIN {{ .Right.Table }} ON {{ template "dotname" .Left }} = {{ template "dotname" .Right }}
+{{- end -}}
+
+{{- define "condition" -}}
+{{- if .ColumnCmp -}}
+	{{ template "dotname" .ColumnCmp.Left }} {{ .ColumnCmp.Operator }} ?
+{{- end -}}
+{{- if .ColumnCmpColumn -}}
+	{{ template "dotname" .ColumnCmpColumn.Left }} {{ .ColumnCmpColumn.Operator }} {{ template "dotname" .ColumnCmpColumn.Right }}
+{{- end -}}
+{{- if .ColumnIn -}}
+	{{ template "dotname" .ColumnIn.Left }} IN ({{ template "select" .ColumnIn.In }})
+{{- end -}}
+{{- end -}}
+
+{{- define "where" -}}
+{{- range $i, $cond := . -}}
+	{{ if not $i }}WHERE {{ else }} AND {{ end }}{{ template "condition" $cond -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "select-what" -}}
+{{ $table := .Table }}
+{{- if len .What -}}
+	{{ range $i, $what := .What }}{{ if $i }}, {{ end }}{{ $table }}.{{ $what }}{{ end }}
+{{- else -}}
+	{{ $table }}.*
+{{- end -}}
+{{- end -}}
+
+{{- define "select" -}}
+SELECT {{ template "select-what" .}} FROM {{ .Table }}
+	{{- range .LeftJoins }}
+		{{ template "leftjoin" . }}
+	{{- end -}}
+	{{- if .Conditions }}
+		{{ template "where" .Conditions }}
+	{{- end -}}
+	{{- if .OrderBy }}
+		ORDER BY {{ template "dotname" .OrderBy.Column }} ASC
+	{{- end -}}
+	{{- if .Limit }}
+		LIMIT ?
+	{{- end -}}
+{{- end -}}
+
+{{- define "count" -}}
+SELECT count(*) FROM {{ .Table }}
+	{{- range .LeftJoins }}
+		{{ template "leftjoin" . }}
+	{{- end -}}
+	{{- if .Conditions }}
+		{{ template "where" .Conditions }}
+	{{- end -}}
+{{- end -}}
+
+{{- define "select-base" -}}
+{{- end -}}
+
+{{- define "delete" -}}
+DELETE FROM {{ .Table }}
+	{{- if .Conditions }}
+		{{template "where" .Conditions }}
+	{{- end -}}
+{{- end -}}
+
+{{- define "insert" -}}
+INSERT INTO {{ .Table }}
+	{{- if .Columns -}}
+		({{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}{{ $col }}{{ end }}) VALUES(
+		{{- range $i, $col := .Columns }}{{ if $i }}, {{ end }}?{{ end }})
+	{{- end }}
+{{- end -}}
+
+{{- define "update" -}}
+UPDATE {{ .Table }} SET |||QS|||
+	{{- if .Conditions }}
+		{{template "where" .Conditions }}
+	{{- end }}
+{{- end -}}
