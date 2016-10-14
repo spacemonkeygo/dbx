@@ -42,11 +42,14 @@ type {{ $struct }}Update interface {
 }
 {{ range .UpdatableFields }}
 {{ $upstruct := printf "%s%s" (cameldown $struct) .Name }}
-type {{ $upstruct }} {{ .Type }}
-func {{ $struct }}{{ .Name }}(v {{ .Type }}) {{ $struct }}Update { return {{ $upstruct }}(v) }
-func (u {{ $upstruct }}) columnName() string { return "{{ .Column }}" }
-func (u {{ $upstruct }}) value() interface{} { return {{ .Type }}(u) }
-func (u {{ $upstruct }}) private{{ $struct }}() {}
+type {{ $upstruct }} struct {
+    v {{ .Type }}
+}
+
+func {{ $struct }}{{ .Name }}(v {{ .Type }}) {{ $struct }}Update { return &{{ $upstruct }}{v: v} }
+func (u *{{ $upstruct }}) columnName() string { return "{{ .Column }}" }
+func (u *{{ $upstruct }}) value() interface{} { return u.v }
+func (u *{{ $upstruct }}) private{{ $struct }}() {}
 {{- end -}}
 {{- end -}}
 {{- end }}
