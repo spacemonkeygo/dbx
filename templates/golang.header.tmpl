@@ -57,7 +57,7 @@ func (u *{{ $upstruct }}) private{{ $struct }}() {}
 type DB struct {
 	*sqlx.DB
     lru *lru
-    impl implMethods
+    dbMethods
 }
 
 func Open(driver, source string, lru_size int) (*DB, error) {
@@ -68,7 +68,7 @@ func Open(driver, source string, lru_size int) (*DB, error) {
 	
     lru := newLRU(db, lru_size)
 
-    var impl implMethods
+    var impl dbMethods
     switch driver {
 {{- range .Dialects }}
     case {{ .Name | printf "%q" }}:
@@ -81,23 +81,18 @@ func Open(driver, source string, lru_size int) (*DB, error) {
 	return &DB{
 		DB: db,
 		lru: lru,
-        impl: impl,
+        dbMethods: impl,
 	}, nil
 }
 
 func (obj *DB) Close() (err error) {
-    obj.impl = nil
 	obj.lru.Purge()
 	return WrapErr(obj.DB.Close())
 }
 
-func (obj *DB) Schema() string {
-	return obj.impl.schema()
-}
-
 func (obj *DB) DeleteAll() (total int64, err error) {
 {{- range .StructsReverse }}
-    if n, err := obj.impl.Delete{{ pluralize .Name }}(); err == nil {
+    if n, err := obj.Delete{{ pluralize .Name }}(); err == nil {
         total += n
     } else {
         return total, WrapErr(err)
@@ -112,27 +107,25 @@ func (obj *DB) Open() (*Tx, error) {
 		return nil, WrapErr(err)
 	}
 
-    return &Tx{Tx: tx, impl: obj.impl.begin(tx)}, nil
+    return &Tx{Tx: tx, methods: obj.begin(tx)}, nil
 }
 
 type Tx struct {
 	*sqlx.Tx
-    impl methods
+    methods
 }
 
 func (tx *Tx) Commit() (err error) {
-    tx.impl = nil
 	return WrapErr(tx.Tx.Commit())
 }
 
 func (tx *Tx) Rollback() (err error) {
-    tx.impl = nil
 	return WrapErr(tx.Tx.Rollback())
 }
 
 func (tx *Tx) DeleteAll() (total int64, err error) {
 {{- range .StructsReverse }}
-    if n, err := tx.impl.Delete{{ pluralize .Name }}(); err == nil {
+    if n, err := tx.Delete{{ pluralize .Name }}(); err == nil {
         total += n
     } else {
         return total, WrapErr(err)
@@ -150,7 +143,7 @@ type {{ $dbtype }} struct {
 	lru *lru
 }
 
-func (obj *{{ $dbtype }}) schema() string {
+func (obj *{{ $dbtype }}) Schema() string {
 return `
 {{- .SchemaSQL -}}
 `

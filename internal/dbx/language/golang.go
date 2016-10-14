@@ -643,10 +643,5 @@ func (g *Golang) renderBase(tmpl *template.Template, w io.Writer,
 		return err
 	}
 	g.funcs = append(g.funcs, buf.String())
-
-	err = dbx.RenderTemplate(g.tmpl, w, name+"-wrap", base)
-	if err != nil {
-		return err
-	}
 	return nil
 }

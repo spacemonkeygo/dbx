@@ -6,8 +6,8 @@ type methods interface {
 {{ end }}   
 }
 
-type implMethods interface {
+type dbMethods interface {
+    Schema() string
 	begin(tx *sqlx.Tx) methods
-	schema() string
 	methods
 }

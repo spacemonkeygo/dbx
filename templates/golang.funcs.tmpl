@@ -31,16 +31,6 @@
 {{ end -}}
 
 {{/* SELECT STATEMENT */}}
-{{ define "select-wrap" }}
-func (obj *DB) {{ template "select-func-sig" . }} {
-    return obj.impl.{{ template "select-func-name" . }}({{ template "args" .Args }})
-}
-
-func (obj *Tx) {{ template "select-func-sig" . }} {
-    return obj.impl.{{ template "select-func-name" . }}({{ template "args" .Args }})
-}
-{{ end }}
-
 {{ define "select" }}
 func (obj *{{ .Dialect }}DB) {{ template "select-func" . }}
 
@@ -74,17 +64,6 @@ Get{{ .Struct }}{{ .FuncSuffix }}
 {{- end -}}
 
 {{/* SELECT ALL STATEMENT */}}
-
-{{ define "select-all-wrap" }}
-func (obj *DB) {{ template "select-all-func-sig" . }} {
-    return obj.impl.{{ template "select-all-func-name" . }}({{ template "args" .Args }})
-}
-
-func (obj *Tx) {{ template "select-all-func-sig" . }} {
-    return obj.impl.{{ template "select-all-func-name" . }}({{ template "args" .Args }})
-}
-{{ end }}
-
 {{ define "select-all" }}
 func (obj *{{ .Dialect }}DB) {{ template "select-all-func" . }}
 
@@ -114,17 +93,6 @@ Get{{ pluralize .Struct }}{{ .FuncSuffix }}
 {{- end -}}
 
 {{/* SELECT PAGED STATEMENT */}}
-
-{{ define "select-paged-wrap" }}
-func (obj *DB) {{ template "select-paged-func-sig" . }} {
-    return obj.impl.{{ template "select-paged-func-name" . }}({{ if .Args }}{{ template "args" .Args }}, {{end}} ctoken, limit)
-}
-
-func (obj *Tx) {{ template "select-paged-func-sig" . }} {
-    return obj.impl.{{ template "select-paged-func-name" . }}({{ if .Args }}{{ template "args" .Args }}, {{end}} ctoken, limit)
-}
-{{ end }}
-
 {{ define "select-paged" }}
 func (obj *{{ .Dialect }}DB) {{ template "select-paged-func" . }}
 
@@ -166,17 +134,6 @@ PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}
 {{- end -}}
 
 {{/* COUNT STATEMENT */}}
-
-{{ define "count-wrap" }}
-func (obj *DB) {{ template "count-func-sig" . }} {
-    return obj.impl.{{ template "count-func-name" . }}({{ template "args" .Args }})
-}
-
-func (obj *Tx) {{ template "count-func-sig" . }} {
-    return obj.impl.{{ template "count-func-name" . }}({{ template "args" .Args }})
-}
-{{ end }}
-
 {{ define "count" }}
 func (obj *{{ .Dialect }}DB) {{ template "count-func" . }}
 
@@ -205,16 +162,6 @@ Count{{ .Struct }}{{ .FuncSuffix }}
 }
 {{- end -}}
 
-{{ define "has-wrap" }}
-func (obj *DB) {{ template "has-func-sig" . }} {
-    return obj.impl.{{ template "has-func-name" . }}({{ template "args" .Args }})
-}
-
-func (obj *Tx) {{ template "has-func-sig" . }} {
-    return obj.impl.{{ template "has-func-name" . }}({{ template "args" .Args }})
-}
-{{ end }}
-
 {{ define "has" }}
 func (obj *{{ .Dialect }}DB) {{ template "has-func" . }}
 
@@ -242,16 +189,6 @@ Has{{ .Struct }}{{ .FuncSuffix }}
 {{- end -}}
 
 {{/* DELETE STATEMENT */}}
-{{ define "delete-wrap" }}
-func (obj *DB) {{ template "delete-func-sig" . }} {
-    return obj.impl.{{ template "delete-func-name" . }}({{ template "args" .Args }})
-}
-
-func (obj *Tx) {{ template "delete-func-sig" . }} {
-    return obj.impl.{{ template "delete-func-name" . }}({{ template "args" .Args }})
-}
-{{ end }}
-
 {{ define "delete" }}
 func (obj *{{ .Dialect }}DB) {{ template "delete-func" . }}
 
@@ -285,17 +222,6 @@ Delete{{ .Struct }}{{ .FuncSuffix }}
 {{- end -}}
 
 {{/* SELECT ALL STATEMENT */}}
-
-{{ define "delete-all-wrap" }}
-func (obj *DB) {{ template "delete-all-func-sig" . }} {
-    return obj.impl.{{ template "delete-all-func-name" . }}({{ template "args" .Args }})
-}
-
-func (obj *Tx) {{ template "delete-all-func-sig" . }} {
-    return obj.impl.{{ template "delete-all-func-name" . }}({{ template "args" .Args }})
-}
-{{ end }}
-
 {{ define "delete-all" }}
 func (obj *{{ .Dialect }}DB) {{ template "delete-all-func" . }}
 
@@ -329,16 +255,6 @@ Delete{{ pluralize .Struct }}{{ .FuncSuffix }}
 {{- end -}}
 
 {{/* INSERT STATEMENT */}}
-{{ define "insert-wrap" }}
-func (obj *DB) {{ template "insert-func-sig" . }} {
-    return obj.impl.{{ template "insert-func-name" . }}({{ template "args" .Args }})
-}
-
-func (obj *Tx) {{ template "insert-func-sig" . }} {
-    return obj.impl.{{ template "insert-func-name" . }}({{ template "args" .Args }})
-}
-{{ end }}
-
 {{ define "insert" }}
 func (obj *{{ .Dialect }}DB) {{ template "insert-func" . }}
 
@@ -395,18 +311,6 @@ Create{{ .Struct }}
 	{{ .Name }} := {{ .Init }}
 {{- end -}}
 {{- end -}}
-
-
-{{ define "raw-insert-wrap" }}
-func (obj *DB) {{ template "raw-insert-func-sig" . }} {
-    return obj.impl.{{ template "raw-insert-func-name" . }}({{ template "args" .Inserts }})
-}
-
-func (obj *Tx) {{ template "raw-insert-func-sig" . }} {
-    return obj.impl.{{ template "raw-insert-func-name" . }}({{ template "args" .Inserts }})
-}
-{{ end }}
-
 
 {{ define "raw-insert" }}
 func (obj *{{ .Dialect }}DB) {{ template "raw-insert-func" . }}
@@ -470,16 +374,6 @@ CreateRaw{{ .Struct }}
 
 
 {{/* UPDATE STATEMENT */}}
-{{ define "update-wrap" }}
-func (obj *DB) {{ template "update-func-sig" . }} {
-    return obj.impl.{{ template "update-func-name" . }}({{ template "args" .Args }}, updates...)
-}
-
-func (obj *Tx) {{ template "update-func-sig" . }} {
-    return obj.impl.{{ template "update-func-name" . }}({{ template "args" .Args }}, updates...)
-}
-{{ end }}
-
 {{ define "update" }}
 func (obj *{{ .Dialect }}DB) {{ template "update-func" . }}
 
