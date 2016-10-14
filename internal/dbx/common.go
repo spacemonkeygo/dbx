@@ -24,19 +24,18 @@ var Error = errors.NewClass("dbx")
 
 type Language interface {
 	Name() string
-	Render(w io.Writer, schema *Schema) error
-	AddSelect(w io.Writer, sql string, params *SelectParams)
-	AddCount(w io.Writer, sql string, params *SelectParams)
-	AddDelete(w io.Writer, sql string, params *DeleteParams)
-	AddInsert(w io.Writer, sql string, params *InsertParams)
-	AddUpdate(w io.Writer, sql string, params *UpdateParams)
+	RenderHeader(w io.Writer, dialects []Dialect, schema *Schema) error
+	RenderSelect(w io.Writer, dialects []Dialect, params *SelectParams) error
+	RenderCount(w io.Writer, dialects []Dialect, params *SelectParams) error
+	RenderDelete(w io.Writer, dialects []Dialect, params *DeleteParams) error
+	RenderInsert(w io.Writer, dialects []Dialect, params *InsertParams) error
+	RenderUpdate(w io.Writer, dialects []Dialect, params *UpdateParams) error
+	RenderFooter(w io.Writer) error
 	Format([]byte) ([]byte, error)
 }
 
 type Dialect interface {
 	Name() string
-	ColumnName(column *Column) string
-	ListTablesSQL() string
 	RenderSchema(schema *Schema) (string, error)
 	RenderSelect(params *SelectParams) (string, error)
 	RenderCount(params *SelectParams) (string, error)

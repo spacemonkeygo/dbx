@@ -15,6 +15,7 @@
 package language
 
 import (
+	"bytes"
 	"fmt"
 	"go/format"
 	"io"
@@ -132,15 +133,14 @@ type GolangOptions struct {
 }
 
 type Golang struct {
-	dialect     dbx.Dialect
 	options     *GolangOptions
 	header_tmpl *template.Template
+	footer_tmpl *template.Template
 	tmpl        *template.Template
+	funcs       []string
 }
 
-func NewGolang(loader dbx.Loader, dialect dbx.Dialect, options *GolangOptions) (
-	*Golang, error) {
-
+func NewGolang(loader dbx.Loader, options *GolangOptions) (*Golang, error) {
 	header_tmpl, err := loader.Load("golang.header.tmpl")
 	if err != nil {
 		return nil, err
@@ -151,10 +151,15 @@ func NewGolang(loader dbx.Loader, dialect dbx.Dialect, options *GolangOptions) (
 		return nil, err
 	}
 
+	footer_tmpl, err := loader.Load("golang.footer.tmpl")
+	if err != nil {
+		return nil, err
+	}
+
 	return &Golang{
 		tmpl:        funcs_tmpl,
-		dialect:     dialect,
 		header_tmpl: header_tmpl,
+		footer_tmpl: footer_tmpl,
 		options:     options,
 	}, nil
 }
@@ -168,46 +173,74 @@ func (g *Golang) Format(in []byte) (out []byte, err error) {
 	return out, Error.Wrap(err)
 }
 
-func (g *Golang) RenderHeader(w io.Writer, schema *dbx.Schema) (err error) {
-	rendered_schema, err := g.dialect.RenderSchema(schema)
-	if err != nil {
-		return err
-	}
+func (g *Golang) RenderHeader(w io.Writer, dialects []dbx.Dialect,
+	schema *dbx.Schema) (err error) {
 
-	var driver string
-	switch g.dialect.Name() {
-	case "postgres":
-		driver = "github.com/lib/pq"
-	case "sqlite3":
-		driver = "github.com/mattn/go-sqlite3"
-	default:
-		return Error.New("unsupported dialect %q", g.dialect.Name())
+	type headerDialect struct {
+		Name      string
+		Driver    string
+		SchemaSQL string
 	}
 
 	type headerParams struct {
-		Driver         string
 		Package        string
-		Dialect        string
+		Dialects       []headerDialect
 		Structs        []GolangStruct
-		Schema         string
-		ListTablesSQL  string
 		StructsReverse []GolangStruct
 	}
 
 	params := headerParams{
-		Driver:        driver,
-		Package:       g.options.Package,
-		Dialect:       g.dialect.Name(),
-		Structs:       g.structsFromTables(schema.Tables),
-		Schema:        rendered_schema,
-		ListTablesSQL: g.dialect.ListTablesSQL(),
+		Package: g.options.Package,
+		Structs: g.structsFromTables(schema.Tables),
 	}
 
 	for i := len(params.Structs) - 1; i >= 0; i-- {
 		params.StructsReverse = append(params.StructsReverse, params.Structs[i])
 	}
 
+	for _, dialect := range dialects {
+		schema_sql, err := dialect.RenderSchema(schema)
+		if err != nil {
+			return err
+		}
+
+		var driver string
+		switch dialect.Name() {
+		case "postgres":
+			driver = "github.com/lib/pq"
+		case "sqlite3":
+			driver = "github.com/mattn/go-sqlite3"
+		default:
+			return Error.New("unsupported dialect %q", dialect.Name())
+		}
+
+		params.Dialects = append(params.Dialects, headerDialect{
+			Name:      dialect.Name(),
+			Driver:    driver,
+			SchemaSQL: schema_sql,
+		})
+	}
+
 	return dbx.RenderTemplate(g.header_tmpl, w, "", params)
+}
+
+func (g *Golang) RenderFooter(w io.Writer) (err error) {
+	type footerParams struct {
+		Funcs []string
+	}
+
+	params := footerParams{
+		Funcs: g.funcs,
+	}
+
+	return dbx.RenderTemplate(g.footer_tmpl, w, "", params)
+}
+
+func GolangArgsFromColumns(columns []*dbx.Column) (out []GolangArg) {
+	for _, column := range columns {
+		out = append(out, GolangArgFromColumn(column))
+	}
+	return out
 }
 
 func GolangArgsFromConditions(conditions []*dbx.ConditionParams) (
@@ -268,6 +301,7 @@ type GolangAutoParam struct {
 	Name   string
 	Init   string
 	Column string
+	column *dbx.Column
 }
 
 type GolangArg struct {
@@ -276,11 +310,32 @@ type GolangArg struct {
 	from_column *dbx.Column
 }
 
-type GolangFunc struct {
+type GolangFuncBase struct {
 	Struct     string
-	SQL        string
 	FuncSuffix string
 	Args       []GolangArg
+}
+
+type GolangFunc struct {
+	GolangFuncBase
+	Dialect string
+	SQL     string
+}
+
+func MakeGolangFuncBase(table *dbx.Table, args []GolangArg) GolangFuncBase {
+	return GolangFuncBase{
+		Struct:     GolangStructName(table),
+		Args:       args,
+		FuncSuffix: GolangFuncSuffix(table, args),
+	}
+}
+
+func MakeGolangFunc(base GolangFuncBase, dialect, sql string) GolangFunc {
+	return GolangFunc{
+		GolangFuncBase: base,
+		Dialect:        dialect,
+		SQL:            sql,
+	}
 }
 
 type GolangSelect struct {
@@ -288,9 +343,19 @@ type GolangSelect struct {
 	PagedOn string
 }
 
+type GolangInsertBase struct {
+	GolangFuncBase
+	Inserts []GolangArg
+}
+
+type GolangReturnBy struct {
+	Pk     string
+	Getter *GolangFuncBase
+}
+
 type GolangInsert struct {
 	GolangFunc
-	ReturnBy *string
+	ReturnBy *GolangReturnBy
 	NeedsNow bool
 	Inserts  []GolangArg
 	Autos    []GolangAutoParam
@@ -298,12 +363,12 @@ type GolangInsert struct {
 
 type GolangUpdate struct {
 	GolangFunc
-	ReturnBy *string
-	NeedsNow bool
-	Autos    []GolangAutoParam
+	SupportsReturning bool
+	NeedsNow          bool
+	Autos             []GolangAutoParam
 }
 
-func (g *Golang) RenderSelect(w io.Writer, sql string,
+func (g *Golang) RenderSelect(w io.Writer, dialects []dbx.Dialect,
 	params *dbx.SelectParams) (err error) {
 
 	var tmpl string
@@ -316,53 +381,94 @@ func (g *Golang) RenderSelect(w io.Writer, sql string,
 		tmpl = "select-paged"
 	}
 
-	return dbx.RenderTemplate(g.tmpl, w, tmpl, GolangSelect{
-		GolangFunc: MakeGolangFunc(
-			params.Table, sql,
-			GolangArgsFromConditions(params.Conditions),
-		),
-		PagedOn: GolangFieldName(params.PagedOn),
-	})
-}
+	base := MakeGolangFuncBase(
+		params.Table,
+		GolangArgsFromConditions(params.Conditions),
+	)
 
-func MakeGolangFunc(table *dbx.Table, sql string, args []GolangArg) GolangFunc {
-	return GolangFunc{
-		Struct:     GolangStructName(table),
-		SQL:        sql,
-		Args:       args,
-		FuncSuffix: GolangFuncSuffix(table, args),
+	if err = g.renderBase(g.tmpl, w, tmpl, base); err != nil {
+		return err
 	}
+
+	data := GolangSelect{
+		PagedOn: GolangFieldName(params.PagedOn),
+	}
+
+	for _, dialect := range dialects {
+		sql, err := dialect.RenderSelect(params)
+		if err != nil {
+			return err
+		}
+		data.GolangFunc = MakeGolangFunc(base, dialect.Name(), sql)
+		if err = dbx.RenderTemplate(g.tmpl, w, tmpl, data); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (g *Golang) RenderCount(w io.Writer, sql string,
+func (g *Golang) RenderCount(w io.Writer, dialects []dbx.Dialect,
 	params *dbx.SelectParams) (err error) {
 
-	return dbx.RenderTemplate(g.tmpl, w, "count",
-		MakeGolangFunc(
-			params.Table,
-			sql,
-			GolangArgsFromConditions(params.Conditions),
-		))
+	base := MakeGolangFuncBase(
+		params.Table,
+		GolangArgsFromConditions(params.Conditions),
+	)
+	if err = g.renderBase(g.tmpl, w, "count", base); err != nil {
+		return err
+	}
+	if err = g.renderBase(g.tmpl, w, "has", base); err != nil {
+		return err
+	}
+
+	for _, dialect := range dialects {
+		sql, err := dialect.RenderCount(params)
+		if err != nil {
+			return err
+		}
+		data := MakeGolangFunc(base, dialect.Name(), sql)
+		if err = dbx.RenderTemplate(g.tmpl, w, "count", data); err != nil {
+			return err
+		}
+		if err = dbx.RenderTemplate(g.tmpl, w, "has", data); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (g *Golang) RenderDelete(w io.Writer, sql string,
-	params *dbx.DeleteParams) error {
+func (g *Golang) RenderDelete(w io.Writer, dialects []dbx.Dialect,
+	params *dbx.DeleteParams) (err error) {
 
 	tmpl := "delete"
 	if params.Many {
 		tmpl = "delete-all"
 	}
 
-	return dbx.RenderTemplate(g.tmpl, w, tmpl,
-		MakeGolangFunc(
-			params.Table,
-			sql,
-			GolangArgsFromConditions(params.Conditions),
-		))
+	base := MakeGolangFuncBase(
+		params.Table,
+		GolangArgsFromConditions(params.Conditions),
+	)
+
+	if err = g.renderBase(g.tmpl, w, tmpl, base); err != nil {
+		return err
+	}
+
+	for _, dialect := range dialects {
+		sql, err := dialect.RenderDelete(params)
+		if err != nil {
+			return err
+		}
+		data := MakeGolangFunc(base, dialect.Name(), sql)
+		if err = dbx.RenderTemplate(g.tmpl, w, tmpl, data); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (g *Golang) RenderInsert(w io.Writer, sql string,
-	params *dbx.InsertParams) error {
+func (g *Golang) RenderInsert(w io.Writer, dialects []dbx.Dialect,
+	params *dbx.InsertParams) (err error) {
 
 	var all []GolangArg
 	var args []GolangArg
@@ -379,7 +485,7 @@ func (g *Golang) RenderInsert(w io.Writer, sql string,
 				autos = append(autos, GolangAutoParam{
 					Name:   arg.Name,
 					Init:   init,
-					Column: g.dialect.ColumnName(column),
+					Column: column.SQLName(),
 				})
 			} else {
 				args = append(args, arg)
@@ -389,26 +495,58 @@ func (g *Golang) RenderInsert(w io.Writer, sql string,
 		}
 	}
 
-	insert := GolangInsert{
-		GolangFunc: MakeGolangFunc(params.Table, sql, args),
-		Inserts:    all,
-		Autos:      autos,
-		NeedsNow:   needs_now,
+	base := GolangInsertBase{
+		GolangFuncBase: MakeGolangFuncBase(params.Table, args),
+		Inserts:        all,
+	}
+	if err = g.renderBase(g.tmpl, w, "insert", base); err != nil {
+		return err
+	}
+	if err = g.renderBase(g.tmpl, w, "raw-insert", base); err != nil {
+		return err
 	}
 
-	if g.dialect.SupportsReturning() {
-		return dbx.RenderTemplate(g.tmpl, w, "insert", insert)
-	} else if pk := params.Table.BasicPrimaryKey(); pk != nil {
-		by := GolangFieldName(pk)
-		insert.ReturnBy = &by
-		return dbx.RenderTemplate(g.tmpl, w, "insert", insert)
-	} else {
-		return dbx.RenderTemplate(g.tmpl, w, "insert-no-return", insert)
+	data := GolangInsert{
+		Inserts:  all,
+		Autos:    autos,
+		NeedsNow: needs_now,
 	}
+
+	for _, dialect := range dialects {
+		if dialect.SupportsReturning() {
+			data.ReturnBy = nil
+		} else if pk := params.Table.BasicPrimaryKey(); pk != nil {
+			data.ReturnBy = &GolangReturnBy{
+				Pk: GolangFieldName(pk),
+			}
+		} else {
+			getter := MakeGolangFuncBase(
+				params.Table,
+				GolangArgsFromColumns(params.Table.PrimaryKey),
+			)
+			data.ReturnBy = &GolangReturnBy{
+				Getter: &getter,
+			}
+		}
+
+		sql, err := dialect.RenderInsert(params)
+		if err != nil {
+			return err
+		}
+		data.GolangFunc = MakeGolangFunc(base.GolangFuncBase,
+			dialect.Name(), sql)
+		if err = dbx.RenderTemplate(g.tmpl, w, "insert", data); err != nil {
+			return err
+		}
+		if err = dbx.RenderTemplate(g.tmpl, w, "raw-insert", data); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (g *Golang) RenderUpdate(w io.Writer, sql string,
-	params *dbx.UpdateParams) error {
+func (g *Golang) RenderUpdate(w io.Writer, dialects []dbx.Dialect,
+	params *dbx.UpdateParams) (err error) {
 
 	// For updates, the only thing we need to know is which fields to
 	// auto generate. The rest will be passed in via ColumnUpdate interfaces
@@ -427,30 +565,37 @@ func (g *Golang) RenderUpdate(w io.Writer, sql string,
 			autos = append(autos, GolangAutoParam{
 				Name:   arg.Name,
 				Init:   init,
-				Column: g.dialect.ColumnName(column),
+				Column: column.SQLName(),
 			})
 		}
 	}
 
-	update := GolangUpdate{
-		GolangFunc: MakeGolangFunc(
-			params.Table,
-			sql,
-			GolangArgsFromConditions(params.Conditions),
-		),
+	base := MakeGolangFuncBase(
+		params.Table,
+		GolangArgsFromConditions(params.Conditions),
+	)
+	if err = g.renderBase(g.tmpl, w, "update", base); err != nil {
+		return err
+	}
+
+	data := GolangUpdate{
 		Autos:    autos,
 		NeedsNow: needs_now,
 	}
 
-	if g.dialect.SupportsReturning() {
-		return dbx.RenderTemplate(g.tmpl, w, "update", update)
-	} else if pk := params.Table.BasicPrimaryKey(); pk != nil {
-		by := GolangFieldName(pk)
-		update.ReturnBy = &by
-		return dbx.RenderTemplate(g.tmpl, w, "update", update)
-	} else {
-		return dbx.RenderTemplate(g.tmpl, w, "update-no-return", update)
+	for _, dialect := range dialects {
+		data.SupportsReturning = dialect.SupportsReturning()
+
+		sql, err := dialect.RenderUpdate(params)
+		if err != nil {
+			return err
+		}
+		data.GolangFunc = MakeGolangFunc(base, dialect.Name(), sql)
+		if err = dbx.RenderTemplate(g.tmpl, w, "update", data); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (g *Golang) fieldsFromColumns(columns []*dbx.Column, updatabe_only bool) (
@@ -469,7 +614,7 @@ func (g *Golang) fieldFromColumn(column *dbx.Column) GolangField {
 		Name:   GolangFieldName(column),
 		Type:   GolangFieldType(column),
 		Tag:    GolangFieldTag(column),
-		Column: g.dialect.ColumnName(column),
+		Column: column.SQLName(),
 	}
 }
 
@@ -487,4 +632,21 @@ func (g *Golang) structsFromTables(tables []*dbx.Table) (structs []GolangStruct)
 		structs = append(structs, g.structFromTable(table))
 	}
 	return structs
+}
+
+func (g *Golang) renderBase(tmpl *template.Template, w io.Writer,
+	name string, base interface{}) (err error) {
+
+	var buf bytes.Buffer
+	err = dbx.RenderTemplate(tmpl, &buf, name+"-func-sig", base)
+	if err != nil {
+		return err
+	}
+	g.funcs = append(g.funcs, buf.String())
+
+	err = dbx.RenderTemplate(g.tmpl, w, name+"-wrap", base)
+	if err != nil {
+		return err
+	}
+	return nil
 }

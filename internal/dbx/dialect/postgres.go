@@ -26,7 +26,7 @@ func PostgresTableName(table *dbx.Table) string {
 }
 
 func PostgresColumnName(column *dbx.Column) string {
-	return inflect.Underscore(column.Name)
+	return column.SQLName()
 }
 
 func PostgresColumnNames(columns []*dbx.Column) (out []string) {
@@ -162,10 +162,6 @@ func (s *Postgres) Name() string {
 
 func (s *Postgres) ColumnName(column *dbx.Column) string {
 	return PostgresColumnName(column)
-}
-
-func (s *Postgres) ListTablesSQL() string {
-	return `SELECT tablename FROM pg_tables WHERE schemaname = 'public';`
 }
 
 func (s *Postgres) RenderSchema(schema *dbx.Schema) (

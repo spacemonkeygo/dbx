@@ -1,0 +1,13 @@
+
+
+type methods interface {
+{{ range .Funcs }}
+    {{ . }}
+{{ end }}   
+}
+
+type implMethods interface {
+	begin(tx *sqlx.Tx) methods
+	schema() string
+	methods
+}

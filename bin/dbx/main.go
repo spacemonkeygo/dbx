@@ -34,8 +34,8 @@ func main() {
 	template_dir_arg := app.StringOpt("t templates", "", "templates directory")
 	in_arg := app.StringArg("IN", "", "path to the yaml description")
 	out_arg := app.StringArg("OUT", "", "output file (- for stdout)")
-
-	dialect_opt := app.StringOpt("d dialect", "postgres", "SQL dialect to use")
+	dialects_opt := app.StringsOpt("d dialect", nil,
+		"SQL dialect to use")
 
 	var err error
 	die := func(err error) {
@@ -61,9 +61,9 @@ func main() {
 
 	app.Command("schema", "generate SQL schema", func(cmd *cli.Cmd) {
 		cmd.Action = func() {
-			dialect, err := createDialect(*dialect_opt, loader)
+			dialects, err := createDialects(*dialects_opt, loader)
 			die(err)
-			die(generateSQLSchema(*out_arg, schema, dialect))
+			die(generateSQLSchema(*out_arg, dialects, schema))
 		}
 	})
 
@@ -73,47 +73,63 @@ func main() {
 		format_code := cmd.BoolOpt("f format", true,
 			"format the code")
 		cmd.Action = func() {
-			dialect, err := createDialect(*dialect_opt, loader)
+			dialects, err := createDialects(*dialects_opt, loader)
 			die(err)
-			lang, err := language.NewGolang(loader, dialect,
+			lang, err := language.NewGolang(loader,
 				&language.GolangOptions{
 					Package: *pkg_name,
 				})
 			die(err)
 
-			die(generateCode(*out_arg, schema, dialect, lang, *format_code))
+			die(generateCode(*out_arg, schema, dialects, lang, *format_code))
 		}
 	})
 
 	app.Run(os.Args)
 }
 
-func createDialect(which string, loader dbx.Loader) (dbx.Dialect, error) {
-	switch which {
-	case "postgres":
-		return dialect.NewPostgres(loader)
-	case "sqlite3":
-		return dialect.NewSQLite3(loader)
-	default:
-		return nil, fmt.Errorf("unknown dialect %q", which)
+func createDialects(which []string, loader dbx.Loader) (
+	out []dbx.Dialect, err error) {
+
+	for _, name := range which {
+		var d dbx.Dialect
+		var err error
+		switch name {
+		case "postgres":
+			d, err = dialect.NewPostgres(loader)
+		case "sqlite3":
+			d, err = dialect.NewSQLite3(loader)
+		default:
+			return nil, fmt.Errorf("unknown dialect %q", name)
+		}
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, d)
 	}
+	return out, nil
 }
 
-func generateSQLSchema(out string, schema *dbx.Schema, dialect dbx.Dialect) (
+func generateSQLSchema(out string, dialects []dbx.Dialect, schema *dbx.Schema) (
 	err error) {
 
-	sql, err := dialect.RenderSchema(schema)
-	if err != nil {
-		return err
+	for _, dialect := range dialects {
+		sql, err := dialect.RenderSchema(schema)
+		if err != nil {
+			return err
+		}
+		if err = writeOut(out+"-"+dialect.Name(), []byte(sql)); err != nil {
+			return err
+		}
 	}
-	return writeOut(out, []byte(sql))
+	return nil
 }
 
-func generateCode(out string, schema *dbx.Schema, dialect dbx.Dialect,
+func generateCode(out string, schema *dbx.Schema, dialects []dbx.Dialect,
 	lang dbx.Language, format_code bool) (err error) {
 
 	var buf bytes.Buffer
-	if err := dbx.RenderCode(&buf, schema, dialect, lang); err != nil {
+	if err := dbx.RenderCode(&buf, schema, dialects, lang); err != nil {
 		return err
 	}
 	rendered := buf.Bytes()

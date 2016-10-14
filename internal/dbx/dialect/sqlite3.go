@@ -26,7 +26,7 @@ func SQLite3TableName(table *dbx.Table) string {
 }
 
 func SQLite3ColumnName(column *dbx.Column) string {
-	return inflect.Underscore(column.Name)
+	return column.SQLName()
 }
 
 func SQLite3ColumnNames(columns []*dbx.Column) (out []string) {
@@ -162,10 +162,6 @@ func (s *SQLite3) Name() string {
 
 func (s *SQLite3) ColumnName(column *dbx.Column) string {
 	return SQLite3ColumnName(column)
-}
-
-func (s *SQLite3) ListTablesSQL() string {
-	return `SELECT tablename FROM pg_tables WHERE schemaname = 'public';`
 }
 
 func (s *SQLite3) RenderSchema(schema *dbx.Schema) (

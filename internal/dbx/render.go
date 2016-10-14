@@ -19,27 +19,27 @@ import (
 	"io"
 )
 
-func RenderCode(w io.Writer, schema *Schema, dialect Dialect, lang Language) (
+func RenderCode(w io.Writer, schema *Schema, dialects []Dialect, lang Language) (
 	err error) {
 
-	renderer := newCodeRenderer(w, dialect, lang)
+	renderer := newCodeRenderer(w, dialects, lang)
 	return renderer.RenderCode(schema)
 }
 
 type codeRenderer struct {
 	w            io.Writer
-	dialect      Dialect
+	dialects     []Dialect
 	lang         Language
 	err          error
 	queries_seen map[string]bool
 }
 
-func newCodeRenderer(w io.Writer, dialect Dialect, lang Language) (
+func newCodeRenderer(w io.Writer, dialects []Dialect, lang Language) (
 	r *codeRenderer) {
 
 	return &codeRenderer{
 		w:            w,
-		dialect:      dialect,
+		dialects:     dialects,
 		lang:         lang,
 		queries_seen: map[string]bool{},
 	}
@@ -48,7 +48,7 @@ func newCodeRenderer(w io.Writer, dialect Dialect, lang Language) (
 func (r *codeRenderer) RenderCode(schema *Schema) (err error) {
 	r.err = nil
 
-	r.setError(r.lang.RenderHeader(r.w, schema))
+	r.setError(r.lang.RenderHeader(r.w, r.dialects, schema))
 
 	for _, table := range schema.Tables {
 		r.renderTable(table)
@@ -57,6 +57,8 @@ func (r *codeRenderer) RenderCode(schema *Schema) (err error) {
 	for _, query := range schema.Queries {
 		r.renderQuery(query)
 	}
+
+	r.setError(r.lang.RenderFooter(r.w))
 
 	return r.err
 }
@@ -178,42 +180,26 @@ func (r *codeRenderer) renderInsert(params *InsertParams) {
 	if r.err != nil {
 		return
 	}
-	sql, err := r.dialect.RenderInsert(params)
-	if !r.setError(err) {
-		return
-	}
-	r.setError(r.lang.RenderInsert(r.w, sql, params))
+	r.setError(r.lang.RenderInsert(r.w, r.dialects, params))
 }
 
 func (r *codeRenderer) renderUpdate(params *UpdateParams) {
 	if r.err != nil {
 		return
 	}
-	sql, err := r.dialect.RenderUpdate(params)
-	if !r.setError(err) {
-		return
-	}
-	r.setError(r.lang.RenderUpdate(r.w, sql, params))
+	r.setError(r.lang.RenderUpdate(r.w, r.dialects, params))
 }
 
 func (r *codeRenderer) renderSelect(params *SelectParams) {
 	if r.err != nil {
 		return
 	}
-	sql, err := r.dialect.RenderSelect(params)
-	if !r.setError(err) {
-		return
-	}
-	if !r.setError(r.lang.RenderSelect(r.w, sql, params)) {
+	if !r.setError(r.lang.RenderSelect(r.w, r.dialects, params)) {
 		return
 	}
 
 	if params.PagedOn == nil {
-		sql, err = r.dialect.RenderCount(params)
-		if !r.setError(err) {
-			return
-		}
-		if !r.setError(r.lang.RenderCount(r.w, sql, params)) {
+		if !r.setError(r.lang.RenderCount(r.w, r.dialects, params)) {
 			return
 		}
 	}
@@ -223,11 +209,7 @@ func (r *codeRenderer) renderDelete(params *DeleteParams) {
 	if r.err != nil {
 		return
 	}
-	sql, err := r.dialect.RenderDelete(params)
-	if !r.setError(err) {
-		return
-	}
-	r.setError(r.lang.RenderDelete(r.w, sql, params))
+	r.setError(r.lang.RenderDelete(r.w, r.dialects, params))
 }
 
 func (r *codeRenderer) render(code string, err error) {

@@ -11,8 +11,9 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-
+{{- range .Dialects }}
 	_ "{{ .Driver }}"
+{{- end }}
 )
 
 var WrapErr = func(err error) error {return err}
@@ -24,10 +25,6 @@ func loge(err error) {
 		Logger("error closing statement: %v", err)
 	}
 }
-
-const Schema = `
-{{- .Schema -}}
-`
 
 {{ range .Structs }}
 type {{ .Name }} struct {
@@ -56,51 +53,48 @@ func (u {{ $upstruct }}) private{{ $struct }}() {}
 
 type DB struct {
 	*sqlx.DB
-
-	lru *lru
+    lru *lru
+    impl implMethods
 }
 
-func Open(source string, lru_size int) (*DB, error) {
-	db, err := sqlx.Connect({{ .Dialect | printf "%q" }}, source)
+func Open(driver, source string, lru_size int) (*DB, error) {
+	db, err := sqlx.Connect(driver, source)
 	if err != nil {
 		return nil, WrapErr(err)
 	}
+	
+    lru := newLRU(db, lru_size)
+
+    var impl implMethods
+    switch driver {
+{{- range .Dialects }}
+    case {{ .Name | printf "%q" }}:
+		impl = &{{ .Name }}DB{lru: lru}
+{{- end }}
+    default:
+        return nil, WrapErr(fmt.Errorf("unsupported driver %s", driver))
+    }
 
 	return &DB{
 		DB: db,
-		lru: newLRU(db, lru_size),
+		lru: lru,
+        impl: impl,
 	}, nil
 }
 
-func (db *DB) Close() (err error) {
-	db.lru.Purge()
-	return WrapErr(db.DB.Close())
+func (obj *DB) Close() (err error) {
+    obj.impl = nil
+	obj.lru.Purge()
+	return WrapErr(obj.DB.Close())
 }
 
-func (db *DB) prepare(stmt string) (prepared *sqlx.Stmt, replace func(), err error) {
-	entry, err := db.lru.Get(stmt)
-	if err != nil {
-		return nil, nil, err
-	}
-	return entry.Stmt, func() { db.lru.Replace(entry) }, nil
+func (obj *DB) Schema() string {
+	return obj.impl.schema()
 }
 
-func (db *DB) logStmt(stmt string, args... interface{}) {
-	// TODO: render placeholders
-	if Logger != nil {
-		Logger("sql: " + stmt + " args=%v", args)
-	}
-}
-
-func (db *DB) ListTables() (tables []string, err error) {
-    err = db.Select(&tables, `{{ .ListTablesSQL }}`)
-    return tables, WrapErr(err)
-}
-
-
-func (db *DB) DeleteAll() (total int64, err error) {
+func (obj *DB) DeleteAll() (total int64, err error) {
 {{- range .StructsReverse }}
-    if n, err := db.Delete{{ pluralize .Name }}(); err == nil {
+    if n, err := obj.impl.Delete{{ pluralize .Name }}(); err == nil {
         total += n
     } else {
         return total, WrapErr(err)
@@ -109,34 +103,33 @@ func (db *DB) DeleteAll() (total int64, err error) {
     return total, nil
 }
 
-type Tx struct {
-	*sqlx.Tx
-	db *DB
-}
-
-func (db *DB) Open() (*Tx, error) {
-	tx, err := db.DB.Beginx()
+func (obj *DB) Open() (*Tx, error) {
+	tx, err := obj.DB.Beginx()
 	if err != nil {
 		return nil, WrapErr(err)
 	}
 
-	return &Tx{
-		Tx: tx,
-		db: db,
-	}, nil
+    return &Tx{Tx: tx, impl: obj.impl.begin(tx)}, nil
+}
+
+type Tx struct {
+	*sqlx.Tx
+    impl methods
 }
 
 func (tx *Tx) Commit() (err error) {
+    tx.impl = nil
 	return WrapErr(tx.Tx.Commit())
 }
 
 func (tx *Tx) Rollback() (err error) {
+    tx.impl = nil
 	return WrapErr(tx.Tx.Rollback())
 }
 
 func (tx *Tx) DeleteAll() (total int64, err error) {
 {{- range .StructsReverse }}
-    if n, err := tx.Delete{{ pluralize .Name }}(); err == nil {
+    if n, err := tx.impl.Delete{{ pluralize .Name }}(); err == nil {
         total += n
     } else {
         return total, WrapErr(err)
@@ -145,17 +138,65 @@ func (tx *Tx) DeleteAll() (total int64, err error) {
     return total, nil
 }
 
-func (tx *Tx) prepare(stmt string) (prepared *sqlx.Stmt, replace func(), err error) {
-	prepared, replace, err = tx.db.prepare(stmt)
+{{- range .Dialects }}
+
+{{ $dbtype := .Name | printf "%sDB" }}
+{{ $txtype := .Name | printf "%sTx" }}
+
+type {{ $dbtype }} struct {
+	lru *lru
+}
+
+func (obj *{{ $dbtype }}) schema() string {
+return `
+{{- .SchemaSQL -}}
+`
+}
+
+func (obj *{{ $dbtype }}) prepare(stmt string) (prepared *sqlx.Stmt, replace func(), err error) {
+	entry, err := obj.lru.Get(stmt)
 	if err != nil {
 		return nil, nil, err
 	}
-	return tx.Stmtx(prepared), replace, nil
+	return entry.Stmt, func() { obj.lru.Replace(entry) }, nil
 }
 
-func (tx *Tx) logStmt(stmt string, args... interface{}) {
-	tx.db.logStmt(stmt, args...)
+func (obj *{{ $dbtype }}) logStmt(stmt string, args... interface{}) {
+	{{ .Name }}LogStmt(stmt, args...)
 }
+
+func (obj *{{ $dbtype }}) begin(tx *sqlx.Tx) methods {
+	return &{{ $txtype }}{
+		tx: tx,
+		lru: obj.lru,
+	}
+}
+
+type {{ $txtype }} struct {
+	tx *sqlx.Tx
+	lru *lru
+}
+
+func (obj *{{ $txtype }}) prepare(stmt string) (prepared *sqlx.Stmt, replace func(), err error) {
+	entry, err := obj.lru.Get(stmt)
+	if err != nil {
+		return nil, nil, err
+	}
+	return obj.tx.Stmtx(entry.Stmt), func() { obj.lru.Replace(entry) }, nil
+}
+
+func (obj *{{ $txtype }}) logStmt(stmt string, args... interface{}) {
+	{{ .Name }}LogStmt(stmt, args...)
+}
+
+func {{ .Name }}LogStmt(stmt string, args ...interface{}) {
+	// TODO: render placeholders
+	if Logger != nil {
+		Logger("sql:\n%s\nargs:\n%v", stmt, args)
+	}
+}
+
+{{- end }}
 
 type entry struct {
 	Stmt *sqlx.Stmt

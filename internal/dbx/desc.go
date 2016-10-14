@@ -14,7 +14,11 @@
 
 package dbx
 
-import "fmt"
+import (
+	"fmt"
+
+	"bitbucket.org/pkg/inflect"
+)
 
 type RelationKind string
 
@@ -41,6 +45,10 @@ type Column struct {
 
 func (c *Column) String() string {
 	return fmt.Sprintf("%s.%s", c.Table.Name, c.Name)
+}
+
+func (c *Column) SQLName() string {
+	return inflect.Underscore(c.Name)
 }
 
 func (c *Column) IsInt() bool {
@@ -205,6 +213,13 @@ func (t *Table) Updatable() bool {
 	return false
 }
 
+func (t *Table) BasicPrimaryKey() *Column {
+	if len(t.PrimaryKey) == 1 && t.PrimaryKey[0].IsInt() {
+		return t.PrimaryKey[0]
+	}
+	return nil
+}
+
 // returns true if left is a subset of right
 func columnSetSubset(left, right []*Column) bool {
 	if len(left) > len(right) {
@@ -239,13 +254,6 @@ func columnSetPrune(all, bad []*Column) (out []*Column) {
 		out = append(out, all[i])
 	}
 	return out
-}
-
-func (t *Table) BasicPrimaryKey() *Column {
-	if len(t.PrimaryKey) == 1 && t.PrimaryKey[0].IsInt() {
-		return t.PrimaryKey[0]
-	}
-	return nil
 }
 
 func (t *Table) ColumnSetUnique(columns []*Column) bool {
