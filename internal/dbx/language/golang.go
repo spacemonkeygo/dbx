@@ -34,7 +34,7 @@ func GolangStructName(table *dbx.Table) string {
 	if table == nil {
 		return ""
 	}
-	return inflect.Camelize(inflect.Singularize(table.Name))
+	return inflect.Camelize(table.Name)
 }
 
 func GolangFieldName(column *dbx.Column) string {
