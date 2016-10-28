@@ -36,10 +36,11 @@ func deserial(t string) string {
 
 func LoadSchema(path string) (schema *Schema, err error) {
 	type YRelation struct {
-		OwnedBy  string `yaml:"owned_by"`
-		HasA     string `yaml:"has_a"`
-		Name     string `yaml:"name"`
-		Nullable bool   `yaml:"nullable"`
+		OwnedBy   string `yaml:"owned_by"`
+		HasA      string `yaml:"has_a"`
+		Name      string `yaml:"name"`
+		Nullable  bool   `yaml:"nullable"`
+		Updatable bool   `yaml:"updatable"`
 	}
 
 	type YColumn struct {
@@ -151,10 +152,11 @@ func LoadSchema(path string) (schema *Schema, err error) {
 					ytable.Name, name)
 			}
 			table.Columns = append(table.Columns, &Column{
-				Table:   table,
-				Name:    name,
-				Type:    deserial(fcolumn.Type),
-				NotNull: !yrelation.Nullable,
+				Table:     table,
+				Name:      name,
+				Type:      deserial(fcolumn.Type),
+				NotNull:   !yrelation.Nullable,
+				Updatable: yrelation.Updatable,
 				Relation: &Relation{
 					Column: fcolumn,
 					Kind:   kind,
