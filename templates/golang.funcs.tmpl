@@ -125,9 +125,13 @@ PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}
 		return nil, "", WrapErr(err)
 	}
 
-	if len(result) == limit {
-		ctokenout = fmt.Sprint(result[limit-1].{{ .PagedOn }})
-	}
+    if limit > 0 {
+        if len(result) == limit {
+            ctokenout = fmt.Sprint(result[limit-1].{{ .PagedOn }})
+        }
+    } else {
+        ctokenout = ctoken
+    }
 
 	return result, ctokenout, nil
 }
