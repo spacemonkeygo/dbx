@@ -40,11 +40,11 @@ func PostgresColumnType(column *dbx.Column) string {
 	switch column.Type {
 	case "text":
 		return "text"
-	case "int":
+	case "int", "uint":
 		return "integer"
 	case "serial":
 		return "serial"
-	case "int64":
+	case "int64", "uint64":
 		return "bigint"
 	case "serial64":
 		return "bigserial"

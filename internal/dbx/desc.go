@@ -53,7 +53,7 @@ func (c *Column) SQLName() string {
 
 func (c *Column) IsInt() bool {
 	switch c.Type {
-	case "serial", "serial64", "int", "int64":
+	case "serial", "serial64", "int", "int64", "uint", "uint64":
 		return true
 	}
 	return false

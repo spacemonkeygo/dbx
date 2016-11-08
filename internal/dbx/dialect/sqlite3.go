@@ -40,11 +40,11 @@ func SQLite3ColumnType(column *dbx.Column) string {
 	switch column.Type {
 	case "text":
 		return "text"
-	case "int":
+	case "int", "uint":
 		return "integer"
 	case "serial":
 		return "integer"
-	case "int64":
+	case "int64", "uint64":
 		return "integer"
 	case "serial64":
 		return "integer"

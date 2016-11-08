@@ -61,11 +61,19 @@ func GolangFieldType(column *dbx.Column) string {
 		} else {
 			return "sql.NullInt64"
 		}
+	case "uint":
+		if column.NotNull {
+			return "uint"
+		}
 	case "int64", "serial64":
 		if column.NotNull {
 			return "int64"
 		} else {
 			return "sql.NullInt64"
+		}
+	case "uint64":
+		if column.NotNull {
+			return "uint64"
 		}
 	case "blob":
 		return "[]byte"
@@ -82,7 +90,8 @@ func GolangFieldType(column *dbx.Column) string {
 			return "sql.NullBool"
 		}
 	}
-	panic(fmt.Sprintf("unhandled column type %q", column.Type))
+	panic(fmt.Sprintf("unhandled column type %q (notnull=%t)", column.Type,
+		column.NotNull))
 }
 
 func GolangFieldInit(column *dbx.Column) string {
@@ -92,7 +101,7 @@ func GolangFieldInit(column *dbx.Column) string {
 		return `""`
 	case "sql.NullString":
 		return `sql.NullString{}`
-	case "int64":
+	case "int64", "uint64":
 		return `0`
 	case "sql.NullInt64":
 		return `sql.NullInt64{}`
