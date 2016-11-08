@@ -114,7 +114,14 @@ PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}
 {{- define "select-paged-func" -}}
 {{- template "select-paged-func-sig" . }} {
 
-{{ template "func-header" . }}
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+    obj.logStmt(stmt, {{ if .Args }}{{ template "args" .Args }}, {{end}}ctoken, limit)
 
     if ctoken == "" {
         ctoken = "0"
@@ -334,10 +341,16 @@ CreateRaw{{ .Struct }}
 
 {{- define "raw-insert-func" -}}
 {{- template "raw-insert-func-sig" . }} {
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ template "args" .Inserts }})
 
-{{- template "raw-func-header" . }}
-
-{{- if not .ReturnBy }}
+{{ if not .ReturnBy }}
 	result = &{{ .Struct }}{}
 	err = prepared.QueryRowx({{template "args" .Inserts}}).StructScan(result)
 	if err != nil {
@@ -362,19 +375,6 @@ CreateRaw{{ .Struct }}
 {{- end -}}
 }
 {{- end -}}
-
-
-{{- define "raw-func-header" }}
-	const stmt=`{{ .SQL }}`
-	prepared, replace, err := obj.prepare(stmt)
-	if err != nil {
-		err = WrapErr(err)
-		return
-	}
-	defer replace()
-	obj.logStmt(stmt, {{ template "args" .Inserts }})
-{{ end -}}
-
 
 
 {{/* UPDATE STATEMENT */}}
