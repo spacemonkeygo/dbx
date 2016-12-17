@@ -1,15 +1,21 @@
 {{/* GOLANG FUNCTION TEMPLATES */}}
 
 {{- define "params" -}}
-{{- range $i, $arg := . -}}
+{{- range $i, $field := . -}}
 	{{ if $i }},
-    {{end}}{{ $arg.Name }} {{ $arg.Type }}
+    {{end}}{{ $field.Param }}
 {{- end -}}
 {{- end -}}
 
 {{- define "args" -}}
-{{- range $i, $arg := . -}}
-	{{ if $i }}, {{ end }}{{ $arg.Name }}
+{{- range $i, $field := . -}}
+    {{ if $i }}, {{ end }}{{ $field.Arg }}
+{{- end -}}
+{{- end -}}
+
+{{- define "ptr-args" -}}
+{{- range $i, $field := . -}}
+    {{ if $i }}, {{ end }}&{{ $field.Arg }}
 {{- end -}}
 {{- end -}}
 
@@ -38,28 +44,36 @@ func (obj *{{ .Dialect }}Tx) {{ template "select-func" . }}
 {{ end }}
 
 {{- define "select-func-name" -}}
-Get{{ .Struct }}{{ .FuncSuffix }}
+Get{{ .FuncSuffix }}
 {{- end -}}
 
 {{- define "select-func-sig" -}}
 {{ template "select-func-name" . }}(
 {{ template "params" .Args }}) (
-    result *{{ .Struct }}, err error)
+{{ template "params" .Returns }}, err error)
 {{- end -}}
 
 {{- define "select-func" -}}
 {{- template "select-func-sig" . }} {
 
 {{ template "func-header" . }}
-	result = &{{ .Struct }}{}
-	err = prepared.QueryRowx({{template "args" .Args }}).StructScan(result)
+{{ range .Returns }}
+    {{ .Arg }} = {{ .Init }}
+{{- end }}
+	err = prepared.QueryRowx({{template "args" .Args }}).Scan(
+    {{- range $ir, $return := .Returns -}}
+        {{- range $if, $field := $return.Fields -}}
+            {{ if or $ir $if }}, {{ end }}&{{ $field.Arg }}
+        {{- end -}}
+    {{- end -}}
+    )
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, WrapErr(err)
 	}
-	return result, nil
+    return {{ template "args" .Returns }}, nil
 }
 {{- end -}}
 
@@ -140,7 +154,7 @@ PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}
         ctokenout = ctoken
     }
 
-	return result, ctokenout, nil
+    return {{ template "args" .Returns }}, ctokenout, nil
 }
 {{- end -}}
 
@@ -273,7 +287,7 @@ func (obj *{{ .Dialect }}Tx) {{ template "insert-func" . }}
 {{ end }}
 
 {{- define "insert-func-name" -}}
-Create{{ .Struct }}
+Create{{ .FuncSuffix }}
 {{- end -}}
 
 {{- define "insert-func-sig" -}}
@@ -329,12 +343,8 @@ func (obj *{{ .Dialect }}DB) {{ template "raw-insert-func" . }}
 func (obj *{{ .Dialect }}Tx) {{ template "raw-insert-func" . }}
 {{ end }}
 
-{{- define "raw-insert-func-name" -}}
-CreateRaw{{ .Struct }}
-{{- end -}}
-
 {{- define "raw-insert-func-sig" -}}
-{{ template "raw-insert-func-name" . }}(
+CreateRaw{{ .FuncSuffix }}(
 {{ template "params" .Inserts }}) (
     result *{{ .Struct }}, err error)
 {{- end -}}

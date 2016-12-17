@@ -22,19 +22,21 @@ import (
 	"os"
 
 	cli "github.com/jawher/mow.cli"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/dialect"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/language"
-	"gopkg.in/spacemonkeygo/dbx.v0/templates"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/code"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/parser"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/sql"
+	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/templates"
+	pubtemplates "gopkg.in/spacemonkeygo/dbx.v0/templates"
 )
 
 func main() {
 	app := cli.App("dbx", "generate SQL schema and matching code")
 
 	template_dir_arg := app.StringOpt("t templates", "", "templates directory")
-	in_arg := app.StringArg("IN", "", "path to the yaml description")
+	in_arg := app.StringArg("IN", "", "path to the description")
 	out_arg := app.StringArg("OUT", "", "output file (- for stdout)")
-	dialects_opt := app.StringsOpt("d dialect", nil,
+	dialects_opt := app.StringsOpt("d dialect", []string{"postgres"},
 		"SQL dialect to use")
 
 	var err error
@@ -45,25 +47,25 @@ func main() {
 		}
 	}
 
-	var schema *dbx.Schema
-	var loader dbx.Loader
+	var root *ast.Root
+	var loader templates.Loader
 
 	app.Before = func() {
-		schema, err = dbx.LoadSchema(*in_arg)
+		root, err = parser.ParseFile(*in_arg)
 		die(err)
 
 		if *template_dir_arg != "" {
-			loader = dbx.DirLoader(*template_dir_arg)
+			loader = templates.DirLoader(*template_dir_arg)
 		} else {
-			loader = dbx.BinLoader(templates.Asset)
+			loader = templates.BinLoader(pubtemplates.Asset)
 		}
 	}
 
 	app.Command("schema", "generate SQL schema", func(cmd *cli.Cmd) {
 		cmd.Action = func() {
-			dialects, err := createDialects(*dialects_opt, loader)
-			die(err)
-			die(generateSQLSchema(*out_arg, dialects, schema))
+			//dialects, err := createDialects(*dialects_opt)
+			//die(err)
+			//die(generateSQLSchema(*out_arg, dialects, root))
 		}
 	})
 
@@ -73,63 +75,57 @@ func main() {
 		format_code := cmd.BoolOpt("f format", true,
 			"format the code")
 		cmd.Action = func() {
-			dialects, err := createDialects(*dialects_opt, loader)
+			dialects, err := createDialects(*dialects_opt)
 			die(err)
-			lang, err := language.NewGolang(loader,
-				&language.GolangOptions{
+			lang, err := code.NewGolang(loader,
+				&code.GolangOptions{
 					Package: *pkg_name,
 				})
 			die(err)
 
-			die(generateCode(*out_arg, schema, dialects, lang, *format_code))
+			die(generateCode(*out_arg, root, dialects, lang, *format_code))
 		}
 	})
 
 	app.Run(os.Args)
 }
 
-func createDialects(which []string, loader dbx.Loader) (
-	out []dbx.Dialect, err error) {
-
+func createDialects(which []string) (out []sql.Dialect, err error) {
 	for _, name := range which {
-		var d dbx.Dialect
-		var err error
+		var d sql.Dialect
 		switch name {
 		case "postgres":
-			d, err = dialect.NewPostgres(loader)
+			d = sql.Postgres()
 		case "sqlite3":
-			d, err = dialect.NewSQLite3(loader)
+			d = sql.SQLite3()
 		default:
 			return nil, fmt.Errorf("unknown dialect %q", name)
-		}
-		if err != nil {
-			return nil, err
 		}
 		out = append(out, d)
 	}
 	return out, nil
 }
 
-func generateSQLSchema(out string, dialects []dbx.Dialect, schema *dbx.Schema) (
-	err error) {
+//func generateSQLSchema(out string, dialects []sql.Dialect, root *ast.Root) (
+//	err error) {
+//
+//	for _, dialect := range dialects {
+//		sql, err := dialect.RenderSchema(schema)
+//		if err != nil {
+//			return err
+//		}
+//		if err = writeOut(out+"-"+dialect.Name(), []byte(sql)); err != nil {
+//			return err
+//		}
+//	}
+//	return nil
+//}
 
-	for _, dialect := range dialects {
-		sql, err := dialect.RenderSchema(schema)
-		if err != nil {
-			return err
-		}
-		if err = writeOut(out+"-"+dialect.Name(), []byte(sql)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func generateCode(out string, schema *dbx.Schema, dialects []dbx.Dialect,
-	lang dbx.Language, format_code bool) (err error) {
+func generateCode(out string, root *ast.Root, dialects []sql.Dialect,
+	lang code.Language, format_code bool) (err error) {
 
 	var buf bytes.Buffer
-	if err := dbx.RenderCode(&buf, schema, dialects, lang); err != nil {
+	if err := code.Render(&buf, root, lang, dialects); err != nil {
 		return err
 	}
 	rendered := buf.Bytes()
