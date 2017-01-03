@@ -14,8 +14,8 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
-func RenderUpdate(dialect Dialect, model *ast.Model) string {
+func RenderUpdate(dialect Dialect, model *ir.Model) string {
 	return ""
 }

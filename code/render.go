@@ -17,11 +17,11 @@ package code
 import (
 	"io"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
-func Render(w io.Writer, root *ast.Root, language Language,
+func Render(w io.Writer, root *ir.Root, language Language,
 	dialects []sql.Dialect) (err error) {
 
 	r := renderer{w: w, language: language}
@@ -34,7 +34,7 @@ type renderer struct {
 	err      error
 }
 
-func (r *renderer) render(root *ast.Root, dialects []sql.Dialect) (err error) {
+func (r *renderer) render(root *ir.Root, dialects []sql.Dialect) (err error) {
 	r.setError(r.language.RenderHeader(r.w, root, dialects))
 	for _, dialect := range dialects {
 		r.renderDialect(root, dialect)
@@ -44,7 +44,7 @@ func (r *renderer) render(root *ast.Root, dialects []sql.Dialect) (err error) {
 	return r.err
 }
 
-func (r *renderer) renderDialect(root *ast.Root, dialect sql.Dialect) {
+func (r *renderer) renderDialect(root *ir.Root, dialect sql.Dialect) {
 	if !r.ok() {
 		return
 	}
@@ -60,21 +60,21 @@ func (r *renderer) renderDialect(root *ast.Root, dialect sql.Dialect) {
 	}
 }
 
-func (r *renderer) renderInsert(model *ast.Model, dialect sql.Dialect) {
+func (r *renderer) renderInsert(model *ir.Model, dialect sql.Dialect) {
 	if !r.ok() {
 		return
 	}
 	r.setError(r.language.RenderInsert(r.w, model, dialect))
 }
 
-func (r *renderer) renderSelect(sel *ast.Select, dialect sql.Dialect) {
+func (r *renderer) renderSelect(sel *ir.Select, dialect sql.Dialect) {
 	if !r.ok() {
 		return
 	}
 	r.setError(r.language.RenderSelect(r.w, sel, dialect))
 }
 
-func (r *renderer) renderDelete(del *ast.Delete, dialect sql.Dialect) {
+func (r *renderer) renderDelete(del *ir.Delete, dialect sql.Dialect) {
 	if !r.ok() {
 		return
 	}

@@ -22,6 +22,7 @@ import (
 
 	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
@@ -67,7 +68,7 @@ func (g *Golang) Format(in []byte) (out []byte, err error) {
 	return out, GoError.Wrap(err)
 }
 
-func (g *Golang) RenderHeader(w io.Writer, root *ast.Root,
+func (g *Golang) RenderHeader(w io.Writer, root *ir.Root,
 	dialects []sql.Dialect) error {
 
 	type headerDialect struct {
@@ -119,7 +120,7 @@ func (g *Golang) RenderHeader(w io.Writer, root *ast.Root,
 	return tmplutil.Render(g.header, w, "", params)
 }
 
-func (g *Golang) RenderInsert(w io.Writer, model *ast.Model,
+func (g *Golang) RenderInsert(w io.Writer, model *ir.Model,
 	dialect sql.Dialect) (err error) {
 
 	go_ins := GolangInsertFromModel(model, dialect, false)
@@ -135,7 +136,7 @@ func (g *Golang) RenderInsert(w io.Writer, model *ast.Model,
 	return nil
 }
 
-func (g *Golang) RenderSelect(w io.Writer, sel *ast.Select,
+func (g *Golang) RenderSelect(w io.Writer, sel *ir.Select,
 	dialect sql.Dialect) error {
 
 	go_sel := GolangSelectFromSelect(sel, dialect)
@@ -146,25 +147,25 @@ func (g *Golang) RenderSelect(w io.Writer, sel *ast.Select,
 	return nil
 }
 
-func (g *Golang) RenderDelete(w io.Writer, del *ast.Delete,
+func (g *Golang) RenderDelete(w io.Writer, del *ir.Delete,
 	dialect sql.Dialect) error {
 
 	return nil
 }
 
-func (g *Golang) RenderFooter(w io.Writer, root *ast.Root,
+func (g *Golang) RenderFooter(w io.Writer, root *ir.Root,
 	dialects []sql.Dialect) error {
 	return nil
 }
 
 type GolangInsert struct {
-	model   *ast.Model
+	model   *ir.Model
 	s       *GolangStruct
 	dialect sql.Dialect
 	raw     bool
 }
 
-func GolangInsertFromModel(model *ast.Model, dialect sql.Dialect, raw bool) (
+func GolangInsertFromModel(model *ir.Model, dialect sql.Dialect, raw bool) (
 	i *GolangInsert) {
 
 	return &GolangInsert{
@@ -249,11 +250,11 @@ type GolangReturnBy struct {
 }
 
 type GolangStruct struct {
-	model  *ast.Model
+	model  *ir.Model
 	fields []*GolangField
 }
 
-func GolangStructFromModel(model *ast.Model) *GolangStruct {
+func GolangStructFromModel(model *ir.Model) *GolangStruct {
 	if model == nil {
 		return nil
 	}
@@ -268,7 +269,7 @@ func GolangStructFromModel(model *ast.Model) *GolangStruct {
 	return s
 }
 
-func GolangStructsFromModels(models []*ast.Model) (out []*GolangStruct) {
+func GolangStructsFromModels(models []*ir.Model) (out []*GolangStruct) {
 	for _, model := range models {
 		out = append(out, GolangStructFromModel(model))
 	}
@@ -300,11 +301,11 @@ func (s *GolangStruct) Param() string {
 }
 
 type GolangField struct {
-	field    *ast.Field
+	field    *ir.Field
 	gostruct *GolangStruct
 }
 
-func GolangFieldFromField(field *ast.Field) *GolangField {
+func GolangFieldFromField(field *ir.Field) *GolangField {
 	if field == nil {
 		return nil
 	}
@@ -313,7 +314,7 @@ func GolangFieldFromField(field *ast.Field) *GolangField {
 	}
 }
 
-func GolangFieldsFromFields(fields []*ast.Field) (out []*GolangField) {
+func GolangFieldsFromFields(fields []*ir.Field) (out []*GolangField) {
 	for _, field := range fields {
 		out = append(out, GolangFieldFromField(field))
 	}
@@ -429,11 +430,11 @@ func (f *GolangField) Init() (string, error) {
 }
 
 type GolangSelect struct {
-	sel     *ast.Select
+	sel     *ir.Select
 	dialect sql.Dialect
 }
 
-func GolangSelectFromSelect(sel *ast.Select,
+func GolangSelectFromSelect(sel *ir.Select,
 	dialect sql.Dialect) *GolangSelect {
 
 	return &GolangSelect{
@@ -466,9 +467,9 @@ func (g *GolangSelect) Args() (args []*GolangField) {
 func (g *GolangSelect) Returns() (returns []interface{}) {
 	for _, selectable := range g.sel.Fields {
 		switch t := selectable.(type) {
-		case *ast.Model:
+		case *ir.Model:
 			returns = append(returns, GolangStructFromModel(t))
-		case *ast.Field:
+		case *ir.Field:
 			returns = append(returns, GolangFieldFromField(t))
 		default:
 			panic(fmt.Sprintf("unhandled selectable type %T", t))

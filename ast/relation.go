@@ -14,8 +14,9 @@
 
 package ast
 
-type Where struct {
-	Left  *Field
-	Op    Operator
-	Right *Field
+import "text/scanner"
+
+type Relation struct {
+	Pos      scanner.Position
+	FieldRef *FieldRef
 }

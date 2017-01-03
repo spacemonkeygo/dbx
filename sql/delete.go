@@ -14,12 +14,12 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
 var deleteTmpl = `
 DELETE FROM {{ .Model }} {{ .Where }}
 `
 
-func RenderDelete(dialect Dialect, del *ast.Delete) string {
+func RenderDelete(dialect Dialect, del *ir.Delete) string {
 	return ""
 }

@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package ir
 
-import "text/scanner"
+import "github.com/spacemonkeygo/errors"
 
-type Index struct {
-	Pos    scanner.Position
-	Name   string
-	Fields []*RelativeFieldRef
-}
+var (
+	Error = errors.NewClass("ast")
+)

@@ -15,11 +15,9 @@
 package parser
 
 import (
-	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
-	"text/scanner"
 
 	"github.com/spacemonkeygo/errors"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
@@ -46,554 +44,16 @@ func Parse(data []byte) (root *ast.Root, err error) {
 	return parseRoot(scanner)
 }
 
-type parserRoot struct {
-	Models  []*parserModel
-	Selects []*parserSelect
-	Deletes []*parserDelete
+func parseRoot(scanner *Scanner) (root *ast.Root, err error) {
+	root = new(ast.Root)
 
-	ast    *ast.Root
-	models map[string]*parserModel
-}
-
-func newParserRoot() *parserRoot {
-	return &parserRoot{
-		ast:    &ast.Root{},
-		models: map[string]*parserModel{},
-	}
-}
-
-func (r *parserRoot) AddModel(model *parserModel) (err error) {
-	if existing := r.models[model.Name]; existing != nil {
-		return Error.New("%s: model %q already defined at %s",
-			model.Pos, existing.Pos)
-	}
-
-	r.models[model.Name] = model
-	r.Models = append(r.Models, model)
-	return nil
-}
-
-func (r *parserRoot) Model(ref *parserFieldRef) (*parserModel, error) {
-	model := r.models[ref.Model]
-	if model != nil {
-		return model, nil
-	}
-	return nil, Error.New("%s: no model %q defined",
-		ref.Pos, ref.Model)
-}
-
-func (r *parserRoot) Field(ref *parserFieldRef) (*parserField, error) {
-	model, err := r.Model(ref)
-	if err != nil {
-		return nil, err
-	}
-	return model.Field(ref)
-}
-
-func (r *parserRoot) FinalizeAST() (err error) {
-	for _, model := range r.Models {
-		if err = model.FinalizeAST(r); err != nil {
-			return err
-		}
-		r.ast.Models = append(r.ast.Models, model.ast)
-	}
-	for _, sel := range r.Selects {
-		if err = sel.FinalizeAST(r); err != nil {
-			return err
-		}
-		r.ast.Selects = append(r.ast.Selects, sel.ast)
-	}
-	for _, del := range r.Deletes {
-		if err = del.FinalizeAST(r); err != nil {
-			return err
-		}
-		r.ast.Deletes = append(r.ast.Deletes, del.ast)
-	}
-	return nil
-}
-
-type parserModel struct {
-	Pos        scanner.Position
-	Name       string
-	Table      string
-	Fields     []*parserField
-	PrimaryKey []*parserFieldRef
-	Unique     [][]*parserFieldRef
-	Indexes    []*parserIndex
-
-	ast     *ast.Model
-	fields  map[string]*parserField
-	indexes map[string]*parserIndex
-}
-
-func newParserModel() *parserModel {
-	return &parserModel{
-		ast:     &ast.Model{},
-		fields:  map[string]*parserField{},
-		indexes: map[string]*parserIndex{},
-	}
-}
-
-func (m *parserModel) AddField(field *parserField) (err error) {
-	if existing := m.fields[field.Name]; existing != nil {
-		return Error.New("%s: field %q already defined at %s",
-			field.Pos, existing.Pos)
-	}
-	m.fields[field.Name] = field
-	m.Fields = append(m.Fields, field)
-	return nil
-}
-
-func (m *parserModel) Field(ref *parserFieldRef) (*parserField, error) {
-	field := m.fields[ref.Field]
-	if field != nil {
-		return field, nil
-	}
-	return nil, Error.New("%s: no field %q on model %q",
-		ref.Pos, ref.Field, m.Name)
-}
-
-func (m *parserModel) AddIndex(index *parserIndex) (err error) {
-	if existing := m.indexes[index.Name]; existing != nil {
-		return Error.New("%s: index %q already defined at %s",
-			index.Pos, existing.Pos)
-	}
-	m.indexes[index.Name] = index
-	m.Indexes = append(m.Indexes, index)
-	return nil
-}
-
-func (m *parserModel) Index(name string) *parserIndex {
-	return m.indexes[name]
-}
-
-func (m *parserModel) FinalizeAST(root *parserRoot) (err error) {
-	m.ast.Name = m.Name
-	m.ast.Table = m.Table
-
-	for _, field := range m.Fields {
-		if err = field.FinalizeAST(root, m); err != nil {
-			return err
-		}
-		m.ast.Fields = append(m.ast.Fields, field.ast)
-	}
-
-	if len(m.PrimaryKey) == 0 {
-		return Error.New("%s: no primary key defined", m.Pos)
-	}
-
-	for _, fieldref := range m.PrimaryKey {
-		if field, err := m.Field(fieldref); err == nil {
-			m.ast.PrimaryKey = append(m.ast.PrimaryKey, field.ast)
-		} else {
-			return err
-		}
-	}
-
-	for _, unique := range m.Unique {
-		var fields []*ast.Field
-		for _, name := range unique {
-			if field, err := m.Field(name); err == nil {
-				fields = append(fields, field.ast)
-			} else {
-				return err
-			}
-		}
-		m.ast.Unique = append(m.ast.Unique, fields)
-	}
-
-	for _, index := range m.Indexes {
-		if err = index.FinalizeAST(m); err != nil {
-			return err
-		}
-		m.ast.Indexes = append(m.ast.Indexes, index.ast)
-	}
-
-	return nil
-}
-
-type parserField struct {
-	Pos        scanner.Position
-	Name       string
-	Type       ast.FieldType
-	Relation   *parserRelation
-	Column     string
-	Nullable   bool
-	Updatable  bool
-	AutoInsert bool
-	AutoUpdate bool
-	Length     int
-
-	ast *ast.Field
-}
-
-func newParserField() *parserField {
-	return &parserField{
-		ast: &ast.Field{},
-	}
-}
-
-func (f *parserField) FinalizeAST(root *parserRoot, model *parserModel) (
-	err error) {
-
-	f.ast.Name = f.Name
-	f.ast.Type = f.Type
-	f.ast.Model = model.ast
-	if f.Relation != nil {
-		if err = f.Relation.FinalizeAST(root); err != nil {
-			return err
-		}
-		f.ast.Relation = f.Relation.ast
-		f.ast.Type = f.ast.Relation.Field.Type.AsLink()
-	}
-	f.ast.Column = f.Column
-	f.ast.Nullable = f.Nullable
-	f.ast.Updatable = f.Updatable
-	f.ast.AutoInsert = f.AutoInsert
-	f.ast.AutoUpdate = f.AutoUpdate
-	f.ast.Length = f.Length
-	return nil
-}
-
-type parserRelation struct {
-	Pos      scanner.Position
-	FieldRef *parserFieldRef
-
-	ast *ast.Relation
-}
-
-func newParserRelation() *parserRelation {
-	return &parserRelation{
-		ast: &ast.Relation{},
-	}
-}
-
-func (r *parserRelation) FinalizeAST(root *parserRoot) (err error) {
-	field, err := root.Field(r.FieldRef)
-	if err != nil {
-		return err
-	}
-
-	r.ast.Field = field.ast
-	return nil
-}
-
-type parserIndex struct {
-	Pos    scanner.Position
-	Name   string
-	Fields []*parserFieldRef
-
-	ast *ast.Index
-}
-
-func newParserIndex() *parserIndex {
-	return &parserIndex{
-		ast: &ast.Index{},
-	}
-}
-
-func (idx *parserIndex) FinalizeAST(model *parserModel) (err error) {
-	idx.ast.Name = idx.Name
-	for _, ref := range idx.Fields {
-		if field, err := model.Field(ref); err == nil {
-			idx.ast.Fields = append(idx.ast.Fields, field.ast)
-		} else {
-			return err
-		}
-	}
-	return nil
-}
-
-type parserFields struct {
-	Pos  scanner.Position
-	Refs []*parserFieldRef
-}
-
-type parserSelect struct {
-	Pos     scanner.Position
-	Fields  *parserFields
-	Joins   []*parserJoin
-	Where   []*parserWhere
-	OrderBy *parserOrderBy
-
-	ast *ast.Select
-}
-
-func newParserSelect() *parserSelect {
-	return &parserSelect{
-		ast: &ast.Select{},
-	}
-}
-
-func (s *parserSelect) FinalizeAST(root *parserRoot) (err error) {
-
-	var func_suffix []string
-	if s.Fields == nil || len(s.Fields.Refs) == 0 {
-		return Error.New("%s: no fields defined to select", s.Pos)
-	}
-
-	// Figure out which models are needed for the fields and that the field
-	// references aren't repetetive.
-	selected := map[string]map[string]*parserFieldRef{}
-	for _, fieldref := range s.Fields.Refs {
-		fields := selected[fieldref.Model]
-		if fields == nil {
-			fields = map[string]*parserFieldRef{}
-			selected[fieldref.Model] = fields
-		}
-
-		existing := fields[""]
-		if existing == nil {
-			existing = fields[fieldref.Field]
-		}
-		if existing != nil {
-			return Error.New(
-				"%s: field %s already selected by field %s",
-				fieldref.Pos, fieldref, existing)
-		}
-		fields[fieldref.Field] = fieldref
-
-		if fieldref.Field == "" {
-			model, err := root.Model(fieldref)
-			if err != nil {
-				return err
-			}
-			s.ast.Fields = append(s.ast.Fields, model.ast)
-			func_suffix = append(func_suffix, fieldref.Model)
-		} else {
-			field, err := root.Field(fieldref)
-			if err != nil {
-				return err
-			}
-			s.ast.Fields = append(s.ast.Fields, field.ast)
-			func_suffix = append(func_suffix, fieldref.Model, fieldref.Field)
-		}
-	}
-
-	// Figure out set of models that are included in the select. These come from
-	// explicit joins, or implicitly if there is only a single model referenced
-	// in the fields.
-	models := map[string]*parserFieldRef{}
-	switch {
-	case len(s.Joins) > 0:
-		next := s.Joins[0].Left.Model
-		for _, join := range s.Joins {
-			left, err := root.Field(join.Left)
-			if err != nil {
-				return err
-			}
-			if join.Left.Model != next {
-				return Error.New(
-					"%s: model order must be consistent; expected %q; got %q",
-					left.Pos, next, join.Left.Model)
-			}
-			right, err := root.Field(join.Right)
-			if err != nil {
-				return err
-			}
-			next = join.Right.Model
-			if s.ast.From == nil {
-				s.ast.From = left.ast.Model
-				models[join.Left.Model] = join.Left
-			}
-			s.ast.Joins = append(s.ast.Joins, &ast.Join{
-				Type:  join.Type,
-				Left:  left.ast,
-				Right: right.ast,
-			})
-			if existing := models[join.Right.Model]; existing != nil {
-				return Error.New("%s: model %q already joined at %s",
-					join.Right.Pos, join.Right.Model, existing.Pos)
-			}
-			models[join.Right.Model] = join.Right
-		}
-	case len(selected) == 1:
-		from, err := root.Model(s.Fields.Refs[0])
-		if err != nil {
-			return err
-		}
-		s.ast.From = from.ast
-		models[from.Name] = s.Fields.Refs[0]
-	default:
-		return Error.New(
-			"%s: cannot select from multiple models without a join",
-			s.Fields.Pos)
-	}
-
-	// Make sure all of the fields are accounted for in the set of models
-	for _, fieldref := range s.Fields.Refs {
-		if models[fieldref.Model] == nil {
-			return Error.New(
-				"%s: cannot select field/model %q; model %q is not joined",
-				fieldref.Pos, fieldref, fieldref.Model)
-		}
-	}
-
-	// Finalize the where conditions and make sure referenced models are part
-	// of the select.
-	if len(s.Where) > 0 {
-		func_suffix = append(func_suffix, "by")
-	}
-	for _, where := range s.Where {
-		if err = where.FinalizeAST(root); err != nil {
-			return err
-		}
-		if models[where.Left.Model] == nil {
-			return Error.New(
-				"%s: invalid where condition %q; model %q is not joined",
-				where.Pos, where, where.Left.Model)
-		}
-		if where.Right != nil {
-			if models[where.Right.Model] == nil {
-				return Error.New(
-					"%s: invalid where condition %q; model %q is not joined",
-					where.Pos, where, where.Right.Model)
-			}
-		} else {
-			func_suffix = append(func_suffix, where.Left.Model, where.Left.Field)
-		}
-		s.ast.Where = append(s.ast.Where, where.ast)
-	}
-
-	// Finalize OrderBy and make sure referenced fields are part of the select
-	if s.OrderBy != nil {
-		if err = s.OrderBy.FinalizeAST(root); err != nil {
-			return err
-		}
-		for _, order_by_field := range s.OrderBy.Fields {
-			if models[order_by_field.Model] == nil {
-				return Error.New(
-					"%s: invalid orderby field %q; model %q is not joined",
-					order_by_field.Pos, order_by_field, order_by_field.Model)
-			}
-		}
-		s.ast.OrderBy = s.OrderBy.ast
-	}
-
-	if s.ast.FuncSuffix == "" {
-		s.ast.FuncSuffix = strings.Join(func_suffix, "_")
-	}
-
-	return nil
-}
-
-type parserJoin struct {
-	Pos   scanner.Position
-	Left  *parserFieldRef
-	Right *parserFieldRef
-	Type  ast.JoinType
-}
-
-type parserWhere struct {
-	Pos   scanner.Position
-	Left  *parserFieldRef
-	Op    ast.Operator
-	Right *parserFieldRef
-
-	ast *ast.Where
-}
-
-func newParserWhere() *parserWhere {
-	return &parserWhere{
-		ast: &ast.Where{},
-	}
-}
-
-func (s *parserWhere) FinalizeAST(root *parserRoot) (err error) {
-	s.ast.Op = s.Op
-	left, err := root.Field(s.Left)
-	if err != nil {
-		return err
-	}
-	s.ast.Left = left.ast
-	if s.Right != nil {
-		right, err := root.Field(s.Right)
-		if err != nil {
-			return err
-		}
-		s.ast.Right = right.ast
-	}
-	return nil
-}
-
-type parserOrderBy struct {
-	Fields []*parserFieldRef
-	ast    *ast.OrderBy
-}
-
-func newParserOrderBy() *parserOrderBy {
-	return &parserOrderBy{
-		ast: &ast.OrderBy{},
-	}
-}
-
-func (s *parserOrderBy) FinalizeAST(root *parserRoot) (err error) {
-	for _, order_by_field := range s.Fields {
-		field, err := root.Field(order_by_field)
-		if err != nil {
-			return err
-		}
-		s.ast.Fields = append(s.ast.Fields, field.ast)
-	}
-	return nil
-}
-
-type parserDelete struct {
-	Pos   scanner.Position
-	Name  string
-	Model string
-	Where []*parserWhere
-
-	ast *ast.Delete
-}
-
-func newParserDelete() *parserDelete {
-	return &parserDelete{
-		ast: &ast.Delete{},
-	}
-}
-
-func (s *parserDelete) FinalizeAST(root *parserRoot) (err error) {
-	s.ast.Name = s.Name
-	s.ast.Model = s.Model
-
-	for _, where := range s.Where {
-		if err := where.FinalizeAST(root); err != nil {
-			return err
-		}
-		s.ast.Where = append(s.ast.Where, where.ast)
-	}
-	return nil
-}
-
-type parserFieldRef struct {
-	Pos   scanner.Position
-	Model string
-	Field string
-}
-
-func (r *parserFieldRef) String() string {
-	if r.Field == "" {
-		return r.Model
-	}
-	if r.Model == "" {
-		return r.Field
-	}
-	return fmt.Sprintf("%s.%s", r.Model, r.Field)
-}
-
-func parseRoot(scanner *Scanner) (astroot *ast.Root, err error) {
-	root := newParserRoot()
 	for {
 		token, pos, text, err := scanner.ScanOneOf(EOF, Ident)
 		if err != nil {
 			return nil, err
 		}
 		if token == EOF {
-			if err = root.FinalizeAST(); err != nil {
-				return nil, err
-			}
-			return root.ast, nil
+			return root, nil
 		}
 
 		switch strings.ToLower(text) {
@@ -602,31 +62,21 @@ func parseRoot(scanner *Scanner) (astroot *ast.Root, err error) {
 			if err != nil {
 				return nil, err
 			}
-
-			if err = root.AddModel(model); err != nil {
-				return nil, err
-			}
+			root.Models = append(root.Models, model)
 		case "select":
 			sel, err := parseSelect(scanner)
 			if err != nil {
 				return nil, err
 			}
-
 			root.Selects = append(root.Selects, sel)
-		case "delete":
-			del, err := parseDelete(scanner)
-			if err != nil {
-				return nil, err
-			}
-			root.Deletes = append(root.Deletes, del)
 		default:
-			return nil, expectedKeyword(pos, text, "model", "select", "delete")
+			return nil, expectedKeyword(pos, text, "model", "select")
 		}
 	}
 }
 
-func parseModel(scanner *Scanner) (model *parserModel, err error) {
-	model = newParserModel()
+func parseModel(scanner *Scanner) (model *ast.Model, err error) {
+	model = new(ast.Model)
 	model.Pos, model.Name, err = scanner.ScanExact(Ident)
 	if err != nil {
 		return nil, err
@@ -657,9 +107,7 @@ func parseModel(scanner *Scanner) (model *parserModel, err error) {
 			if err != nil {
 				return nil, err
 			}
-			if err = model.AddField(field); err != nil {
-				return nil, err
-			}
+			model.Fields = append(model.Fields, field)
 		case "key":
 			if model.PrimaryKey != nil {
 				return nil, Error.New("%s: primary key already on model %q",
@@ -681,9 +129,7 @@ func parseModel(scanner *Scanner) (model *parserModel, err error) {
 			if err != nil {
 				return nil, err
 			}
-			if err = model.AddIndex(index); err != nil {
-				return nil, err
-			}
+			model.Indexes = append(model.Indexes, index)
 		default:
 			return nil, expectedKeyword(pos, text, "name", "field", "key",
 				"unique", "index")
@@ -720,8 +166,8 @@ var allowedAttributes = map[string]map[ast.FieldType]bool{
 	},
 }
 
-func parseField(scanner *Scanner) (field *parserField, err error) {
-	field = newParserField()
+func parseField(scanner *Scanner) (field *ast.Field, err error) {
+	field = new(ast.Field)
 	field.Pos, field.Name, err = scanner.ScanExact(Ident)
 	if err != nil {
 		return nil, err
@@ -792,7 +238,7 @@ func parseField(scanner *Scanner) (field *parserField, err error) {
 }
 
 func parseFieldType(scanner *Scanner) (field_type ast.FieldType,
-	relation *parserRelation, err error) {
+	relation *ast.Relation, err error) {
 
 	pos, ident, err := scanner.ScanExact(Ident)
 	if err != nil {
@@ -841,11 +287,12 @@ func parseFieldType(scanner *Scanner) (field_type ast.FieldType,
 	}
 	suffix = strings.ToLower(suffix)
 
-	relation = newParserRelation()
-	relation.FieldRef = &parserFieldRef{
-		Pos:   pos,
-		Model: ident,
-		Field: suffix,
+	relation = &ast.Relation{
+		FieldRef: &ast.FieldRef{
+			Pos:   pos,
+			Model: ident,
+			Field: suffix,
+		},
 	}
 	return ast.UnsetField, relation, nil
 }
@@ -878,7 +325,7 @@ func parseIntAttribute(scanner *Scanner) (int, error) {
 	return value, nil
 }
 
-func parseRelativeFieldRefs(scanner *Scanner) (refs []*parserFieldRef,
+func parseRelativeFieldRefs(scanner *Scanner) (refs []*ast.RelativeFieldRef,
 	err error) {
 
 	for {
@@ -891,15 +338,17 @@ func parseRelativeFieldRefs(scanner *Scanner) (refs []*parserFieldRef,
 		if pos, _, ok := scanner.ScanIf(Comma); !ok {
 			if len(refs) == 0 {
 				return nil, Error.New(
-					"%s: at least one field must be specified", pos)
+					"%s: at ir one field must be specified", pos)
 			}
 			return refs, nil
 		}
 	}
 }
 
-func parseRelativeFieldRef(scanner *Scanner) (ref *parserFieldRef, err error) {
-	ref = &parserFieldRef{}
+func parseRelativeFieldRef(scanner *Scanner) (ref *ast.RelativeFieldRef,
+	err error) {
+
+	ref = new(ast.RelativeFieldRef)
 	ref.Pos, ref.Field, err = scanner.ScanExact(Ident)
 	if err != nil {
 		return nil, err
@@ -907,9 +356,10 @@ func parseRelativeFieldRef(scanner *Scanner) (ref *parserFieldRef, err error) {
 	return ref, nil
 }
 
-func parseIndex(scanner *Scanner) (index *parserIndex, err error) {
-	index = newParserIndex()
+func parseIndex(scanner *Scanner) (index *ast.Index, err error) {
+	index = new(ast.Index)
 	index.Pos = scanner.Pos()
+
 	if scanner.Peek() == Ident {
 		_, index.Name, err = scanner.ScanExact(Ident)
 		if err != nil {
@@ -945,8 +395,8 @@ func parseIndex(scanner *Scanner) (index *parserIndex, err error) {
 	return index, nil
 }
 
-func parseSelect(scanner *Scanner) (sel *parserSelect, err error) {
-	sel = newParserSelect()
+func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
+	sel = new(ast.Select)
 	sel.Pos = scanner.Pos()
 
 	if _, _, err := scanner.ScanExact(OpenParen); err != nil {
@@ -965,11 +415,11 @@ func parseSelect(scanner *Scanner) (sel *parserSelect, err error) {
 
 		switch text {
 		case "suffix":
-			if sel.ast.FuncSuffix != "" {
+			if sel.FuncSuffix != "" {
 				return nil, Error.New("%s: suffix can only be specified once",
 					pos)
 			}
-			_, sel.ast.FuncSuffix, err = scanner.ScanExact(Ident)
+			_, sel.FuncSuffix, err = scanner.ScanExact(Ident)
 			if err != nil {
 				return nil, err
 			}
@@ -978,10 +428,7 @@ func parseSelect(scanner *Scanner) (sel *parserSelect, err error) {
 				return nil, Error.New("%s: fields can only be specified once",
 					pos)
 			}
-			sel.Fields = &parserFields{
-				Pos: pos,
-			}
-			sel.Fields.Refs, err = parseFieldRefs(scanner, modelCentricRef)
+			sel.Fields, err = parseFieldRefs(scanner, modelCentricRef)
 			if err != nil {
 				return nil, err
 			}
@@ -998,7 +445,7 @@ func parseSelect(scanner *Scanner) (sel *parserSelect, err error) {
 			}
 			sel.Joins = append(sel.Joins, join)
 		case "limit":
-			sel.ast.Limit, err = parseLimit(scanner)
+			sel.Limit, err = parseLimit(scanner)
 			if err != nil {
 				return nil, err
 			}
@@ -1020,6 +467,8 @@ func parseSelect(scanner *Scanner) (sel *parserSelect, err error) {
 
 func parseLimit(scanner *Scanner) (limit *ast.Limit, err error) {
 	limit = new(ast.Limit)
+	limit.Pos = scanner.Pos()
+
 	if _, _, ok := scanner.ScanIf(Question); ok {
 		return limit, nil
 	}
@@ -1038,8 +487,10 @@ func parseLimit(scanner *Scanner) (limit *ast.Limit, err error) {
 	return limit, nil
 }
 
-func parseOrderBy(scanner *Scanner) (order_by *parserOrderBy, err error) {
-	order_by = newParserOrderBy()
+func parseOrderBy(scanner *Scanner) (order_by *ast.OrderBy, err error) {
+	order_by = new(ast.OrderBy)
+	order_by.Pos = scanner.Pos()
+
 	pos, text, err := scanner.ScanExact(Ident)
 	if err != nil {
 		return nil, err
@@ -1047,7 +498,7 @@ func parseOrderBy(scanner *Scanner) (order_by *parserOrderBy, err error) {
 	switch strings.ToLower(text) {
 	case "asc":
 	case "desc":
-		order_by.ast.Descending = true
+		order_by.Descending = true
 	default:
 		return nil, expectedKeyword(pos, text, "asc", "desc")
 	}
@@ -1059,45 +510,8 @@ func parseOrderBy(scanner *Scanner) (order_by *parserOrderBy, err error) {
 	return order_by, nil
 }
 
-func parseDelete(scanner *Scanner) (del *parserDelete, err error) {
-	del = newParserDelete()
-	del.Pos = scanner.Pos()
-
-	_, del.Name, _ = scanner.ScanIf(Ident)
-	del.Name = strings.ToLower(del.Name)
-
-	if _, _, ok := scanner.ScanIf(OpenParen); !ok {
-		return nil, nil
-	}
-
-	for {
-		token, _, text, err := scanner.ScanOneOf(CloseParen, Ident)
-		if err != nil {
-			return nil, err
-		}
-
-		if token == CloseParen {
-			return del, nil
-		}
-
-		switch text {
-		case "model":
-			_, del.Model, err = scanner.ScanExact(Ident)
-			if err != nil {
-				return nil, err
-			}
-		case "where":
-			where, err := parseWhere(scanner)
-			if err != nil {
-				return nil, err
-			}
-			del.Where = append(del.Where, where)
-		}
-	}
-}
-
-func parseWhere(scanner *Scanner) (where *parserWhere, err error) {
-	where = newParserWhere()
+func parseWhere(scanner *Scanner) (where *ast.Where, err error) {
+	where = new(ast.Where)
 	where.Pos = scanner.Pos()
 
 	where.Left, err = parseFieldRef(scanner, fullRef)
@@ -1145,7 +559,7 @@ func parseWhere(scanner *Scanner) (where *parserWhere, err error) {
 		return where, nil
 	}
 
-	where.Right, err = parseFieldRef(scanner, fieldCentricRef)
+	where.Right, err = parseFieldRef(scanner, fullRef)
 	if err != nil {
 		return nil, err
 	}
@@ -1153,8 +567,8 @@ func parseWhere(scanner *Scanner) (where *parserWhere, err error) {
 	return where, nil
 }
 
-func parseJoin(scanner *Scanner) (join *parserJoin, err error) {
-	join = &parserJoin{}
+func parseJoin(scanner *Scanner) (join *ast.Join, err error) {
+	join = new(ast.Join)
 	join.Pos = scanner.Pos()
 
 	pos, join_type, err := scanner.ScanExact(Ident)
@@ -1192,18 +606,20 @@ type fieldRefType int
 const (
 	fullRef fieldRefType = iota
 	modelCentricRef
-	fieldCentricRef
 )
 
 func parseFieldRefs(scanner *Scanner, ref_type fieldRefType) (
-	refs []*parserFieldRef, err error) {
+	refs *ast.FieldRefs, err error) {
+
+	refs = new(ast.FieldRefs)
+	refs.Pos = scanner.Pos()
 
 	for {
 		ref, err := parseFieldRef(scanner, ref_type)
 		if err != nil {
 			return nil, err
 		}
-		refs = append(refs, ref)
+		refs.Refs = append(refs.Refs, ref)
 
 		if _, _, ok := scanner.ScanIf(Comma); !ok {
 			return refs, nil
@@ -1212,9 +628,12 @@ func parseFieldRefs(scanner *Scanner, ref_type fieldRefType) (
 }
 
 func parseFieldRef(scanner *Scanner, ref_type fieldRefType) (
-	ref *parserFieldRef, err error) {
+	ref *ast.FieldRef, err error) {
 
-	pos, first, err := scanner.ScanExact(Ident)
+	ref = new(ast.FieldRef)
+	ref.Pos = scanner.Pos()
+
+	_, first, err := scanner.ScanExact(Ident)
 	if err != nil {
 		return nil, err
 	}
@@ -1233,15 +652,8 @@ func parseFieldRef(scanner *Scanner, ref_type fieldRefType) (
 	if !full {
 		switch ref_type {
 		case modelCentricRef:
-			return &parserFieldRef{
-				Pos:   pos,
-				Model: first,
-			}, nil
-		case fieldCentricRef:
-			return &parserFieldRef{
-				Pos:   pos,
-				Field: first,
-			}, nil
+			ref.Model = first
+			return ref, nil
 		default:
 			return nil, errors.NotImplementedError.New(
 				"unhandled ref type %s", ref_type)
@@ -1252,9 +664,7 @@ func parseFieldRef(scanner *Scanner, ref_type fieldRefType) (
 		return nil, err
 	}
 
-	return &parserFieldRef{
-		Pos:   pos,
-		Model: first,
-		Field: second,
-	}, nil
+	ref.Model = first
+	ref.Field = second
+	return ref, nil
 }

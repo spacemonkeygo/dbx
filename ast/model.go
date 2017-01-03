@@ -14,50 +14,14 @@
 
 package ast
 
-import (
-	"fmt"
-
-	"bitbucket.org/pkg/inflect"
-)
+import "text/scanner"
 
 type Model struct {
+	Pos        scanner.Position
 	Name       string
 	Table      string
 	Fields     []*Field
-	PrimaryKey []*Field
-	Unique     [][]*Field
+	PrimaryKey []*RelativeFieldRef
+	Unique     [][]*RelativeFieldRef
 	Indexes    []*Index
 }
-
-func (m *Model) TableName() string {
-	if m.Table != "" {
-		return m.Table
-	}
-	return inflect.Pluralize(m.Name)
-}
-
-func (m *Model) BasicPrimaryKey() *Field {
-	if len(m.PrimaryKey) == 1 && m.PrimaryKey[0].IsInt() {
-		return m.PrimaryKey[0]
-	}
-	return nil
-}
-
-func (m *Model) InsertableFields() (fields []*Field) {
-	for _, field := range m.Fields {
-		if field.Insertable() {
-			fields = append(fields, field)
-		}
-	}
-	return fields
-}
-
-func (m *Model) SelectRefs() (refs []string) {
-	for _, field := range m.Fields {
-		refs = append(refs,
-			fmt.Sprintf("%s.%s", m.TableName(), field.ColumnName()))
-	}
-	return refs
-}
-
-func (m *Model) selectable() {}

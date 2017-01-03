@@ -24,6 +24,7 @@ import (
 	cli "github.com/jawher/mow.cli"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/code"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/parser"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 	pubtemplates "gopkg.in/spacemonkeygo/dbx.v1/templates"
@@ -47,11 +48,14 @@ func main() {
 		}
 	}
 
-	var root *ast.Root
+	var ast_root *ast.Root
+	var root *ir.Root
 	var loader tmplutil.Loader
 
 	app.Before = func() {
-		root, err = parser.ParseFile(*in_arg)
+		ast_root, err = parser.ParseFile(*in_arg)
+		die(err)
+		root, err = ir.Transform(ast_root)
 		die(err)
 
 		if *template_dir_arg != "" {
@@ -106,7 +110,7 @@ func createDialects(which []string) (out []sql.Dialect, err error) {
 	return out, nil
 }
 
-//func generateSQLSchema(out string, dialects []sql.Dialect, root *ast.Root) (
+//func generateSQLSchema(out string, dialects []sql.Dialect, root *ir.Root) (
 //	err error) {
 //
 //	for _, dialect := range dialects {
@@ -121,7 +125,7 @@ func createDialects(which []string) (out []sql.Dialect, err error) {
 //	return nil
 //}
 
-func generateCode(out string, root *ast.Root, dialects []sql.Dialect,
+func generateCode(out string, root *ir.Root, dialects []sql.Dialect,
 	lang code.Language, format_code bool) (err error) {
 
 	var buf bytes.Buffer

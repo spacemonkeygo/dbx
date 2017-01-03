@@ -17,5 +17,4 @@ package ast
 type Root struct {
 	Models  []*Model
 	Selects []*Select
-	Deletes []*Delete
 }

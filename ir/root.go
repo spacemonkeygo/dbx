@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package ir
 
-import "text/scanner"
-
-type Index struct {
-	Pos    scanner.Position
-	Name   string
-	Fields []*RelativeFieldRef
+type Root struct {
+	Models  []*Model
+	Selects []*Select
+	Deletes []*Delete
 }

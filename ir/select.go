@@ -12,47 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package ir
 
-import "text/scanner"
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+
+type Selectable interface {
+	SelectRefs() []string
+	selectable()
+}
 
 type Select struct {
-	Pos        scanner.Position
 	FuncSuffix string
-	Limit      *Limit
-	Fields     *FieldRefs
+	Fields     []Selectable
+	From       *Model
 	Joins      []*Join
 	Where      []*Where
 	OrderBy    *OrderBy
-}
-
-type Limit struct {
-	Pos    scanner.Position
-	Amount int
+	Limit      *Limit
 }
 
 type Join struct {
-	Pos   scanner.Position
-	Left  *FieldRef
-	Right *FieldRef
-	Type  JoinType
-}
-
-type JoinType int
-
-const (
-	LeftJoin JoinType = iota
-)
-
-type Where struct {
-	Pos   scanner.Position
-	Left  *FieldRef
-	Op    Operator
-	Right *FieldRef
+	Type  ast.JoinType
+	Left  *Field
+	Right *Field
 }
 
 type OrderBy struct {
-	Pos        scanner.Position
-	Fields     *FieldRefs
+	Fields     []*Field
 	Descending bool
+}
+
+type Limit struct {
+	Amount int
 }

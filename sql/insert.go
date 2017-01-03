@@ -14,7 +14,7 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
 var insertTmpl = `INSERT INTO {{ .Table }}(
 	{{- range $i, $col := .Columns }}
@@ -24,16 +24,16 @@ var insertTmpl = `INSERT INTO {{ .Table }}(
 		{{- if $i }}, {{ end }}?
 	{{- end }}){{ if .SupportsReturning }} RETURNING *{{ end }}`
 
-func RenderInsert(dialect Dialect, model *ast.Model) string {
+func RenderInsert(dialect Dialect, model *ir.Model) string {
 	return mustRender(insertTmpl, SQLInsertFromModel(model, dialect))
 }
 
 type SQLInsert struct {
-	model   *ast.Model
+	model   *ir.Model
 	dialect Dialect
 }
 
-func SQLInsertFromModel(model *ast.Model, dialect Dialect) *SQLInsert {
+func SQLInsertFromModel(model *ir.Model, dialect Dialect) *SQLInsert {
 	return &SQLInsert{
 		model:   model,
 		dialect: dialect,

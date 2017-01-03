@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package ir
 
-import "text/scanner"
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
-type Delete struct {
-	Name  string
-	Pos   scanner.Position
-	Model string
-	Joins []*Join
-	Where []*Where
+type Where struct {
+	Left  *Field
+	Op    ast.Operator
+	Right *Field
 }

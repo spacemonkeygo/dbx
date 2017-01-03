@@ -18,7 +18,7 @@ import (
 	"io"
 
 	"github.com/spacemonkeygo/errors"
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
@@ -28,9 +28,9 @@ var (
 
 type Language interface {
 	Format([]byte) ([]byte, error)
-	RenderHeader(w io.Writer, root *ast.Root, dialects []sql.Dialect) error
-	RenderInsert(w io.Writer, model *ast.Model, dialect sql.Dialect) error
-	RenderSelect(w io.Writer, sel *ast.Select, dialect sql.Dialect) error
-	RenderDelete(w io.Writer, del *ast.Delete, dialect sql.Dialect) error
-	RenderFooter(w io.Writer, root *ast.Root, dialects []sql.Dialect) error
+	RenderHeader(w io.Writer, root *ir.Root, dialects []sql.Dialect) error
+	RenderInsert(w io.Writer, model *ir.Model, dialect sql.Dialect) error
+	RenderSelect(w io.Writer, sel *ir.Select, dialect sql.Dialect) error
+	RenderDelete(w io.Writer, del *ir.Delete, dialect sql.Dialect) error
+	RenderFooter(w io.Writer, root *ir.Root, dialects []sql.Dialect) error
 }

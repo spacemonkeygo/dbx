@@ -14,56 +14,87 @@
 
 package ast
 
-import "fmt"
-
-type Relation struct {
-	Field *Field
-}
+import "text/scanner"
 
 type Field struct {
+	Pos        scanner.Position
 	Name       string
-	Column     string
-	Model      *Model
 	Type       FieldType
 	Relation   *Relation
+	Column     string
 	Nullable   bool
+	Updatable  bool
 	AutoInsert bool
 	AutoUpdate bool
-	Updatable  bool
 	Length     int
-	Default    interface{}
-	SQLDefault interface{}
 }
 
-func (f *Field) ColumnName() string {
-	if f.Column != "" {
-		return f.Column
-	}
-	return f.Name
+type FieldRefs struct {
+	Pos  scanner.Position
+	Refs []*FieldRef
 }
 
-func (f *Field) Insertable() bool {
-	if f.Relation != nil {
-		return true
-	}
-	return f.Type != SerialField && f.Type != Serial64Field
-}
+type FieldType int
 
-func (f *Field) IsInt() bool {
-	switch f.Type {
-	case SerialField, Serial64Field, IntField, Int64Field:
-		return true
+const (
+	UnsetField FieldType = iota
+	SerialField
+	Serial64Field
+	IntField
+	Int64Field
+	UintField
+	Uint64Field
+	FloatField
+	Float64Field
+	TextField
+	BoolField
+	TimestampField
+	TimestampUTCField
+	BlobField
+)
+
+func (f FieldType) String() string {
+	switch f {
+	case UnsetField:
+		return "<UNSET-FIELD>"
+	case SerialField:
+		return "serial"
+	case Serial64Field:
+		return "serial64"
+	case IntField:
+		return "int"
+	case Int64Field:
+		return "int64"
+	case UintField:
+		return "uint"
+	case Uint64Field:
+		return "uint64"
+	case FloatField:
+		return "float"
+	case Float64Field:
+		return "float64"
+	case TextField:
+		return "text"
+	case BoolField:
+		return "bool"
+	case TimestampField:
+		return "timestamp"
+	case TimestampUTCField:
+		return "utimestamp"
+	case BlobField:
+		return "blob"
 	default:
-		return false
+		return "<UNKNOWN-FIELD>"
 	}
 }
 
-func (f *Field) ColumnRef() string {
-	return fmt.Sprintf("%s.%s", f.Model.TableName(), f.ColumnName())
+func (f FieldType) AsLink() FieldType {
+	switch f {
+	case SerialField:
+		return IntField
+	case Serial64Field:
+		return Int64Field
+	default:
+		return f
+	}
 }
-
-func (f *Field) SelectRefs() (refs []string) {
-	return []string{f.ColumnRef()}
-}
-
-func (f *Field) selectable() {}

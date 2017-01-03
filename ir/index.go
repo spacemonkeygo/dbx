@@ -12,16 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package ir
 
-type JoinType int
-
-const (
-	LeftJoin JoinType = iota
-)
-
-type Join struct {
-	Type  JoinType
-	Left  *Field
-	Right *Field
+type Index struct {
+	Name   string
+	Fields []*Field
 }

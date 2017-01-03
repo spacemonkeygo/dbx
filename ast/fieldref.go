@@ -14,45 +14,37 @@
 
 package ast
 
-import "text/scanner"
-
-type Select struct {
-	Pos        scanner.Position
-	FuncSuffix string
-	Limit      *Limit
-	Fields     *FieldRefs
-	Joins      []*Join
-	Where      []*Where
-	OrderBy    *OrderBy
-}
-
-type Limit struct {
-	Pos    scanner.Position
-	Amount int
-}
-
-type Join struct {
-	Pos   scanner.Position
-	Left  *FieldRef
-	Right *FieldRef
-	Type  JoinType
-}
-
-type JoinType int
-
-const (
-	LeftJoin JoinType = iota
+import (
+	"fmt"
+	"text/scanner"
 )
 
-type Where struct {
+type FieldRef struct {
 	Pos   scanner.Position
-	Left  *FieldRef
-	Op    Operator
-	Right *FieldRef
+	Model string
+	Field string
 }
 
-type OrderBy struct {
-	Pos        scanner.Position
-	Fields     *FieldRefs
-	Descending bool
+func (r *FieldRef) String() string {
+	if r.Field == "" {
+		return r.Model
+	}
+	if r.Model == "" {
+		return r.Field
+	}
+	return fmt.Sprintf("%s.%s", r.Model, r.Field)
 }
+
+func (f *FieldRef) Relative() *RelativeFieldRef {
+	return &RelativeFieldRef{
+		Pos:   f.Pos,
+		Field: f.Field,
+	}
+}
+
+type RelativeFieldRef struct {
+	Pos   scanner.Position
+	Field string
+}
+
+func (r *RelativeFieldRef) String() string { return r.Field }

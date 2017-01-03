@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
 var selectTmpl = `SELECT {{ range $i, $f:= .Fields }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}
@@ -36,16 +37,16 @@ var selectTmpl = `SELECT {{ range $i, $f:= .Fields }}{{ if $i }}, {{ end }}{{ $f
 	{{- end }}
 `
 
-func RenderSelect(dialect Dialect, sel *ast.Select) string {
+func RenderSelect(dialect Dialect, sel *ir.Select) string {
 	return mustRender(selectTmpl, SelectFromAST(sel, dialect))
 }
 
 type Select struct {
-	sel     *ast.Select
+	sel     *ir.Select
 	dialect Dialect
 }
 
-func SelectFromAST(sel *ast.Select, dialect Dialect) *Select {
+func SelectFromAST(sel *ir.Select, dialect Dialect) *Select {
 	return &Select{
 		sel:     sel,
 		dialect: dialect,
