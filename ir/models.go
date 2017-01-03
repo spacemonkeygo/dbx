@@ -20,31 +20,24 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 )
 
-func Transform(ast_root *ast.Root) (*Root, error) {
-	return newTransformer(ast_root).Transform()
+type Models struct {
+	models []*Model
+	linker *linker
 }
 
-func newTransformer(ast_root *ast.Root) *transformer {
-	return &transformer{
+func newModels() *Models {
+	return &Models{
 		linker: newLinker(),
-
-		ast_root: ast_root,
-		ir_root:  new(Root),
 	}
 }
 
-type transformer struct {
-	*linker
+func TransformModels(ast_models []*ast.Model) (*Models, error) {
+	m := newModels()
 
-	ast_root *ast.Root
-	ir_root  *Root
-}
-
-func (t *transformer) Transform() (*Root, error) {
-	// pass 1. build up the ir structures in a way where we can uniquely
-	// reference them.
-	for _, ast_model := range t.ast_root.Models {
-		link, err := t.AddModel(ast_model)
+	// step 1. create all the Model and Field instances and set their pointers
+	// to point at each other appropriately.
+	for _, ast_model := range ast_models {
+		link, err := m.linker.AddModel(ast_model)
 		if err != nil {
 			return nil, err
 		}
@@ -55,36 +48,61 @@ func (t *transformer) Transform() (*Root, error) {
 		}
 	}
 
-	for _, ast_model := range t.ast_root.Models {
-		model_link := t.GetModel(ast_model.Name)
-		if err := t.transformModel(model_link); err != nil {
+	// step 2. resolve all of the other fields on the Models and Fields
+	// including references between them.
+	for _, ast_model := range ast_models {
+		model_link := m.linker.GetModel(ast_model.Name)
+		if err := m.transformModel(model_link); err != nil {
 			return nil, err
 		}
-		t.ir_root.Models = append(t.ir_root.Models, model_link.model)
+		m.models = append(m.models, model_link.model)
 	}
 
-	for _, ast_sel := range t.ast_root.Selects {
-		if err := t.transformSelect(ast_sel); err != nil {
-			return nil, err
-		}
-	}
-
-	return t.ir_root, nil
+	return m, nil
 }
 
-func (t *transformer) transformModel(model_link *modelLink) (err error) {
+func (m *Models) Models() []*Model {
+	return m.models
+}
+
+func (m *Models) resolveFields(ast_refs []*ast.FieldRef) (
+	fields []*Field, err error) {
+
+	for _, ast_ref := range ast_refs {
+		field, err := m.linker.FindField(ast_ref)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, field)
+	}
+	return fields, nil
+}
+
+func resolveRelativeFieldRefs(model_link *modelLink,
+	ast_refs []*ast.RelativeFieldRef) (fields []*Field, err error) {
+
+	for _, ast_ref := range ast_refs {
+		field, err := model_link.FindField(ast_ref)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, field)
+	}
+	return fields, nil
+}
+
+func (m *Models) transformModel(model_link *modelLink) (err error) {
 	model := model_link.model
-	ast_model := model_link.ast_model
+	ast_model := model_link.ast
 
 	model.Name = ast_model.Name
 	model.Table = ast_model.Table
 
 	for _, ast_field := range ast_model.Fields {
 		field_link := model_link.GetField(ast_field.Name)
-		if err := t.transformField(field_link); err != nil {
+		if err := m.transformField(field_link); err != nil {
 			return err
 		}
-		model.Fields = append(model.Fields, field_link.field)
 	}
 
 	if len(ast_model.PrimaryKey) == 0 {
@@ -128,9 +146,9 @@ func (t *transformer) transformModel(model_link *modelLink) (err error) {
 	return nil
 }
 
-func (t *transformer) transformField(field_link *fieldLink) (err error) {
+func (m *Models) transformField(field_link *fieldLink) (err error) {
 	field := field_link.field
-	ast_field := field_link.ast_field
+	ast_field := field_link.ast
 
 	field.Name = ast_field.Name
 	field.Type = ast_field.Type
@@ -142,7 +160,7 @@ func (t *transformer) transformField(field_link *fieldLink) (err error) {
 	field.Length = ast_field.Length
 
 	if ast_field.Relation != nil {
-		related, err := t.FindField(ast_field.Relation.FieldRef)
+		related, err := m.linker.FindField(ast_field.Relation.FieldRef)
 		if err != nil {
 			return err
 		}
@@ -155,12 +173,12 @@ func (t *transformer) transformField(field_link *fieldLink) (err error) {
 	return nil
 }
 
-func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
-	sel := new(Select)
+func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
+	sel = new(Select)
 
 	var func_suffix []string
 	if ast_sel.Fields == nil || len(ast_sel.Fields.Refs) == 0 {
-		return Error.New("%s: no fields defined to select", ast_sel.Pos)
+		return nil, Error.New("%s: no fields defined to select", ast_sel.Pos)
 	}
 
 	// Figure out which models are needed for the fields and that the field
@@ -178,23 +196,23 @@ func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
 			existing = fields[ast_fieldref.Field]
 		}
 		if existing != nil {
-			return Error.New(
+			return nil, Error.New(
 				"%s: field %s already selected by field %s",
 				ast_fieldref.Pos, ast_fieldref, existing)
 		}
 		fields[ast_fieldref.Field] = ast_fieldref
 
 		if ast_fieldref.Field == "" {
-			model, err := t.FindModel(ast_fieldref)
+			model, err := m.linker.FindModel(ast_fieldref)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			sel.Fields = append(sel.Fields, model)
 			func_suffix = append(func_suffix, ast_fieldref.Model)
 		} else {
-			field, err := t.FindField(ast_fieldref)
+			field, err := m.linker.FindField(ast_fieldref)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			sel.Fields = append(sel.Fields, field)
 			func_suffix = append(func_suffix,
@@ -210,18 +228,18 @@ func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
 	case len(ast_sel.Joins) > 0:
 		next := ast_sel.Joins[0].Left.Model
 		for _, join := range ast_sel.Joins {
-			left, err := t.FindField(join.Left)
+			left, err := m.linker.FindField(join.Left)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if join.Left.Model != next {
-				return Error.New(
+				return nil, Error.New(
 					"%s: model order must be consistent; expected %q; got %q",
 					join.Left.Pos, next, join.Left.Model)
 			}
-			right, err := t.FindField(join.Right)
+			right, err := m.linker.FindField(join.Right)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			next = join.Right.Model
 			if sel.From == nil {
@@ -234,20 +252,20 @@ func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
 				Right: right,
 			})
 			if existing := models[join.Right.Model]; existing != nil {
-				return Error.New("%s: model %q already joined at %s",
+				return nil, Error.New("%s: model %q already joined at %s",
 					join.Right.Pos, join.Right.Model, existing.Pos)
 			}
 			models[join.Right.Model] = join.Right
 		}
 	case len(selected) == 1:
-		from, err := t.FindModel(ast_sel.Fields.Refs[0])
+		from, err := m.linker.FindModel(ast_sel.Fields.Refs[0])
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sel.From = from
 		models[from.Name] = ast_sel.Fields.Refs[0]
 	default:
-		return Error.New(
+		return nil, Error.New(
 			"%s: cannot select from multiple models without a join",
 			ast_sel.Fields.Pos)
 	}
@@ -255,7 +273,7 @@ func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
 	// Make sure all of the fields are accounted for in the set of models
 	for _, ast_fieldref := range ast_sel.Fields.Refs {
 		if models[ast_fieldref.Model] == nil {
-			return Error.New(
+			return nil, Error.New(
 				"%s: cannot select field/model %q; model %q is not joined",
 				ast_fieldref.Pos, ast_fieldref, ast_fieldref.Model)
 		}
@@ -267,24 +285,24 @@ func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
 		func_suffix = append(func_suffix, "by")
 	}
 	for _, ast_where := range ast_sel.Where {
-		left, err := t.FindField(ast_where.Left)
+		left, err := m.linker.FindField(ast_where.Left)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if models[ast_where.Left.Model] == nil {
-			return Error.New(
+			return nil, Error.New(
 				"%s: invalid where condition %q; model %q is not joined",
 				ast_where.Pos, ast_where, ast_where.Left.Model)
 		}
 
 		var right *Field
 		if ast_where.Right != nil {
-			right, err = t.FindField(ast_where.Right)
+			right, err = m.linker.FindField(ast_where.Right)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if models[ast_where.Right.Model] == nil {
-				return Error.New(
+				return nil, Error.New(
 					"%s: invalid where condition %q; model %q is not joined",
 					ast_where.Pos, ast_where, ast_where.Right.Model)
 			}
@@ -302,13 +320,13 @@ func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
 
 	// Finalize OrderBy and make sure referenced fields are part of the select
 	if ast_sel.OrderBy != nil {
-		fields, err := t.resolveFields(ast_sel.OrderBy.Fields.Refs)
+		fields, err := m.resolveFields(ast_sel.OrderBy.Fields.Refs)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, order_by_field := range ast_sel.OrderBy.Fields.Refs {
 			if models[order_by_field.Model] == nil {
-				return Error.New(
+				return nil, Error.New(
 					"%s: invalid orderby field %q; model %q is not joined",
 					order_by_field.Pos, order_by_field, order_by_field.Model)
 			}
@@ -324,32 +342,5 @@ func (t *transformer) transformSelect(ast_sel *ast.Select) (err error) {
 		sel.FuncSuffix = strings.Join(func_suffix, "_")
 	}
 
-	t.ir_root.Selects = append(t.ir_root.Selects, sel)
-	return nil
-}
-
-func (t *transformer) resolveFields(ast_refs []*ast.FieldRef) (
-	fields []*Field, err error) {
-
-	for _, ast_ref := range ast_refs {
-		field, err := t.FindField(ast_ref)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, field)
-	}
-	return fields, nil
-}
-
-func resolveRelativeFieldRefs(model_link *modelLink,
-	ast_refs []*ast.RelativeFieldRef) (fields []*Field, err error) {
-
-	for _, ast_ref := range ast_refs {
-		field, err := model_link.FindField(ast_ref)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, field)
-	}
-	return fields, nil
+	return sel, nil
 }

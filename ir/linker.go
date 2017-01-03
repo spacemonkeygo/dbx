@@ -29,7 +29,7 @@ func newLinker() *linker {
 func (l *linker) AddModel(ast_model *ast.Model) (link *modelLink, err error) {
 	if existing, ok := l.models[ast_model.Name]; ok {
 		return nil, Error.New("%s: model %q already defined at %s",
-			ast_model.Pos, ast_model.Name, existing.ast_model.Pos)
+			ast_model.Pos, ast_model.Name, existing.ast.Pos)
 	}
 
 	link = newModelLink(ast_model)
@@ -60,32 +60,35 @@ func (l *linker) FindField(ref *ast.FieldRef) (*Field, error) {
 }
 
 type modelLink struct {
-	model     *Model
-	ast_model *ast.Model
-	fields    map[string]*fieldLink
+	model  *Model
+	ast    *ast.Model
+	fields map[string]*fieldLink
 }
 
 func newModelLink(ast_model *ast.Model) *modelLink {
 	return &modelLink{
-		model:     &Model{},
-		ast_model: ast_model,
-		fields:    make(map[string]*fieldLink),
+		model:  &Model{},
+		ast:    ast_model,
+		fields: make(map[string]*fieldLink),
 	}
 }
 
 func (m *modelLink) newFieldLink(ast_field *ast.Field) *fieldLink {
+	field := &Field{
+		Model: m.model,
+	}
+	m.model.Fields = append(m.model.Fields, field)
+
 	return &fieldLink{
-		field: &Field{
-			Model: m.model,
-		},
-		ast_field: ast_field,
+		field: field,
+		ast:   ast_field,
 	}
 }
 
 func (m *modelLink) AddField(ast_field *ast.Field) (err error) {
 	if existing, ok := m.fields[ast_field.Name]; ok {
 		return Error.New("%s: field %q already defined at %s",
-			ast_field.Pos, ast_field.Name, existing.ast_field.Pos)
+			ast_field.Pos, ast_field.Name, existing.ast.Pos)
 	}
 	m.fields[ast_field.Name] = m.newFieldLink(ast_field)
 	return nil
@@ -105,6 +108,6 @@ func (m *modelLink) FindField(ref *ast.RelativeFieldRef) (*Field, error) {
 }
 
 type fieldLink struct {
-	field     *Field
-	ast_field *ast.Field
+	field *Field
+	ast   *ast.Field
 }

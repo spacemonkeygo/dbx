@@ -14,8 +14,29 @@
 
 package ir
 
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+
 type Root struct {
-	Models  []*Model
+	Models  *Models
 	Selects []*Select
 	Deletes []*Delete
+}
+
+func Transform(ast_root *ast.Root) (root *Root, err error) {
+	root = new(Root)
+
+	root.Models, err = TransformModels(ast_root.Models)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ast_sel := range ast_root.Selects {
+		sel, err := root.Models.CreateSelect(ast_sel)
+		if err != nil {
+			return nil, err
+		}
+		root.Selects = append(root.Selects, sel)
+	}
+
+	return root, nil
 }

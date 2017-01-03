@@ -86,7 +86,7 @@ func (g *Golang) RenderHeader(w io.Writer, root *ir.Root,
 
 	params := headerParams{
 		Package: g.options.Package,
-		Structs: GolangStructsFromModels(root.Models),
+		Structs: GolangStructsFromModels(root.Models.Models()),
 	}
 
 	for i := len(params.Structs) - 1; i >= 0; i-- {

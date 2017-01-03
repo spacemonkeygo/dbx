@@ -49,7 +49,7 @@ func (r *renderer) renderDialect(root *ir.Root, dialect sql.Dialect) {
 		return
 	}
 
-	for _, model := range root.Models {
+	for _, model := range root.Models.Models() {
 		r.renderInsert(model, dialect)
 	}
 	for _, sel := range root.Selects {
