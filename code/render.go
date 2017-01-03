@@ -17,8 +17,8 @@ package code
 import (
 	"io"
 
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
 func Render(w io.Writer, root *ast.Root, language Language,

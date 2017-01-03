@@ -12,10 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package tmplutil
 
-import "github.com/spacemonkeygo/errors"
-
-var (
-	Error = errors.NewClass("templates")
+import (
+	"bytes"
+	"io"
+	"text/template"
 )
+
+func RenderString(tmpl *template.Template, name string,
+	data interface{}) (string, error) {
+
+	var buf bytes.Buffer
+	if err := Render(tmpl, &buf, name, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func Render(tmpl *template.Template, w io.Writer, name string,
+	data interface{}) error {
+
+	if name == "" {
+		return Error.Wrap(tmpl.Execute(w, data))
+	}
+	return Error.Wrap(tmpl.ExecuteTemplate(w, name, data))
+}

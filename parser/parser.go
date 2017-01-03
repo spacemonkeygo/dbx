@@ -22,7 +22,7 @@ import (
 	"text/scanner"
 
 	"github.com/spacemonkeygo/errors"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 )
 
 func ParseFile(path string) (root *ast.Root, err error) {
@@ -620,7 +620,7 @@ func parseRoot(scanner *Scanner) (astroot *ast.Root, err error) {
 			}
 			root.Deletes = append(root.Deletes, del)
 		default:
-			return nil, expectedKeyword(pos, text, "model", "query")
+			return nil, expectedKeyword(pos, text, "model", "select", "delete")
 		}
 	}
 }

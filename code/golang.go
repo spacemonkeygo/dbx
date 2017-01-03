@@ -21,9 +21,9 @@ import (
 	"text/template"
 
 	"bitbucket.org/pkg/inflect"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/sql"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/templates"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
 
 var (
@@ -42,7 +42,7 @@ type Golang struct {
 
 var _ Language = (*Golang)(nil)
 
-func NewGolang(loader templates.Loader, options *GolangOptions) (
+func NewGolang(loader tmplutil.Loader, options *GolangOptions) (
 	*Golang, error) {
 
 	header, err := loader.Load("golang.header.tmpl")
@@ -116,19 +116,19 @@ func (g *Golang) RenderHeader(w io.Writer, root *ast.Root,
 		})
 	}
 
-	return templates.Render(g.header, w, "", params)
+	return tmplutil.Render(g.header, w, "", params)
 }
 
 func (g *Golang) RenderInsert(w io.Writer, model *ast.Model,
 	dialect sql.Dialect) (err error) {
 
 	go_ins := GolangInsertFromModel(model, dialect, false)
-	if err := templates.Render(g.funcs, w, "insert", go_ins); err != nil {
+	if err := tmplutil.Render(g.funcs, w, "insert", go_ins); err != nil {
 		return err
 	}
 
 	go_ins = GolangInsertFromModel(model, dialect, true)
-	if err := templates.Render(g.funcs, w, "raw-insert", go_ins); err != nil {
+	if err := tmplutil.Render(g.funcs, w, "raw-insert", go_ins); err != nil {
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (g *Golang) RenderSelect(w io.Writer, sel *ast.Select,
 	dialect sql.Dialect) error {
 
 	go_sel := GolangSelectFromSelect(sel, dialect)
-	if err := templates.Render(g.funcs, w, "select", go_sel); err != nil {
+	if err := tmplutil.Render(g.funcs, w, "select", go_sel); err != nil {
 		return err
 	}
 

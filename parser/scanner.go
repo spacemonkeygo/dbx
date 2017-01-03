@@ -64,13 +64,15 @@ func NewScanner(filename string, data []byte) (*Scanner, error) {
 	s.Mode = scanner.ScanInts | scanner.ScanIdents | scanner.ScanComments |
 		scanner.SkipComments
 
+	base_filename := filepath.Base(filename)
+
 	var tokens []token
 
 	var tok rune
 	for tok != scanner.EOF {
 		tok = s.Scan()
 		pos := s.Pos()
-		pos.Filename = filepath.Base(filename)
+		pos.Filename = base_filename
 		tokens = append(tokens, token{
 			tok:  convertToken(tok),
 			pos:  pos,

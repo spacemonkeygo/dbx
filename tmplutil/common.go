@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sql
+package tmplutil
 
-import "gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
+import "github.com/spacemonkeygo/errors"
 
-func RenderUpdate(dialect Dialect, model *ast.Model) string {
-	return ""
-}
+var (
+	Error = errors.NewClass("tmplutil")
+)

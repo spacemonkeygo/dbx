@@ -12,29 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package templates
+package parser
 
 import (
-	"bytes"
-	"io"
-	"text/template"
+	"text/scanner"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 )
 
-func RenderString(tmpl *template.Template, name string,
-	data interface{}) (string, error) {
+func expectedKeyword(pos scanner.Position, actual string, expected ...string) (
+	err error) {
 
-	var buf bytes.Buffer
-	if err := Render(tmpl, &buf, name, data); err != nil {
-		return "", err
+	if len(expected) == 1 {
+		return Error.New("%s: expected %q, got %q",
+			pos, expected[0], actual)
+	} else {
+		return Error.New("%s: expected one of %v, got %q",
+			pos, expected, actual)
 	}
-	return buf.String(), nil
 }
 
-func Render(tmpl *template.Template, w io.Writer, name string,
-	data interface{}) error {
+func unallowedAttribute(pos scanner.Position, field_type ast.FieldType,
+	attr string) (err error) {
 
-	if name == "" {
-		return Error.Wrap(tmpl.Execute(w, data))
-	}
-	return Error.Wrap(tmpl.ExecuteTemplate(w, name, data))
+	return Error.New("%s: attribute %q not allowed for field type %q",
+		pos, attr, field_type)
 }

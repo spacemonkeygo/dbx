@@ -17,7 +17,7 @@ package sql
 import (
 	"fmt"
 
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 )
 
 var selectTmpl = `SELECT {{ range $i, $f:= .Fields }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}

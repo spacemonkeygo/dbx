@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // DBX implements code generation for database schemas and accessors.
-package main // import "gopkg.in/spacemonkeygo/dbx.v0/bin/dbx"
+package main // import "gopkg.in/spacemonkeygo/dbx.v1/bin/dbx"
 
 import (
 	"bufio"
@@ -22,12 +22,12 @@ import (
 	"os"
 
 	cli "github.com/jawher/mow.cli"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/code"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/parser"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/sql"
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/templates"
-	pubtemplates "gopkg.in/spacemonkeygo/dbx.v0/templates"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/code"
+	"gopkg.in/spacemonkeygo/dbx.v1/parser"
+	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	pubtemplates "gopkg.in/spacemonkeygo/dbx.v1/templates"
+	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
 
 func main() {
@@ -48,16 +48,16 @@ func main() {
 	}
 
 	var root *ast.Root
-	var loader templates.Loader
+	var loader tmplutil.Loader
 
 	app.Before = func() {
 		root, err = parser.ParseFile(*in_arg)
 		die(err)
 
 		if *template_dir_arg != "" {
-			loader = templates.DirLoader(*template_dir_arg)
+			loader = tmplutil.DirLoader(*template_dir_arg)
 		} else {
-			loader = templates.BinLoader(pubtemplates.Asset)
+			loader = tmplutil.BinLoader(pubtemplates.Asset)
 		}
 	}
 

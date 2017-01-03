@@ -12,29 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
+package code
 
 import (
-	"text/scanner"
+	"io"
 
-	"gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
+	"github.com/spacemonkeygo/errors"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
-func expectedKeyword(pos scanner.Position, actual string, expected ...string) (
-	err error) {
+var (
+	Error = errors.NewClass("code")
+)
 
-	if len(expected) == 1 {
-		return Error.New("%s: expected %q, got %q",
-			pos, expected[0], actual)
-	} else {
-		return Error.New("%s: expected one of %v, got %q",
-			pos, expected, actual)
-	}
-}
-
-func unallowedAttribute(pos scanner.Position, field_type ast.FieldType,
-	attr string) (err error) {
-
-	return Error.New("%s: attribute %q not allowed for field type %q",
-		pos, attr, field_type)
+type Language interface {
+	Format([]byte) ([]byte, error)
+	RenderHeader(w io.Writer, root *ast.Root, dialects []sql.Dialect) error
+	RenderInsert(w io.Writer, model *ast.Model, dialect sql.Dialect) error
+	RenderSelect(w io.Writer, sel *ast.Select, dialect sql.Dialect) error
+	RenderDelete(w io.Writer, del *ast.Delete, dialect sql.Dialect) error
+	RenderFooter(w io.Writer, root *ast.Root, dialects []sql.Dialect) error
 }

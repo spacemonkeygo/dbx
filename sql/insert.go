@@ -14,7 +14,7 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v0/internal/dbx/ast"
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
 var insertTmpl = `INSERT INTO {{ .Table }}(
 	{{- range $i, $col := .Columns }}
