@@ -67,7 +67,9 @@ type modelLink struct {
 
 func newModelLink(ast_model *ast.Model) *modelLink {
 	return &modelLink{
-		model:  &Model{},
+		model: &Model{
+			Name: ast_model.Name,
+		},
 		ast:    ast_model,
 		fields: make(map[string]*fieldLink),
 	}
@@ -75,6 +77,8 @@ func newModelLink(ast_model *ast.Model) *modelLink {
 
 func (m *modelLink) newFieldLink(ast_field *ast.Field) *fieldLink {
 	field := &Field{
+		Name:  ast_field.Name,
+		Type:  ast_field.Type,
 		Model: m.model,
 	}
 	m.model.Fields = append(m.model.Fields, field)
