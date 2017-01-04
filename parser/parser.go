@@ -110,8 +110,9 @@ func parseModel(scanner *Scanner) (model *ast.Model, err error) {
 			model.Fields = append(model.Fields, field)
 		case "key":
 			if model.PrimaryKey != nil {
-				return nil, Error.New("%s: primary key already on model %q",
-					pos, model.Name)
+				return nil, Error.New(
+					"%s: primary key already on model %q at %s",
+					pos, model.Name, model.PrimaryKey.Pos)
 			}
 			primary_key, err := parseRelativeFieldRefs(scanner)
 			if err != nil {
@@ -325,18 +326,21 @@ func parseIntAttribute(scanner *Scanner) (int, error) {
 	return value, nil
 }
 
-func parseRelativeFieldRefs(scanner *Scanner) (refs []*ast.RelativeFieldRef,
+func parseRelativeFieldRefs(scanner *Scanner) (refs *ast.RelativeFieldRefs,
 	err error) {
+
+	refs = new(ast.RelativeFieldRefs)
+	refs.Pos = scanner.Pos()
 
 	for {
 		ref, err := parseRelativeFieldRef(scanner)
 		if err != nil {
 			return nil, err
 		}
-		refs = append(refs, ref)
+		refs.Refs = append(refs.Refs, ref)
 
 		if pos, _, ok := scanner.ScanIf(Comma); !ok {
-			if len(refs) == 0 {
+			if len(refs.Refs) == 0 {
 				return nil, Error.New(
 					"%s: at ir one field must be specified", pos)
 			}
@@ -381,15 +385,22 @@ func parseIndex(scanner *Scanner) (index *ast.Index, err error) {
 		if token == CloseParen {
 			break
 		}
-		if strings.ToLower(text) != "field" {
-			return nil, expectedKeyword(pos, text, "field")
-		}
 
-		field, err := parseRelativeFieldRef(scanner)
-		if err != nil {
-			return nil, err
+		switch strings.ToLower(text) {
+		case "fields":
+			if index.Fields != nil {
+				return nil, Error.New(
+					"%s: fields already defined on index at %s",
+					pos, index.Fields.Pos)
+			}
+			fields, err := parseRelativeFieldRefs(scanner)
+			if err != nil {
+				return nil, err
+			}
+			index.Fields = fields
+		default:
+			return nil, expectedKeyword(pos, text, "fields")
 		}
-		index.Fields = append(index.Fields, field)
 	}
 
 	return index, nil

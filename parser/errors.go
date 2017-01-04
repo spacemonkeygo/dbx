@@ -27,7 +27,7 @@ func expectedKeyword(pos scanner.Position, actual string, expected ...string) (
 		return Error.New("%s: expected %q, got %q",
 			pos, expected[0], actual)
 	} else {
-		return Error.New("%s: expected one of %v, got %q",
+		return Error.New("%s: expected one of %q, got %q",
 			pos, expected, actual)
 	}
 }

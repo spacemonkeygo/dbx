@@ -105,11 +105,11 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 		}
 	}
 
-	if len(ast_model.PrimaryKey) == 0 {
+	if len(ast_model.PrimaryKey.Refs) == 0 {
 		return Error.New("%s: no primary key defined", ast_model.Pos)
 	}
 
-	for _, ast_fieldref := range ast_model.PrimaryKey {
+	for _, ast_fieldref := range ast_model.PrimaryKey.Refs {
 		field, err := model_link.FindField(ast_fieldref)
 		if err != nil {
 			return err
@@ -118,7 +118,7 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 	}
 
 	for _, ast_unique := range ast_model.Unique {
-		fields, err := resolveRelativeFieldRefs(model_link, ast_unique)
+		fields, err := resolveRelativeFieldRefs(model_link, ast_unique.Refs)
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,8 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 		}
 		index_names[ast_index.Name] = ast_index
 
-		fields, err := resolveRelativeFieldRefs(model_link, ast_index.Fields)
+		fields, err := resolveRelativeFieldRefs(
+			model_link, ast_index.Fields.Refs)
 		if err != nil {
 			return err
 		}
