@@ -1,9 +1,9 @@
 
 
 type methods interface {
-{{ range .Funcs }}
+{{- range .Funcs }}
     {{ . }}
-{{ end }}   
+{{- end -}}   
 }
 
 type dbMethods interface {

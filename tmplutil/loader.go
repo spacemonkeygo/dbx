@@ -23,44 +23,61 @@ import (
 )
 
 type Loader interface {
-	Load(name string) (*template.Template, error)
+	Load(name string, funcs template.FuncMap) (*template.Template, error)
 }
 
-type LoaderFunc func(name string) (*template.Template, error)
+type LoaderFunc func(name string, funcs template.FuncMap) (
+	*template.Template, error)
 
-func (fn LoaderFunc) Load(name string) (*template.Template, error) {
-	return fn(name)
+func (fn LoaderFunc) Load(name string, funcs template.FuncMap) (
+	*template.Template, error) {
+
+	return fn(name, funcs)
 }
 
 type DirLoader string
 
-func (d DirLoader) Load(name string) (*template.Template, error) {
+func (d DirLoader) Load(name string, funcs template.FuncMap) (
+	*template.Template, error) {
+
 	data, err := ioutil.ReadFile(filepath.Join(string(d), name))
 	if err != nil {
 		return nil, Error.Wrap(err)
 	}
-	return loadTemplate(name, data)
+	return loadTemplate(name, data, funcs)
 }
 
 type BinLoader func(name string) ([]byte, error)
 
-func (b BinLoader) Load(name string) (*template.Template, error) {
+func (b BinLoader) Load(name string, funcs template.FuncMap) (
+	*template.Template, error) {
+
 	data, err := b(name)
 	if err != nil {
 		return nil, Error.Wrap(err)
 	}
-	return loadTemplate(name, data)
+	return loadTemplate(name, data, funcs)
 }
 
-func loadTemplate(name string, data []byte) (*template.Template, error) {
-	globalFuncs := template.FuncMap{
-		"pluralize":   inflect.Pluralize,
-		"singularize": inflect.Singularize,
-		"camelize":    inflect.Camelize,
-		"cameldown":   inflect.CamelizeDownFirst,
-		"underscore":  inflect.Underscore,
+func loadTemplate(name string, data []byte, funcs template.FuncMap) (
+	*template.Template, error) {
+
+	if funcs == nil {
+		funcs = make(template.FuncMap)
 	}
 
-	tmpl, err := template.New(name).Funcs(globalFuncs).Parse(string(data))
+	safeset := func(name string, fn interface{}) {
+		if funcs[name] == nil {
+			funcs[name] = fn
+		}
+	}
+
+	safeset("pluralize", inflect.Pluralize)
+	safeset("singularize", inflect.Singularize)
+	safeset("camelize", inflect.Camelize)
+	safeset("cameldown", inflect.CamelizeDownFirst)
+	safeset("underscore", inflect.Underscore)
+
+	tmpl, err := template.New(name).Funcs(funcs).Parse(string(data))
 	return tmpl, Error.Wrap(err)
 }

@@ -37,6 +37,10 @@ type Field struct {
 	Length     int
 }
 
+func (f *Field) TableName() string {
+	return f.Model.TableName()
+}
+
 func (f *Field) ColumnName() string {
 	if f.Column != "" {
 		return f.Column

@@ -12,13 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package code
+package golang
 
 import (
+	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
-type Renderer interface {
-	RenderCode(root *ir.Root, dialects []sql.Dialect) ([]byte, error)
+type Delete struct {
+	Dialect string
+	Suffix  string
+	Args    []Var
+	Result  *Var
+	SQL     string
+}
+
+func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
+	del := &Delete{
+		Dialect: dialect.Name(),
+		Suffix:  inflect.Camelize(ir_del.FuncSuffix()),
+		SQL:     sql.RenderDelete(dialect, ir_del),
+	}
+
+	if ir_del.One() {
+		del.Result = &Var{
+			Name: "deleted",
+			Type: "bool",
+		}
+	} else {
+		del.Result = &Var{
+			Name: "count",
+			Type: "int64",
+		}
+	}
+
+	//	for _, ir_where := range g.del.Where {
+	//		if ir_where.Right == nil {
+	//			args = append(args, FieldFromIR(ir_where.Left))
+	//		}
+	//	}
+	return del
 }

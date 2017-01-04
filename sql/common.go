@@ -14,22 +14,15 @@
 
 package sql
 
-import (
-	"bytes"
-	"html/template"
-)
+import "gopkg.in/spacemonkeygo/dbx.v1/ir"
+
+type Features struct {
+	// Supports the RETURNING syntax on INSERT/UPDATE
+	Returning bool
+}
 
 type Dialect interface {
 	Name() string
-	SupportsReturning() bool
-}
-
-func mustRender(s string, param interface{}) string {
-	var buf bytes.Buffer
-	tmpl := template.Must(template.New("").Parse(s))
-	err := tmpl.Execute(&buf, param)
-	if err != nil {
-		panic(err)
-	}
-	return buf.String()
+	Features() Features
+	ColumnType(field *ir.Field) string
 }

@@ -1,0 +1,212 @@
+func (obj *{{ .Dialect }}DB) {{ template "select-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "select-func" . }}
+
+{{- define "select-func-name" -}}
+Get{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "select-func-sig" -}}
+{{ template "select-func-name" . }}(
+{{ params .Args }}) (
+{{ params .Returns }}, err error)
+{{- end -}}
+
+{{- define "select-func" -}}
+{{- template "select-func-sig" . }} {
+
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ args .Args }})
+
+{{ range .Returns }}
+    {{ .Arg }} = {{ .Init }}
+{{- end }}
+err = prepared.QueryRowx({{ args .Args }}).Scan(
+    {{- range $ir, $return := .Returns -}}
+        {{- range $if, $field := $return.Fields -}}
+            {{ if or $ir $if }}, {{ end }}&{{ $field.Arg }}
+        {{- end -}}
+    {{- end -}}
+    )
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+    return {{ args .Returns }}, nil
+}
+{{- end -}}
+
+{{/*
+================================================================
+  SELECT ALL METHOD
+================================================================
+*/}}
+{{ define "select-all" }}
+func (obj *{{ .Dialect }}DB) {{ template "select-all-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "select-all-func" . }}
+{{ end }}
+
+{{- define "select-all-func-name" -}}
+Get{{ pluralize .Struct }}{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "select-all-func-sig" -}}
+{{ template "select-all-func-name" . }}(
+{{ params .Args }}) (
+    result []*{{ .Struct }}, err error)
+{{- end -}}
+
+{{- define "select-all-func" -}}
+{{- template "select-all-func-sig" . }} {
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ args .Args }})
+
+    err = prepared.Select(&result, {{ args .Args }})
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return result, nil
+}
+{{- end -}}
+
+{{/*
+================================================================
+  SELECT PAGED METHOD
+================================================================
+*/}}
+{{ define "select-paged" }}
+func (obj *{{ .Dialect }}DB) {{ template "select-paged-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "select-paged-func" . }}
+{{ end }}
+
+{{- define "select-paged-func-name" -}}
+PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "select-paged-func-sig" -}}
+{{ template "select-paged-func-name" . }}(
+{{ params .Args }}{{ if .Args }},
+{{ end -}}
+    ctoken string, limit int) (
+    result []*{{ .Struct }}, ctokenout string, err error)
+{{- end -}}
+
+{{- define "select-paged-func" -}}
+{{- template "select-paged-func-sig" . }} {
+
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+    obj.logStmt(stmt, {{ if .Args }}{{ args .Args }}, {{end}}ctoken, limit)
+
+    if ctoken == "" {
+        ctoken = "0"
+    }
+
+	err = prepared.Select(&result, {{ if .Args }}{{ args .Args }}, {{end}} ctoken, limit)
+	if err != nil {
+		return nil, "", WrapErr(err)
+	}
+
+    if limit > 0 {
+        if len(result) == limit {
+            ctokenout = fmt.Sprint(result[limit-1].{{ .PagedOn }})
+        }
+    } else {
+        ctokenout = ctoken
+    }
+
+    return {{ args .Returns }}, ctokenout, nil
+}
+{{- end -}}
+
+{{/*
+================================================================
+  COUNT METHOD
+================================================================
+*/}}
+{{ define "count" }}
+func (obj *{{ .Dialect }}DB) {{ template "count-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "count-func" . }}
+{{ end }}
+
+{{- define "count-func-name" -}}
+Count{{ .Struct }}{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "count-func-sig" -}}
+{{ template "count-func-name" .}}(
+{{ params .Args }}) (
+    result int, err error)
+{{- end -}}
+
+{{- define "count-func" -}}
+{{- template "count-func-sig" . }} {
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ args .Args }})
+
+    err = prepared.QueryRowx({{ args .Args }}).Scan(&result)
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+	return result, nil
+}
+{{- end -}}
+
+{{/*
+================================================================
+  HAS METHOD
+================================================================
+*/}}
+{{ define "has" }}
+func (obj *{{ .Dialect }}DB) {{ template "has-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "has-func" . }}
+{{ end }}
+
+{{- define "has-func-name" -}}
+Has{{ .Struct }}{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "has-func-sig" -}}
+{{ template "has-func-name" . }}(
+{{ params .Args }}) (
+    result bool, err error)
+{{- end -}}
+
+{{- define "has-func" -}}
+{{- template "has-func-sig" . }} {
+count, err :=  obj.Count{{ .Struct }}{{ .FuncSuffix }}({{ args .Args }})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+{{- end -}}
+

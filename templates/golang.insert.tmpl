@@ -1,0 +1,56 @@
+func (obj *{{ .Dialect }}DB) {{ template "insert-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "insert-func" . }}
+
+{{- define "insert-func-sig" -}}
+{{ .FuncName }}(
+{{ params .Args }}) (
+    result *{{ .Struct }}, err error)
+{{- end -}}
+
+{{- define "insert-func" -}}
+{{ template "insert-func-sig" . }} {
+
+{{- if .AutoFields }}
+    {{- if .NeedsNow }}
+    now := Now()
+    {{- end -}}
+    {{- range .AutoFields }}
+    {{ .Name }} := {{ .Init }}
+    {{- end -}}
+{{- end -}}
+
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ args .Args }})
+
+{{- if not .ReturnBy }}
+	result = &{{ .Struct }}{}
+    err = prepared.QueryRowx({{ args .Fields}}).StructScan(result)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return result, nil
+{{- else }}
+    res, err := prepared.Exec({{ args .Fields}})
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+{{ if .ReturnBy.Pk }}
+	pk, err := res.LastInsertId()
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return obj.Get{{ .Struct }}By{{ .ReturnBy.Pk }}(pk)
+{{ else }}
+	_ = res
+	return obj.{{ template "select-func-name" .ReturnBy.Getter }}({{ args .ReturnBy.Getter.Args }})
+{{ end -}}
+{{- end -}}
+}
+{{- end -}}

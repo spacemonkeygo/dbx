@@ -112,9 +112,17 @@ func (f FieldType) AsLink() FieldType {
 	}
 }
 
+type RelationType string
+
+const (
+	HasA    = "has_a"
+	OwnedBy = "owned_by"
+)
+
 type Relation struct {
 	Pos      scanner.Position
 	FieldRef *FieldRef
+	Type     RelationType
 }
 
 type FieldRef struct {
@@ -156,6 +164,7 @@ type Index struct {
 	Pos    scanner.Position
 	Name   string
 	Fields *RelativeFieldRefs
+	Unique bool
 }
 
 type Select struct {

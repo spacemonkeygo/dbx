@@ -16,41 +16,37 @@ package sql
 
 import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
-var insertTmpl = `INSERT INTO {{ .Table }}(
-	{{- range $i, $col := .Columns }}
-		{{- if $i }}, {{ end }}{{ $col }}
-	{{- end }}) VALUES(
-	{{- range $i, $col := .Columns }}
-		{{- if $i }}, {{ end }}?
-	{{- end }}){{ if .SupportsReturning }} RETURNING *{{ end }}`
+var insertTmpl = `INSERT INTO {{ .Table -}}
+	{{ if .Columns }}(
+		{{- range $i, $col := .Columns }}
+			{{- if $i }}, {{ end }}{{ $col }}
+		{{- end }})
+		VALUES(
+		{{- range $i, $col := .Columns }}
+			{{- if $i }}, {{ end }}?
+		{{- end }})
+	{{- else }}
+		DEFAULT VALUES
+	{{- end -}}
+	{{ if .Returning }} RETURNING *{{ end }}`
 
-func RenderInsert(dialect Dialect, model *ir.Model) string {
-	return mustRender(insertTmpl, SQLInsertFromModel(model, dialect))
+func RenderInsert(dialect Dialect, ins *ir.Insert) string {
+	return render(insertTmpl, InsertFromIR(ins, dialect))
 }
 
-type SQLInsert struct {
-	model   *ir.Model
-	dialect Dialect
+type Insert struct {
+	Table     string
+	Columns   []string
+	Returning bool
 }
 
-func SQLInsertFromModel(model *ir.Model, dialect Dialect) *SQLInsert {
-	return &SQLInsert{
-		model:   model,
-		dialect: dialect,
+func InsertFromIR(ir_ins *ir.Insert, dialect Dialect) *Insert {
+	ins := &Insert{
+		Table:     ir_ins.Model.TableName(),
+		Returning: dialect.Features().Returning,
 	}
-}
-
-func (i *SQLInsert) Table() string {
-	return i.model.Table
-}
-
-func (i *SQLInsert) Columns() (cols []string) {
-	for _, field := range i.model.InsertableFields() {
-		cols = append(cols, field.Column)
+	for _, field := range ir_ins.Fields() {
+		ins.Columns = append(ins.Columns, field.ColumnName())
 	}
-	return cols
-}
-
-func (i *SQLInsert) SupportsReturning() bool {
-	return i.dialect.SupportsReturning()
+	return ins
 }

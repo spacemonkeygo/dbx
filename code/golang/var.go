@@ -12,13 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package code
+package golang
 
-import (
-	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-)
+import "fmt"
 
-type Renderer interface {
-	RenderCode(root *ir.Root, dialects []sql.Dialect) ([]byte, error)
+type Var struct {
+	Name   string
+	Type   string
+	Fields []*Var
+}
+
+func (v *Var) Value() string {
+	return v.Name
+}
+
+func (v *Var) Arg() string {
+	return v.Name
+}
+
+func (v *Var) Ptr() string {
+	return fmt.Sprintf("&%s", v.Name)
+}
+
+func (v *Var) Param() string {
+	return fmt.Sprintf("%s %s", v.Name, v.Type)
+}
+
+func (v *Var) Init() string {
+	return fmt.Sprintf("%s = %s", v.Name, v.Type)
+}
+
+func (v *Var) Zero() string {
+	switch v.Type {
+	case "float", "float64", "int64", "uint64", "int", "uint":
+		return "0"
+	}
+	return "nil"
 }

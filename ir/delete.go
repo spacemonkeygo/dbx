@@ -14,12 +14,53 @@
 
 package ir
 
-import "text/scanner"
+import (
+	"fmt"
+	"strings"
+
+	"bitbucket.org/pkg/inflect"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+)
 
 type Delete struct {
-	Name  string
-	Pos   scanner.Position
-	Model string
-	Joins []*Join
+	Model *Model
 	Where []*Where
+}
+
+func (d *Delete) One() bool {
+	return WhereSetUnique(d.Where)
+}
+
+func (d *Delete) FuncSuffix() string {
+	var parts []string
+	if !d.One() {
+		parts = append(parts, inflect.Pluralize(d.Model.Name))
+	} else {
+		parts = append(parts, d.Model.Name)
+	}
+
+	for _, where := range d.Where {
+		if where.Right != nil {
+			continue
+		}
+		parts = append(parts, "by", where.Left.Name)
+		switch where.Op {
+		case ast.LT:
+			parts = append(parts, "less")
+		case ast.LE:
+			parts = append(parts, "less_or_equal")
+		case ast.GT:
+			parts = append(parts, "greater")
+		case ast.GE:
+			parts = append(parts, "greater_or_equal")
+		case ast.EQ:
+		case ast.NE:
+			parts = append(parts, "not")
+		case ast.Like:
+			parts = append(parts, "like")
+		default:
+			panic(fmt.Sprintf("unhandled operation %q", where.Op))
+		}
+	}
+	return strings.Join(parts, "_")
 }

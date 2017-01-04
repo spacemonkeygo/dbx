@@ -364,14 +364,6 @@ func parseIndex(scanner *Scanner) (index *ast.Index, err error) {
 	index = new(ast.Index)
 	index.Pos = scanner.Pos()
 
-	if scanner.Peek() == Ident {
-		_, index.Name, err = scanner.ScanExact(Ident)
-		if err != nil {
-			return nil, err
-		}
-		index.Name = strings.ToLower(index.Name)
-	}
-
 	_, _, err = scanner.ScanExact(OpenParen)
 	if err != nil {
 		return nil, err
@@ -387,6 +379,16 @@ func parseIndex(scanner *Scanner) (index *ast.Index, err error) {
 		}
 
 		switch strings.ToLower(text) {
+		case "name":
+			if index.Name != "" {
+				return nil, Error.New(
+					"%s: name can only be defined once", pos)
+			}
+			_, index.Name, err = scanner.ScanExact(Ident)
+			if err != nil {
+				return nil, err
+			}
+			index.Name = strings.ToLower(index.Name)
 		case "fields":
 			if index.Fields != nil {
 				return nil, Error.New(
@@ -398,8 +400,10 @@ func parseIndex(scanner *Scanner) (index *ast.Index, err error) {
 				return nil, err
 			}
 			index.Fields = fields
+		case "unique":
+			index.Unique = true
 		default:
-			return nil, expectedKeyword(pos, text, "fields")
+			return nil, expectedKeyword(pos, text, "name", "fields", "unique")
 		}
 	}
 

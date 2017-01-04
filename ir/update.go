@@ -12,13 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package code
+package ir
 
-import (
-	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-)
-
-type Renderer interface {
-	RenderCode(root *ir.Root, dialects []sql.Dialect) ([]byte, error)
+type Update struct {
+	Model *Model
+	Where []*Where
 }

@@ -14,6 +14,13 @@
 
 package sql
 
+import (
+	"fmt"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
+
 type sqlite3 struct {
 }
 
@@ -25,6 +32,27 @@ func (s *sqlite3) Name() string {
 	return "sqlite3"
 }
 
-func (d *sqlite3) SupportsReturning() bool {
-	return false
+func (s *sqlite3) Features() Features {
+	return Features{}
+}
+
+func (s *sqlite3) ColumnType(field *ir.Field) string {
+	switch field.Type {
+	case ast.SerialField, ast.Serial64Field,
+		ast.IntField, ast.Int64Field,
+		ast.UintField, ast.Uint64Field:
+		return "INTEGER"
+	case ast.FloatField, ast.Float64Field:
+		return "REAL"
+	case ast.TextField:
+		return "TEXT"
+	case ast.BoolField:
+		return "INTEGER"
+	case ast.TimestampField, ast.TimestampUTCField:
+		return "TIMESTAMP"
+	case ast.BlobField:
+		return "BLOB"
+	default:
+		panic(fmt.Sprintf("unhandled field type %s", field.Type))
+	}
 }

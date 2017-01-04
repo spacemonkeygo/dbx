@@ -1,0 +1,70 @@
+func (obj *{{ .Dialect }}DB) {{ template "update-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "update-func" . }}
+
+{{- define "update-func-name" -}}
+Update{{ .Struct }}{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "update-func-sig" -}}
+{{ template "update-func-name" . }}(
+{{ params .Args }},
+    updates ...{{ .Struct }}Update) (
+    result *{{ .Struct }}, err error)
+{{- end -}}
+
+{{- define "update-func" -}}
+{{ template "update-func-sig" . }} {
+
+	var qs []string
+	var values []interface{}
+	seen := map[string]int{}
+	addvalue := func(name string, value interface{}) {
+		if idx, ok := seen[name]; ok{
+			values[idx] = value
+		}
+		seen[name] = len(values)
+        qs = append(qs, name + " = ?")
+		values = append(values, value)
+	}
+{{- if .NeedsNow }}
+	now := Now()
+{{- end -}}
+{{- range .AutoFields }}
+	addvalue("{{ .Column }}", {{ .Init }})
+{{- end }}
+	for _, update := range updates {
+		addvalue(update.columnName(), update.value())
+	}
+
+    stmt := strings.Replace(`{{.SQL}}`,
+        "|||QS|||",
+        strings.Join(qs, ", "), 1)
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	args := append(values, {{- args .Args -}})	
+	obj.logStmt(stmt, args...)
+
+{{- if .SupportsReturning }}
+    result = &{{ .Struct }}{}
+    err = prepared.QueryRowx(args...).StructScan(result)
+    if err == sql.ErrNoRows {
+        return nil, nil
+    }
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+    return result, nil
+{{- else }}
+    _, err = prepared.Exec(args...)
+    if err != nil {
+        return nil, WrapErr(err)
+    }
+	return obj.{{ template "select-func-name" . }}({{ args .Args }})
+{{- end -}}
+}
+{{- end -}}

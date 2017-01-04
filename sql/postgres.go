@@ -14,6 +14,13 @@
 
 package sql
 
+import (
+	"fmt"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
+
 type postgres struct {
 }
 
@@ -25,6 +32,44 @@ func (p *postgres) Name() string {
 	return "postgres"
 }
 
-func (p *postgres) SupportsReturning() bool {
-	return true
+func (s *postgres) Features() Features {
+	return Features{
+		Returning: true,
+	}
+}
+
+func (p *postgres) ColumnType(field *ir.Field) string {
+	switch field.Type {
+	case ast.SerialField:
+		return "serial"
+	case ast.Serial64Field:
+		return "bigserial"
+	case ast.IntField:
+		return "integer"
+	case ast.Int64Field:
+		return "bigint"
+	case ast.UintField:
+		return "integer"
+	case ast.Uint64Field:
+		return "bigint"
+	case ast.FloatField:
+		return "real"
+	case ast.Float64Field:
+		return "double precision"
+	case ast.TextField:
+		if field.Length > 0 {
+			return fmt.Sprintf("varchar(%d)", field.Length)
+		}
+		return "text"
+	case ast.BoolField:
+		return "boolean"
+	case ast.TimestampField:
+		return "timestamp with time zone"
+	case ast.TimestampUTCField:
+		return "timestamp"
+	case ast.BlobField:
+		return "bytea"
+	default:
+		panic(fmt.Sprintf("unhandled field type %s", field.Type))
+	}
 }

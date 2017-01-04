@@ -12,27 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sql
+package golang
 
 import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
-var deleteTmpl = `DELETE FROM {{ .From }}
-	{{- if .Where }} WHERE
-	{{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }}
-	{{- end -}}`
-
-func RenderDelete(dialect Dialect, ir_del *ir.Delete) string {
-	return render(deleteTmpl, DeleteFromIR(ir_del, dialect))
+// Struct is used for generating go structures
+type Struct struct {
+	Name   string
+	Fields []*Field
 }
 
-type Delete struct {
-	From  string
-	Where []Where
-}
-
-func DeleteFromIR(ir_del *ir.Delete, dialect Dialect) *Delete {
-	return &Delete{
-		From:  ir_del.Model.TableName(),
-		Where: WheresFromIR(ir_del.Where),
+func StructFromIR(model *ir.Model) *Struct {
+	return &Struct{
+		Name:   structName(model),
+		Fields: FieldsFromIR(model.Fields),
 	}
 }
+
+func StructsFromIR(models []*ir.Model) (out []*Struct) {
+	for _, model := range models {
+		out = append(out, StructFromIR(model))
+	}
+	return out
+}
+
+//func (s *Struct) Init() string {
+//	return fmt.Sprintf("&%s{}", s.Name())
+//}
+//
+//func (s *Struct) Arg() string {
+//	return inflect.Underscore(s.model.Name)
+//}
+//
+//func (s *Struct) Param() string {
+//	return fmt.Sprintf("%s *%s", s.Arg(), s.Name())
+//}

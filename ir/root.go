@@ -18,6 +18,8 @@ import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
 type Root struct {
 	Models  *Models
+	Inserts []*Insert
+	Updates []*Update
 	Selects []*Select
 	Deletes []*Delete
 }

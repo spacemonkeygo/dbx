@@ -114,6 +114,10 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 		if err != nil {
 			return err
 		}
+		if field.Nullable {
+			return Error.New("%s: nullable field %q cannot be a primary key",
+				ast_fieldref.Pos, ast_fieldref.Field)
+		}
 		model.PrimaryKey = append(model.PrimaryKey, field)
 	}
 
@@ -133,6 +137,11 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 		}
 		index_names[ast_index.Name] = ast_index
 
+		if ast_index.Fields == nil || len(ast_index.Fields.Refs) < 1 {
+			return Error.New("%s: index %q has no fields defined",
+				ast_index.Pos, ast_index.Name)
+		}
+
 		fields, err := resolveRelativeFieldRefs(
 			model_link, ast_index.Fields.Refs)
 		if err != nil {
@@ -140,7 +149,9 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 		}
 		model.Indexes = append(model.Indexes, &Index{
 			Name:   ast_index.Name,
+			Model:  fields[0].Model,
 			Fields: fields,
+			Unique: ast_index.Unique,
 		})
 	}
 

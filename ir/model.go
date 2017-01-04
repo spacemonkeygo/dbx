@@ -52,6 +52,27 @@ func (m *Model) InsertableFields() (fields []*Field) {
 	return fields
 }
 
+func (m *Model) UpdatableFields() (fields []*Field) {
+	for _, field := range m.Fields {
+		if field.Updatable {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+func (m *Model) FieldSetUnique(fields []*Field) bool {
+	if fieldSetSubset(m.PrimaryKey, fields) {
+		return true
+	}
+	for _, unique := range m.Unique {
+		if fieldSetSubset(unique, fields) {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Model) SelectRefs() (refs []string) {
 	for _, field := range m.Fields {
 		refs = append(refs,

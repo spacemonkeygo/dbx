@@ -21,112 +21,118 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
-var selectTmpl = `SELECT {{ range $i, $f:= .Fields }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}
+const (
+	selectTmpl = `SELECT {{ range $i, $f:= .Fields }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}
 	FROM {{ .From }}
-	{{- range .Joins }}
-	{{ .Type }} JOIN {{ .Table }} ON {{ .Left }} = {{ if .Right }}{{ .Right }}{{ else }}?{{ end }}
-	{{- end -}}
-	{{- if .Where }}
-	WHERE {{ range $i, $w := .Where }}{{ if $i }} AND {{ end }}{{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }}
-	{{- end -}}
-	{{- if .OrderBy }}
-	ORDER BY {{ range $i, $field := .OrderBy.Fields }}{{ if $i }}, {{ end }}{{ $field }}{{ end }}{{ if .OrderBy.Descending }} DESC{{ end }}
-	{{- end -}}
-	{{- if .Limit }}
-	LIMIT {{ .Limit }}
-	{{- end }}
-`
+	{{- range .Joins }}{{ .Type }} JOIN {{ .Table }} ON {{ .Left }} = {{ if .Right }}{{ .Right }}{{ else }}?{{ end }}{{- end -}}
+	{{- if .Where }} WHERE {{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }} {{- end -}}
+	{{- if .OrderBy }} ORDER BY {{- range $i, $field := .OrderBy.Fields }}{{ if $i }}, {{ end }} {{ $field }}{{ end }}{{ if .OrderBy.Descending }} DESC{{ end }} {{- end -}}
+	{{- if .Limit }} LIMIT {{ .Limit }} {{- end -}}`
 
-func RenderSelect(dialect Dialect, sel *ir.Select) string {
-	return mustRender(selectTmpl, SelectFromAST(sel, dialect))
+	hasTmpl = `SELECT COALESCE((` + selectTmpl + `), 0)`
+)
+
+var (
+	countFields = []string{"COUNT(*)"}
+	hasFields   = []string{"1"}
+)
+
+func RenderSelect(dialect Dialect, ir_sel *ir.Select) string {
+	return render(selectTmpl, SelectFromIR(ir_sel, dialect))
 }
 
-type Select struct {
-	sel     *ir.Select
-	dialect Dialect
+func RenderCount(dialect Dialect, ir_sel *ir.Select) string {
+	sel := SelectFromIR(ir_sel, dialect)
+	sel.Fields = countFields
+	return render(selectTmpl, sel)
 }
 
-func SelectFromAST(sel *ir.Select, dialect Dialect) *Select {
-	return &Select{
-		sel:     sel,
-		dialect: dialect,
+func RenderHas(dialect Dialect, ir_sel *ir.Select) string {
+	sel := SelectFromIR(ir_sel, dialect)
+	sel.Fields = hasFields
+	return render(hasTmpl, sel)
+}
+
+func SelectFromIR(ir_sel *ir.Select, dialect Dialect) *Select {
+	sel := &Select{
+		From:  ir_sel.From.TableName(),
+		Where: WheresFromIR(ir_sel.Where),
 	}
-}
 
-func (s *Select) From() string {
-	return s.sel.From.TableName()
-}
-
-func (s *Select) Fields() (fields []string) {
-	for _, field := range s.sel.Fields {
-		fields = append(fields, field.SelectRefs()...)
+	for _, ir_field := range ir_sel.Fields {
+		sel.Fields = append(sel.Fields, ir_field.SelectRefs()...)
 	}
-	return fields
-}
 
-func (s *Select) Joins() (sqljoins []Join) {
-	for _, join := range s.sel.Joins {
-		sqljoin := Join{
-			Table: join.Right.Model.TableName(),
-			Left:  join.Left.ColumnRef(),
-			Right: join.Right.ColumnRef(),
+	for _, ir_join := range ir_sel.Joins {
+		join := Join{
+			Table: ir_join.Right.Model.TableName(),
+			Left:  ir_join.Left.ColumnRef(),
+			Right: ir_join.Right.ColumnRef(),
 		}
-		switch join.Type {
+		switch ir_join.Type {
 		case ast.LeftJoin:
-			sqljoin.Type = "LEFT"
+			join.Type = "LEFT"
 		default:
 			panic(fmt.Sprintf("unhandled join type %d", join.Type))
 		}
-		sqljoins = append(sqljoins, sqljoin)
+		sel.Joins = append(sel.Joins, join)
 	}
-	return sqljoins
-}
 
-func (s *Select) Where() (sqlwheres []Where) {
-	for _, where := range s.sel.Where {
-		sqlwhere := Where{
-			Left: where.Left.ColumnRef(),
-			Op:   string(where.Op),
+	if ir_sel.OrderBy != nil {
+		order_by := &OrderBy{
+			Descending: ir_sel.OrderBy.Descending,
 		}
-		if where.Right != nil {
-			sqlwhere.Right = where.Right.ColumnRef()
+		for _, ir_field := range ir_sel.OrderBy.Fields {
+			order_by.Fields = append(order_by.Fields, ir_field.ColumnRef())
+		}
+		sel.OrderBy = order_by
+	}
+
+	if ir_sel.Limit != nil {
+		if ir_sel.Limit.Amount <= 0 {
+			sel.Limit = "?"
 		} else {
-			sqlwhere.Right = "?"
+			sel.Limit = fmt.Sprint(ir_sel.Limit.Amount)
 		}
-
-		sqlwheres = append(sqlwheres, sqlwhere)
 	}
-	return sqlwheres
+
+	return sel
 }
 
-func (s *Select) OrderBy() (order_by *OrderBy) {
-	if s.sel.OrderBy == nil {
-		return nil
-	}
-	order_by = &OrderBy{
-		Descending: s.sel.OrderBy.Descending,
-	}
-	for _, field := range s.sel.OrderBy.Fields {
-		order_by.Fields = append(order_by.Fields, field.ColumnRef())
-	}
-
-	return order_by
-}
-
-func (s *Select) Limit() string {
-	if s.sel.Limit == nil {
-		return ""
-	}
-	if s.sel.Limit.Amount <= 0 {
-		return "?"
-	}
-	return fmt.Sprint(s.sel.Limit.Amount)
+type Select struct {
+	From    string
+	Fields  []string
+	Joins   []Join
+	Where   []Where
+	OrderBy *OrderBy
+	Limit   string
 }
 
 type Where struct {
 	Left  string
 	Op    string
 	Right string
+}
+
+func WhereFromIR(ir_where *ir.Where) Where {
+	where := Where{
+		Left: ir_where.Left.ColumnRef(),
+		Op:   string(ir_where.Op),
+	}
+	if ir_where.Right != nil {
+		where.Right = ir_where.Right.ColumnRef()
+	} else {
+		where.Right = "?"
+	}
+	return where
+}
+
+func WheresFromIR(ir_wheres []*ir.Where) (wheres []Where) {
+	wheres = make([]Where, len(ir_wheres))
+	for _, ir_where := range ir_wheres {
+		wheres = append(wheres, WhereFromIR(ir_where))
+	}
+	return wheres
 }
 
 type OrderBy struct {

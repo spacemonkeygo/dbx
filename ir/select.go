@@ -31,6 +31,10 @@ type Select struct {
 	Limit      *Limit
 }
 
+func (s *Select) One() bool {
+	return WhereSetUnique(s.Where)
+}
+
 type Join struct {
 	Type  ast.JoinType
 	Left  *Field

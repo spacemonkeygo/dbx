@@ -16,14 +16,13 @@
 package main // import "gopkg.in/spacemonkeygo/dbx.v1/bin/dbx"
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"os"
 
 	cli "github.com/jawher/mow.cli"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/code"
+	"gopkg.in/spacemonkeygo/dbx.v1/code/golang"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/parser"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
@@ -57,6 +56,18 @@ func main() {
 		die(err)
 		root, err = ir.Transform(ast_root)
 		die(err)
+		err = ir.GenerateBasicQueries(root, ir.GenerateOptions{
+			Insert:             true,
+			RawInsert:          true,
+			SelectAll:          true,
+			SelectByPrimaryKey: true,
+			SelectByUnique:     true,
+			DeleteByPrimaryKey: true,
+			DeleteByUnique:     true,
+			UpdateByPrimaryKey: true,
+			UpdateByUnique:     true,
+		})
+		die(err)
 
 		if *template_dir_arg != "" {
 			loader = tmplutil.DirLoader(*template_dir_arg)
@@ -76,18 +87,15 @@ func main() {
 	app.Command("code", "generate code", func(cmd *cli.Cmd) {
 		pkg_name := cmd.StringOpt("p package", "db",
 			"package name for generated code")
-		format_code := cmd.BoolOpt("f format", true,
-			"format the code")
 		cmd.Action = func() {
 			dialects, err := createDialects(*dialects_opt)
 			die(err)
-			lang, err := code.NewGolang(loader,
-				&code.GolangOptions{
-					Package: *pkg_name,
-				})
+			renderer, err := golang.New(loader, &golang.Options{
+				Package: *pkg_name,
+			})
 			die(err)
 
-			die(generateCode(*out_arg, root, dialects, lang, *format_code))
+			die(generateCode(*out_arg, root, dialects, renderer))
 		}
 	})
 
@@ -126,22 +134,13 @@ func createDialects(which []string) (out []sql.Dialect, err error) {
 //}
 
 func generateCode(out string, root *ir.Root, dialects []sql.Dialect,
-	lang code.Language, format_code bool) (err error) {
+	renderer code.Renderer) (err error) {
 
-	var buf bytes.Buffer
-	if err := code.Render(&buf, root, lang, dialects); err != nil {
+	rendered, err := renderer.RenderCode(root, dialects)
+	if err != nil {
 		return err
 	}
-	rendered := buf.Bytes()
 
-	if format_code {
-		formatted, err := lang.Format(rendered)
-		if err != nil {
-			dumpLinedSource(rendered)
-			return err
-		}
-		rendered = formatted
-	}
 	return writeOut(out, rendered)
 }
 
@@ -156,25 +155,4 @@ func writeOut(out string, data []byte) (err error) {
 	}
 	_, err = w.Write(data)
 	return err
-}
-
-func dumpLinedSource(source []byte) {
-	// scan once to find out how many lines
-	scanner := bufio.NewScanner(bytes.NewReader(source))
-	var lines int
-	for scanner.Scan() {
-		lines++
-	}
-	align := 1
-	for ; lines > 0; lines = lines / 10 {
-		align++
-	}
-
-	// now dump with aligned line numbers
-	format := fmt.Sprintf("%%%dd: %%s\n", align)
-	scanner = bufio.NewScanner(bytes.NewReader(source))
-	for i := 1; scanner.Scan(); i++ {
-		line := scanner.Text()
-		fmt.Fprintf(os.Stderr, format, i, line)
-	}
 }
