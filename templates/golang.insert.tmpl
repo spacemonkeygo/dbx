@@ -1,23 +1,13 @@
-func (obj *{{ .Dialect }}DB) {{ template "insert-func" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "insert-func" . }}
-
-{{- define "insert-func-sig" -}}
-{{ .FuncName }}(
-{{ params .Args }}) (
-    result *{{ .Struct }}, err error)
+{{- define "signature" -}}
+Create{{ .Suffix }}({{ params .Args }}) (result *{{ .Struct }}, err error)
 {{- end -}}
 
-{{- define "insert-func" -}}
-{{ template "insert-func-sig" . }} {
-
+{{- define "body" -}}
 {{- if .AutoFields }}
     {{- if .NeedsNow }}
     now := Now()
     {{- end -}}
-    {{- range .AutoFields }}
-    {{ .Name }} := {{ .Init }}
-    {{- end -}}
+    {{ inits .AutoFields }}
 {{- end -}}
 
 	const stmt=`{{ .SQL }}`
@@ -27,17 +17,20 @@ func (obj *{{ .Dialect }}Tx) {{ template "insert-func" . }}
 		return
 	}
 	defer replace()
-	obj.logStmt(stmt, {{ args .Args }})
+	obj.logStmt(stmt, {{ args .Fields }})
+}
+{{ end -}}
 
+{{/*
 {{- if not .ReturnBy }}
-	result = &{{ .Struct }}{}
-    err = prepared.QueryRowx({{ args .Fields}}).StructScan(result)
+	result = &{{ .Struct }}{}                                                                      
+    err = prepared.QueryRowx({{ args .Fields }}).StructScan(result)
 	if err != nil {
 		return nil, WrapErr(err)
 	}
 	return result, nil
 {{- else }}
-    res, err := prepared.Exec({{ args .Fields}})
+    res, err := prepared.Exec({{ args .Fields }})
 	if err != nil {
 		return nil, WrapErr(err)
 	}
@@ -52,5 +45,4 @@ func (obj *{{ .Dialect }}Tx) {{ template "insert-func" . }}
 	return obj.{{ template "select-func-name" .ReturnBy.Getter }}({{ args .ReturnBy.Getter.Args }})
 {{ end -}}
 {{- end -}}
-}
-{{- end -}}
+*/}}

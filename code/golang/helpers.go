@@ -33,21 +33,33 @@ func asArg(intf interface{}) (string, error) {
 	return forVars(intf, (*Var).Arg)
 }
 
+func asInits(intf interface{}) (string, error) {
+	return forVars(intf, (*Var).Init)
+}
+
 func asZero(intf interface{}) (string, error) {
 	return forVars(intf, (*Var).Zero)
+}
+
+func flattenVars(intf interface{}) (flattened []*Var, err error) {
+	switch obj := intf.(type) {
+	case *Var:
+		flattened = obj.Flatten()
+	case []*Var:
+		for _, v := range obj {
+			flattened = append(flattened, v.Flatten()...)
+		}
+	default:
+		return nil, Error.New("unsupported type %T", obj)
+	}
+	return flattened, nil
 }
 
 func forVars(intf interface{}, fn func(v *Var) string) (string, error) {
 	var elems []string
 	switch obj := intf.(type) {
-	case Var:
-		return fn(&obj), nil
 	case *Var:
 		return fn(obj), nil
-	case []Var:
-		for _, v := range obj {
-			elems = append(elems, fn(&v))
-		}
 	case []*Var:
 		for _, v := range obj {
 			elems = append(elems, fn(v))

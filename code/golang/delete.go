@@ -21,18 +21,16 @@ import (
 )
 
 type Delete struct {
-	Dialect string
-	Suffix  string
-	Args    []Var
-	Result  *Var
-	SQL     string
+	Suffix string
+	Args   []*Var
+	Result *Var
+	SQL    string
 }
 
 func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
 	del := &Delete{
-		Dialect: dialect.Name(),
-		Suffix:  inflect.Camelize(ir_del.FuncSuffix()),
-		SQL:     sql.RenderDelete(dialect, ir_del),
+		Suffix: inflect.Camelize(ir_del.FuncSuffix()),
+		SQL:    sql.RenderDelete(dialect, ir_del),
 	}
 
 	if ir_del.One() {
@@ -47,10 +45,11 @@ func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
 		}
 	}
 
-	//	for _, ir_where := range g.del.Where {
-	//		if ir_where.Right == nil {
-	//			args = append(args, FieldFromIR(ir_where.Left))
-	//		}
-	//	}
+	for _, ir_where := range ir_del.Where {
+		if ir_where.Right == nil {
+			del.Args = append(del.Args, VarFromField(ir_where.Left))
+		}
+	}
+
 	return del
 }

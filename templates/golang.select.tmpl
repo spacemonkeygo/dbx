@@ -1,7 +1,3 @@
-func (obj *{{ .Dialect }}DB) {{ template "select-func" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "select-func" . }}
-
 {{- define "select-func-name" -}}
 Get{{ .FuncSuffix }}
 {{- end -}}
@@ -63,6 +59,7 @@ Get{{ pluralize .Struct }}{{ .FuncSuffix }}
 {{ template "select-all-func-name" . }}(
 {{ params .Args }}) (
     result []*{{ .Struct }}, err error)
+    h ogT
 {{- end -}}
 
 {{- define "select-all-func" -}}

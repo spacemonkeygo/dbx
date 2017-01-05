@@ -21,62 +21,35 @@ import (
 )
 
 type Insert struct {
-	ins     *ir.Insert
-	dialect sql.Dialect
+	Suffix     string
+	Struct     string
+	Args       []*Var
+	Fields     []*Var
+	AutoFields []*Var
+	SQL        string
+	GetFunc    string
+	GetFuncArg []string
 }
 
-func InsertFromIR(ins *ir.Insert, dialect sql.Dialect) *Insert {
+func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
+	suffix := inflect.Camelize(ir_ins.Model.Name)
+	if ir_ins.Raw {
+		suffix = "Raw" + suffix
+	}
+	// TODO: GetFunc & GetFuncArg
 	return &Insert{
-		ins:     ins,
-		dialect: dialect,
+		Suffix:     suffix,
+		Struct:     structName(ir_ins.Model),
+		SQL:        sql.RenderInsert(dialect, ir_ins),
+		Args:       VarsFromFields(ir_ins.ManualFields()),
+		Fields:     VarsFromFields(ir_ins.Fields()),
+		AutoFields: VarsFromFields(ir_ins.AutoFields()),
 	}
-}
-
-func (i *Insert) Dialect() string {
-	return i.dialect.Name()
-}
-
-func (i *Insert) FuncName() string {
-	return inflect.Camelize(i.ins.FuncName())
-}
-
-func (i *Insert) SQL() string {
-	return sql.RenderInsert(i.dialect, i.ins)
-}
-
-func (i *Insert) Args() []*Field {
-	return FieldsFromIR(i.ins.ManualFields())
-}
-
-func (i *Insert) Fields() []*Field {
-	return FieldsFromIR(i.ins.Fields())
-}
-
-func (i *Insert) AutoFields() []*Field {
-	return FieldsFromIR(i.ins.AutoFields())
-}
-
-func (i *Insert) Struct() string {
-	return structName(i.ins.Model)
-}
-
-func (i *Insert) ReturnBy() (return_by *ReturnBy) {
-	if i.dialect.Features().Returning {
-		return nil
-	}
-	if pk := FieldFromIR(i.ins.Model.BasicPrimaryKey()); pk != nil {
-		return &ReturnBy{
-			Pk: pk.Name,
-		}
-	}
-	panic("returnby.getter")
-	// TODO: with getter
-	return nil
 }
 
 func (i *Insert) NeedsNow() bool {
-	for _, field := range i.AutoFields() {
-		switch field.Type {
+	for _, v := range i.AutoFields {
+		switch v.Type {
 		case "time.Time", "*time.Time":
 			return true
 		}

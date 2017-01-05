@@ -22,8 +22,4 @@ Delete{{ .Suffix }}({{ params .Args }}) (count int64, err error)
 
     return count, nil
 }
-{{- end -}}
-
-func (obj *{{ .Dialect }}DB) {{ template "signature" . }} {{ template "body" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "signature" . }} {{ template "body" . }}
+{{ end -}}

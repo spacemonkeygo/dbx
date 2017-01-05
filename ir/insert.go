@@ -14,20 +14,9 @@
 
 package ir
 
-import "strings"
-
 type Insert struct {
 	Model *Model
 	Raw   bool
-}
-
-func (ins *Insert) FuncName() string {
-	parts := []string{"create"}
-	if ins.Raw {
-		parts = append(parts, "raw")
-	}
-	parts = append(parts, ins.Model.Name)
-	return strings.Join(parts, "_")
 }
 
 func (ins *Insert) Fields() []*Field {

@@ -42,10 +42,12 @@ type Options struct {
 type Renderer struct {
 	header     *template.Template
 	footer     *template.Template
+	funcs      *template.Template
 	ins        *template.Template
 	sel        *template.Template
 	upd        *template.Template
 	del        *template.Template
+	del_all    *template.Template
 	signatures map[string]bool
 	options    Options
 }
@@ -70,10 +72,16 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
+	r.funcs, err = loader.Load("golang.funcs.tmpl", nil)
+	if err != nil {
+		return nil, err
+	}
+
 	funcs := template.FuncMap{
 		"params": asParam,
 		"args":   asArg,
 		"zeroed": asZero,
+		"inits":  asInits,
 	}
 
 	r.ins, err = loader.Load("golang.insert.tmpl", funcs)
@@ -96,6 +104,11 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
+	r.del_all, err = loader.Load("golang.delete-all.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
 	return r, nil
 }
 
@@ -108,18 +121,23 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 	}
 
 	for _, dialect := range dialects {
-		// for _, ins := range root.Inserts {
-		// 	if err := r.renderInsert(&buf, ins, dialect); err != nil {
-		// 		return nil, err
-		// 	}
-		// }
-		// for _, sel := range root.Selects {
-		// 	if err := r.renderSelect(&buf, sel, dialect); err != nil {
-		// 		return nil, err
-		// 	}
-		// }
+		for _, ins := range root.Inserts {
+			if err := r.renderInsert(&buf, ins, dialect); err != nil {
+				return nil, err
+			}
+		}
+		//		for _, sel := range root.Selects {
+		//			if err := r.renderSelect(&buf, sel, dialect); err != nil {
+		//				return nil, err
+		//			}
+		//		}
 		for _, upd := range root.Updates {
 			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
+				return nil, err
+			}
+		}
+		for _, del := range root.Deletes {
+			if err := r.renderDelete(&buf, del, dialect); err != nil {
 				return nil, err
 			}
 		}
@@ -200,42 +218,73 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	return tmplutil.Render(r.header, w, "", params)
 }
 
-func (r *Renderer) renderInsert(w io.Writer, ins *ir.Insert,
+func (r *Renderer) renderInsert(w io.Writer, ir_ins *ir.Insert,
 	dialect sql.Dialect) (err error) {
 
-	go_ins := InsertFromIR(ins, dialect)
-	if err := tmplutil.Render(r.ins, w, "", go_ins); err != nil {
+	ins := InsertFromIR(ir_ins, dialect)
+	return r.renderFunc(r.ins, w, ins, dialect)
+}
+
+func (r *Renderer) renderSelect(w io.Writer, ir_sel *ir.Select,
+	dialect sql.Dialect) error {
+
+	sel := SelectFromIR(ir_sel, dialect)
+	return r.renderFunc(r.sel, w, sel, dialect)
+}
+
+func (r *Renderer) renderUpdate(w io.Writer, ir_upd *ir.Update,
+	dialect sql.Dialect) error {
+
+	upd := UpdateFromIR(ir_upd, dialect)
+
+	return r.renderFunc(r.upd, w, upd, dialect)
+}
+
+func (r *Renderer) renderDelete(w io.Writer, ir_del *ir.Delete,
+	dialect sql.Dialect) error {
+
+	del := DeleteFromIR(ir_del, dialect)
+	if ir_del.One() {
+		return r.renderFunc(r.del, w, del, dialect)
+	} else {
+		return r.renderFunc(r.del_all, w, del, dialect)
+	}
+}
+
+func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,
+	data interface{}, dialect sql.Dialect) (err error) {
+
+	var signature bytes.Buffer
+	err = tmplutil.Render(tmpl, &signature, "signature", data)
+	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (r *Renderer) renderSelect(w io.Writer, sel *ir.Select,
-	dialect sql.Dialect) error {
-
-	go_sel := SelectFromIR(sel, dialect)
-	if err := tmplutil.Render(r.sel, w, "", go_sel); err != nil {
+	var body bytes.Buffer
+	err = tmplutil.Render(tmpl, &body, "body", data)
+	if err != nil {
 		return err
 	}
 
+	type funcDecl struct {
+		ReceiverBase string
+		Signature    string
+		Body         string
+	}
+
+	decl := funcDecl{
+		ReceiverBase: dialect.Name(),
+		Signature:    signature.String(),
+		Body:         body.String(),
+	}
+
+	err = tmplutil.Render(r.funcs, w, "decl", decl)
+	if err != nil {
+		return err
+	}
+
+	r.signatures[decl.Signature] = true
 	return nil
-}
-
-func (r *Renderer) renderUpdate(w io.Writer, upd *ir.Update,
-	dialect sql.Dialect) error {
-
-	data := UpdateFromIR(upd, dialect)
-
-	return tmplutil.Render(r.upd, w, "", data)
-}
-
-func (r *Renderer) renderDelete(w io.Writer, del *ir.Delete,
-	dialect sql.Dialect) error {
-
-	data := DeleteFromIR(del, dialect)
-
-	return tmplutil.Render(r.del, w, "", data)
 }
 
 func (r *Renderer) renderFooter(w io.Writer) error {
