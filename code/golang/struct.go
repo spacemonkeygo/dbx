@@ -47,3 +47,12 @@ func StructsFromIR(models []*ir.Model) (out []*Struct) {
 //func (s *Struct) Param() string {
 //	return fmt.Sprintf("%s *%s", s.Arg(), s.Name())
 //}
+
+func (s *Struct) UpdatableFields() (fields []*Field) {
+	for _, field := range s.Fields {
+		if field.Updatable {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}

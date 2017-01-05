@@ -293,40 +293,26 @@ type {{ $struct }} struct {
 {{- end }}
 }
 
-{{ $fintf :=  printf "%sField" (cameldown $struct) }}
-type {{ $fintf }} interface {
-	columnName() string
-	value() interface{}
-	private{{ $struct }}()
-}
+{{- if .UpdatableFields }}
 
-type {{ $struct }}Insert interface {
-    {{ $fintf }} 
-    insertable()
+type Update{{ $struct }} struct {
+{{- range .UpdatableFields }}
+{{- $fstruct := printf "%s%sField" $struct .Name }}
+	{{ .Name }} *{{ $fstruct }}
+{{- end }}
 }
-
-type {{ $struct }}Update interface {
-    {{ $fintf }} 
-    updatable()
-}
+{{- end }}
 
 {{- range .Fields }}
 {{- $fstruct := printf "%s%sField" $struct .Name }}
 
 type {{ $fstruct }} struct { v {{ .Type }} }
 func {{ $struct }}{{ .Name }}(v {{ .Type }}) {{ if .Nullable }}*{{ end }}{{ $fstruct }} { return {{ if .Nullable }}&{{ end }}{{ $fstruct }}{v: v} }
-func (u *{{ $fstruct }}) columnName() string { return "{{ .Column }}" }
-func (u *{{ $fstruct }}) value() interface{} { return u.v }
-func (u *{{ $fstruct }}) private{{ $struct }}() {}
-
-{{- if .Insertable }}
-func (u *{{ $fstruct}}) insertable() {}
-{{- end -}}
-
-{{- if .Updatable }}
-func (u *{{ $fstruct}}) updatable() {}
-{{- end -}}
+func (u {{ $fstruct }}) columnName() string { return "{{ .Column }}" }
+func (u {{ $fstruct }}) value() interface{} { return u.v }
+{{- if not .Nullable }}
+func (u {{ $fstruct }}) Ref() *{{ $fstruct }} { return &u }
+{{- end }}
 
 {{- end -}}
-
 {{- end }}

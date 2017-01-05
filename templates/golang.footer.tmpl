@@ -7,7 +7,7 @@ type methods interface {
 }
 
 type dbMethods interface {
-    Schema() string
+	Schema() string
 	begin(tx *sqlx.Tx) methods
 	methods
 }
