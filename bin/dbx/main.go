@@ -36,8 +36,8 @@ func main() {
 	template_dir_arg := app.StringOpt("t templates", "", "templates directory")
 	in_arg := app.StringArg("IN", "", "path to the description")
 	out_arg := app.StringArg("OUT", "", "output file (- for stdout)")
-	dialects_opt := app.StringsOpt("d dialect", []string{"postgres"},
-		"SQL dialect to use")
+	dialects_opt := app.StringsOpt("d dialect", nil,
+		"SQL dialect to use (postgres if unspecified)")
 
 	var err error
 	die := func(err error) {
@@ -103,6 +103,9 @@ func main() {
 }
 
 func createDialects(which []string) (out []sql.Dialect, err error) {
+	if len(which) == 0 {
+		which = append(which, "postgres")
+	}
 	for _, name := range which {
 		var d sql.Dialect
 		switch name {

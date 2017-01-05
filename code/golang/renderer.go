@@ -21,6 +21,8 @@ import (
 	"regexp"
 	"sort"
 	"text/template"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/spacemonkeygo/errors"
 	"gopkg.in/spacemonkeygo/dbx.v1/code"
@@ -48,6 +50,7 @@ type Renderer struct {
 	upd        *template.Template
 	del        *template.Template
 	del_all    *template.Template
+	get_last   *template.Template
 	signatures map[string]bool
 	options    Options
 }
@@ -78,10 +81,12 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	funcs := template.FuncMap{
-		"params": asParam,
-		"args":   asArg,
-		"zeroed": asZero,
-		"inits":  asInits,
+		"params":  asParam,
+		"args":    asArg,
+		"zeroed":  asZero,
+		"init":    asInit,
+		"ptrs":    asPtr,
+		"flatten": flattenVars,
 	}
 
 	r.ins, err = loader.Load("golang.insert.tmpl", funcs)
@@ -109,6 +114,11 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
+	r.get_last, err = loader.Load("golang.get-last.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
 	return r, nil
 }
 
@@ -121,24 +131,47 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 	}
 
 	for _, dialect := range dialects {
-		// for _, ins := range root.Inserts {
-		// 	if err := r.renderInsert(&buf, ins, dialect); err != nil {
-		// 		return nil, err
-		// 	}
-		// }
-		// for _, sel := range root.Selects {
-		// 	if err := r.renderSelect(&buf, sel, dialect); err != nil {
-		// 		return nil, err
-		// 	}
-		// }
-		for _, upd := range root.Updates {
-			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
+		var gets []*ir.Model
+		for _, ins := range root.Inserts {
+			gets = append(gets, ins.Model)
+			if err := r.renderInsert(&buf, ins, dialect); err != nil {
 				return nil, err
 			}
 		}
+		//		for _, sel := range root.Selects {
+		//			if err := r.renderSelect(&buf, sel, dialect); err != nil {
+		//				return nil, err
+		//			}
+		//		}
+		//		for _, upd := range root.Updates {
+		//			gets = append(gets, upd.Model)
+		//			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
+		//				return nil, err
+		//			}
+		//		}
 		for _, del := range root.Deletes {
 			if err := r.renderDelete(&buf, del, dialect); err != nil {
 				return nil, err
+			}
+		}
+		// 	if err := r.renderDelete(&buf, del, dialect); err != nil {
+		// 		return nil, err
+		// 	}
+		// }
+
+		if len(gets) > 0 && !dialect.Features().Returning {
+			// dialect does not support returning columns on insert and updates
+			// so we need to generate a function to support getting by last
+			// insert id.
+			done := map[*ir.Model]bool{}
+			for _, model := range gets {
+				if done[model] {
+					continue
+				}
+				done[model] = true
+				if err := r.renderGetLast(&buf, model, dialect); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -277,8 +310,32 @@ func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,
 		return err
 	}
 
-	r.signatures[decl.Signature] = true
+	if isExported(decl.Signature) {
+		r.signatures[decl.Signature] = true
+	}
+
 	return nil
+}
+
+func isExported(signature string) bool {
+	r, _ := utf8.DecodeRuneInString(signature)
+	return unicode.IsUpper(r)
+}
+
+func (r *Renderer) renderGetLast(w io.Writer, model *ir.Model,
+	dialect sql.Dialect) error {
+
+	type getLast struct {
+		Return *Var
+		SQL    string
+	}
+
+	get_last := getLast{
+		Return: VarFromModel(model),
+		SQL:    sql.RenderGetLast(dialect, model),
+	}
+
+	return r.renderFunc(r.get_last, w, get_last, dialect)
 }
 
 func (r *Renderer) renderFooter(w io.Writer) error {

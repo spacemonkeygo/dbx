@@ -1,0 +1,22 @@
+{{- define "signature" -}}
+getLast{{ .Return.Type }}(pk int64) ({{ params .Return }}, err error)
+{{- end -}}
+
+{{- define "body" -}}{
+	const __stmt=`{{ .SQL }}`
+	__prepared, __replace, err := obj.prepare(__stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer __replace()
+	obj.logStmt(__stmt, pk)
+
+    {{ init .Return }}
+    err = __prepared.QueryRow(pk).Scan({{ ptrs (flatten .Return) }})
+    if err != nil {
+        return {{ zeroed .Return }}, WrapErr(err)
+    }
+    return {{ args .Return }}, nil
+}
+{{ end -}}

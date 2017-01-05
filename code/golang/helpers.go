@@ -33,7 +33,11 @@ func asArg(intf interface{}) (string, error) {
 	return forVars(intf, (*Var).Arg)
 }
 
-func asInits(intf interface{}) (string, error) {
+func asPtr(intf interface{}) (string, error) {
+	return forVars(intf, (*Var).Ptr)
+}
+
+func asInit(intf interface{}) (string, error) {
 	return forVars(intf, (*Var).Init)
 }
 

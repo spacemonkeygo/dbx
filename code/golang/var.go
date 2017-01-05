@@ -17,13 +17,15 @@ package golang
 import (
 	"fmt"
 
+	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
 func VarFromModel(model *ir.Model) *Var {
 	return &Var{
-		Name: model.Name,
-		Type: model.Name,
+		Name:   model.Name,
+		Type:   structName(model),
+		Fields: VarsFromFields(model.Fields),
 	}
 }
 
@@ -60,19 +62,56 @@ func (v *Var) Ptr() string {
 }
 
 func (v *Var) Param() string {
+	if v.IsStruct() {
+		return fmt.Sprintf("%s *%s", v.Name, v.Type)
+	}
 	return fmt.Sprintf("%s %s", v.Name, v.Type)
 }
 
 func (v *Var) Init() string {
-	return fmt.Sprintf("%s = %s", v.Name, v.Type)
+	if v.IsStruct() {
+		return fmt.Sprintf("%s = &%s{}", v.Name, v.Type)
+	}
+	var val string
+	switch v.Type {
+	case "int", "int64", "uint", "uint64", "float", "float64":
+		val = "0"
+	case "string":
+		val = `""`
+	case "bool":
+		val = "false"
+	case "time.Time":
+		val = "time.Time{}"
+	case "*time.Time":
+		val = "nil"
+	default:
+		panic(fmt.Sprintf("unhandled var type %q", v.Type))
+	}
+	return fmt.Sprintf("%s = %s", v.Name, val)
+}
+
+func (v *Var) IsStruct() bool {
+	return len(v.Fields) > 0
 }
 
 func (v *Var) Zero() string {
-	switch v.Type {
-	case "float", "float64", "int64", "uint64", "int", "uint":
-		return "0"
+	if v.IsStruct() {
+		return "nil"
 	}
-	return "nil"
+	switch v.Type {
+	case "int", "int64", "uint", "uint64", "float", "float64":
+		return "0"
+	case "string":
+		return `""`
+	case "bool":
+		return "false"
+	case "time.Time":
+		return "now"
+	case "*time.Time":
+		return "&now"
+	default:
+		panic(fmt.Sprintf("unhandled var type %q", v.Type))
+	}
 }
 
 func (v *Var) Flatten() (flattened []*Var) {
@@ -85,7 +124,7 @@ func (v *Var) Flatten() (flattened []*Var) {
 	for _, field := range v.Fields {
 		field_vars := field.Flatten()
 		for _, field_var := range field_vars {
-			field_var.Name = v.Name + "." + field_var.Name
+			field_var.Name = v.Name + "." + inflect.Camelize(field_var.Name)
 		}
 		flattened = append(flattened, field_vars...)
 	}

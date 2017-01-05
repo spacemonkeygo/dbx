@@ -32,10 +32,14 @@ func (p *postgres) Name() string {
 	return "postgres"
 }
 
-func (s *postgres) Features() Features {
+func (p *postgres) Features() Features {
 	return Features{
 		Returning: true,
 	}
+}
+
+func (p *postgres) RowId() string {
+	return ""
 }
 
 func (p *postgres) ColumnType(field *ir.Field) string {

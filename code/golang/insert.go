@@ -21,14 +21,13 @@ import (
 )
 
 type Insert struct {
-	Suffix     string
-	Struct     string
-	Args       []*Var
-	Fields     []*Var
-	AutoFields []*Var
-	SQL        string
-	GetFunc    string
-	GetFuncArg []string
+	Suffix            string
+	Return            *Var
+	Args              []*Var
+	Fields            []*Var
+	AutoFields        []*Var
+	SQL               string
+	SupportsReturning bool
 }
 
 func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
@@ -36,14 +35,14 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 	if ir_ins.Raw {
 		suffix = "Raw" + suffix
 	}
-	// TODO: GetFunc & GetFuncArg
 	return &Insert{
-		Suffix:     suffix,
-		Struct:     structName(ir_ins.Model),
-		SQL:        sql.RenderInsert(dialect, ir_ins),
-		Args:       VarsFromFields(ir_ins.ManualFields()),
-		Fields:     VarsFromFields(ir_ins.Fields()),
-		AutoFields: VarsFromFields(ir_ins.AutoFields()),
+		Suffix:            suffix,
+		Return:            VarFromModel(ir_ins.Model),
+		SQL:               sql.RenderInsert(dialect, ir_ins),
+		Args:              VarsFromFields(ir_ins.ManualFields()),
+		Fields:            VarsFromFields(ir_ins.Fields()),
+		AutoFields:        VarsFromFields(ir_ins.AutoFields()),
+		SupportsReturning: dialect.Features().Returning,
 	}
 }
 

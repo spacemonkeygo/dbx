@@ -24,5 +24,6 @@ type Features struct {
 type Dialect interface {
 	Name() string
 	Features() Features
+	RowId() string
 	ColumnType(field *ir.Field) string
 }

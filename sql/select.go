@@ -53,6 +53,21 @@ func RenderHas(dialect Dialect, ir_sel *ir.Select) string {
 	return render(hasTmpl, sel)
 }
 
+func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
+	sel := Select{
+		Fields: ir_model.SelectRefs(),
+		From:   ir_model.TableName(),
+		Where: []Where{
+			{
+				Left:  dialect.RowId(),
+				Op:    "=",
+				Right: "?",
+			},
+		},
+	}
+	return render(selectTmpl, sel)
+}
+
 func SelectFromIR(ir_sel *ir.Select, dialect Dialect) *Select {
 	sel := &Select{
 		From:  ir_sel.From.TableName(),

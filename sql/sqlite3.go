@@ -36,6 +36,10 @@ func (s *sqlite3) Features() Features {
 	return Features{}
 }
 
+func (s *sqlite3) RowId() string {
+	return "_rowid_"
+}
+
 func (s *sqlite3) ColumnType(field *ir.Field) string {
 	switch field.Type {
 	case ast.SerialField, ast.Serial64Field,
