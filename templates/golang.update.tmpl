@@ -1,3 +1,23 @@
+{{- define "signature" -}}
+Update{{ .Suffix }}({{ params .Args }}update Update{{ .Struct.Name }}) (result *{{ .Struct.Name }}, err error)
+{{- end -}}
+
+{{- define "body" -}}{
+	return nil, nil
+}
+{{- end -}}
+
+
+func (obj *{{ .Dialect }}DB) {{ template "signature" . }} {{ template "body" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "signature" . }} {{ template "body" . }}
+
+
+{{/*
+================================================================
+  Old update
+================================================================
+
 func (obj *{{ .Dialect }}DB) {{ template "update-func" . }}
 
 func (obj *{{ .Dialect }}Tx) {{ template "update-func" . }}
@@ -68,3 +88,5 @@ Update{{ .Struct }}{{ .FuncSuffix }}
 {{- end -}}
 }
 {{- end -}}
+
+*/}}

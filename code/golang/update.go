@@ -12,10 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sql
+package golang
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+)
 
-func RenderUpdate(dialect Dialect, model *ir.Model) string {
-	return ""
+type Update struct {
+	Struct  *Struct
+	Dialect string
+	Suffix  string
+	Args    []Var
+	SQL     string
+}
+
+func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
+	upd := &Update{
+		Struct:  StructFromIR(ir_upd.Model),
+		Dialect: dialect.Name(),
+		SQL:     sql.RenderUpdate(dialect, ir_upd),
+	}
+
+	// TODO(jeff): args
+
+	return upd
 }

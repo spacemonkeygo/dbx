@@ -107,28 +107,28 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 		return nil, err
 	}
 
-	// for _, dialect := range dialects {
-	//		for _, ins := range root.Inserts {
-	//			if err := r.renderInsert(&buf, ins, dialect); err != nil {
-	//				return nil, err
-	//			}
-	//		}
-	//		//		for _, sel := range root.Selects {
-	//		//			if err := r.renderSelect(&buf, sel, dialect); err != nil {
-	//		//				return nil, err
-	//		//			}
-	//		//		}
-	//		//		for _, upd := range root.Updates {
-	//		//			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
-	//		//				return nil, err
-	//		//			}
-	//		//		}
-	// for _, del := range root.Deletes {
-	// 	if err := r.renderDelete(&buf, del, dialect); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
-	// }
+	for _, dialect := range dialects {
+		// for _, ins := range root.Inserts {
+		// 	if err := r.renderInsert(&buf, ins, dialect); err != nil {
+		// 		return nil, err
+		// 	}
+		// }
+		// for _, sel := range root.Selects {
+		// 	if err := r.renderSelect(&buf, sel, dialect); err != nil {
+		// 		return nil, err
+		// 	}
+		// }
+		for _, upd := range root.Updates {
+			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
+				return nil, err
+			}
+		}
+		// for _, del := range root.Deletes {
+		// 	if err := r.renderDelete(&buf, del, dialect); err != nil {
+		// 		return nil, err
+		// 	}
+		// }
+	}
 
 	if err := r.renderFooter(&buf); err != nil {
 		return nil, err
@@ -225,11 +225,9 @@ func (r *Renderer) renderSelect(w io.Writer, sel *ir.Select,
 func (r *Renderer) renderUpdate(w io.Writer, upd *ir.Update,
 	dialect sql.Dialect) error {
 
-	if err := tmplutil.Render(r.upd, w, "", nil); err != nil {
-		return err
-	}
+	data := UpdateFromIR(upd, dialect)
 
-	return nil
+	return tmplutil.Render(r.upd, w, "", data)
 }
 
 func (r *Renderer) renderDelete(w io.Writer, del *ir.Delete,
