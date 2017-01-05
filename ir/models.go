@@ -118,6 +118,10 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 			return Error.New("%s: nullable field %q cannot be a primary key",
 				ast_fieldref.Pos, ast_fieldref.Field)
 		}
+		if field.Updatable {
+			return Error.New("%s: updatable field %q cannot be a primary key",
+				ast_fieldref.Pos, ast_fieldref.Field)
+		}
 		model.PrimaryKey = append(model.PrimaryKey, field)
 	}
 
