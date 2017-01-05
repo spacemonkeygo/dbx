@@ -23,7 +23,7 @@ type Update struct {
 	Struct  *Struct
 	Dialect string
 	Suffix  string
-	Args    []Var
+	Args    []*Var
 	SQL     string
 }
 

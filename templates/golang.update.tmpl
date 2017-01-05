@@ -8,11 +8,6 @@ Update{{ .Suffix }}({{ params .Args }}update Update{{ .Struct.Name }}) (result *
 {{- end -}}
 
 
-func (obj *{{ .Dialect }}DB) {{ template "signature" . }} {{ template "body" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "signature" . }} {{ template "body" . }}
-
-
 {{/*
 ================================================================
   Old update

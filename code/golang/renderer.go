@@ -121,16 +121,16 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 	}
 
 	for _, dialect := range dialects {
-		for _, ins := range root.Inserts {
-			if err := r.renderInsert(&buf, ins, dialect); err != nil {
-				return nil, err
-			}
-		}
-		//		for _, sel := range root.Selects {
-		//			if err := r.renderSelect(&buf, sel, dialect); err != nil {
-		//				return nil, err
-		//			}
-		//		}
+		// for _, ins := range root.Inserts {
+		// 	if err := r.renderInsert(&buf, ins, dialect); err != nil {
+		// 		return nil, err
+		// 	}
+		// }
+		// for _, sel := range root.Selects {
+		// 	if err := r.renderSelect(&buf, sel, dialect); err != nil {
+		// 		return nil, err
+		// 	}
+		// }
 		for _, upd := range root.Updates {
 			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
 				return nil, err
@@ -141,11 +141,6 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 				return nil, err
 			}
 		}
-		// for _, del := range root.Deletes {
-		// 	if err := r.renderDelete(&buf, del, dialect); err != nil {
-		// 		return nil, err
-		// 	}
-		// }
 	}
 
 	if err := r.renderFooter(&buf); err != nil {
@@ -236,7 +231,6 @@ func (r *Renderer) renderUpdate(w io.Writer, ir_upd *ir.Update,
 	dialect sql.Dialect) error {
 
 	upd := UpdateFromIR(ir_upd, dialect)
-
 	return r.renderFunc(r.upd, w, upd, dialect)
 }
 
