@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-Update{{ .Suffix }}({{ params .Args }}update Update{{ .Struct.Name }}) (result *{{ .Struct.Name }}, err error)
+Update{{ .Suffix }}({{ param .Args }}update Update{{ .Struct.Name }}) (result *{{ .Struct.Name }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{
@@ -23,7 +23,7 @@ Update{{ .Struct }}{{ .FuncSuffix }}
 
 {{- define "update-func-sig" -}}
 {{ template "update-func-name" . }}(
-{{ params .Args }},
+{{ param .Args }},
     updates ...{{ .Struct }}Update) (
     result *{{ .Struct }}, err error)
 {{- end -}}
@@ -61,7 +61,7 @@ Update{{ .Struct }}{{ .FuncSuffix }}
 		return
 	}
 	defer replace()
-	args := append(values, {{- args .Args -}})	
+	args := append(values, {{- arg .Args -}})	
 	obj.logStmt(stmt, args...)
 
 {{- if .SupportsReturning }}
@@ -79,7 +79,7 @@ Update{{ .Struct }}{{ .FuncSuffix }}
     if err != nil {
         return nil, WrapErr(err)
     }
-	return obj.{{ template "select-func-name" . }}({{ args .Args }})
+	return obj.{{ template "select-func-name" . }}({{ arg .Args }})
 {{- end -}}
 }
 {{- end -}}

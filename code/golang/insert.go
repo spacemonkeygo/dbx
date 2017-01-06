@@ -25,9 +25,14 @@ type Insert struct {
 	Return            *Var
 	Args              []*Var
 	Fields            []*Var
-	AutoFields        []*Var
+	AutoFields        *AutoInit
 	SQL               string
 	SupportsReturning bool
+}
+
+type AutoInit struct {
+	NeedsNow bool
+	Vars     []*Var
 }
 
 func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
@@ -35,28 +40,28 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 	if ir_ins.Raw {
 		suffix = "Raw" + suffix
 	}
+	auto_vars := VarsFromFields(ir_ins.AutoFields())
+	var auto_fields *AutoInit
+	if len(auto_vars) > 0 {
+		auto_fields = &AutoInit{
+			Vars: auto_vars,
+		}
+	needs_now_check:
+		for _, v := range auto_vars {
+			switch v.Type {
+			case "time.Time", "*time.Time":
+				auto_fields.NeedsNow = true
+				break needs_now_check
+			}
+		}
+	}
 	return &Insert{
 		Suffix:            suffix,
 		Return:            VarFromModel(ir_ins.Model),
 		SQL:               sql.RenderInsert(dialect, ir_ins),
 		Args:              VarsFromFields(ir_ins.ManualFields()),
 		Fields:            VarsFromFields(ir_ins.Fields()),
-		AutoFields:        VarsFromFields(ir_ins.AutoFields()),
+		AutoFields:        auto_fields,
 		SupportsReturning: dialect.Features().Returning,
 	}
-}
-
-func (i *Insert) NeedsNow() bool {
-	for _, v := range i.AutoFields {
-		switch v.Type {
-		case "time.Time", "*time.Time":
-			return true
-		}
-	}
-	return false
-}
-
-type ReturnBy struct {
-	Pk     string
-	Getter interface{} //*FuncBase
 }

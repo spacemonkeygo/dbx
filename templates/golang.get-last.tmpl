@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-getLast{{ .Return.Type }}(pk int64) ({{ params .Return }}, err error)
+getLast{{ .Return.Type }}(pk int64) ({{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{
@@ -13,10 +13,10 @@ getLast{{ .Return.Type }}(pk int64) ({{ params .Return }}, err error)
 	obj.logStmt(__stmt, pk)
 
     {{ init .Return }}
-    err = __prepared.QueryRow(pk).Scan({{ ptrs (flatten .Return) }})
+    err = __prepared.QueryRow(pk).Scan({{ addrof (flatten .Return) }})
     if err != nil {
-        return {{ zeroed .Return }}, WrapErr(err)
+        return {{ zero .Return }}, WrapErr(err)
     }
-    return {{ args .Return }}, nil
+    return {{ arg .Return }}, nil
 }
 {{ end -}}

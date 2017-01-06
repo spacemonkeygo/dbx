@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-Delete{{ .Suffix }}({{ params .Args }}) (count int64, err error)
+Delete{{ .Suffix }}({{ param .Args }}) (count int64, err error)
 {{- end -}}
 
 {{- define "body" -}}{
@@ -9,9 +9,9 @@ Delete{{ .Suffix }}({{ params .Args }}) (count int64, err error)
         return 0, WrapErr(err)
 	}
 	defer __replace()
-	obj.logStmt(__stmt, {{ args .Args }})
+	obj.logStmt(__stmt, {{ arg .Args }})
 
-    __res, err := __prepared.Exec({{ args .Args }})
+    __res, err := __prepared.Exec({{ arg .Args }})
 	if err != nil {
         return 0, WrapErr(err)
 	}

@@ -81,12 +81,13 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	funcs := template.FuncMap{
-		"params":  asParam,
-		"args":    asArg,
-		"zeroed":  asZero,
-		"init":    asInit,
-		"ptrs":    asPtr,
-		"flatten": flattenVars,
+		"param":    paramFn,
+		"arg":      argFn,
+		"zero":     zeroFn,
+		"init":     initFn,
+		"autoinit": autoinitFn,
+		"addrof":   addrofFn,
+		"flatten":  flattenFn,
 	}
 
 	r.ins, err = loader.Load("golang.insert.tmpl", funcs)

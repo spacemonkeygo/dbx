@@ -57,7 +57,7 @@ func (v *Var) Arg() string {
 	return v.Name
 }
 
-func (v *Var) Ptr() string {
+func (v *Var) AddrOf() string {
 	return fmt.Sprintf("&%s", v.Name)
 }
 

@@ -25,27 +25,62 @@ func cleanSignature(in string) (out string) {
 	return reCollapseSpace.ReplaceAllString(strings.TrimSpace(in), " ")
 }
 
-func asParam(intf interface{}) (string, error) {
-	return forVars(intf, (*Var).Param)
+func paramFn(intf interface{}) (string, error) {
+	vs, err := forVars(intf, (*Var).Param)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(vs, ", "), nil
 }
 
-func asArg(intf interface{}) (string, error) {
-	return forVars(intf, (*Var).Arg)
+func argFn(intf interface{}) (string, error) {
+	vs, err := forVars(intf, (*Var).Arg)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(vs, ", "), nil
 }
 
-func asPtr(intf interface{}) (string, error) {
-	return forVars(intf, (*Var).Ptr)
+func addrofFn(intf interface{}) (string, error) {
+	vs, err := forVars(intf, (*Var).AddrOf)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(vs, ", "), nil
 }
 
-func asInit(intf interface{}) (string, error) {
-	return forVars(intf, (*Var).Init)
+func initFn(intf interface{}) (string, error) {
+	vs, err := forVars(intf, (*Var).Init)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(vs, "\n"), nil
 }
 
-func asZero(intf interface{}) (string, error) {
-	return forVars(intf, (*Var).Zero)
+func autoinitFn(autoinit *AutoInit) (string, error) {
+	if autoinit == nil {
+		return "", nil
+	}
+	vs, err := forVars(autoinit.Vars, (*Var).Init)
+	if err != nil {
+		return "", err
+	}
+	if autoinit.NeedsNow {
+		vs = append([]string{"__now := Now()"}, vs...)
+	}
+
+	return strings.Join(vs, "\n"), nil
 }
 
-func flattenVars(intf interface{}) (flattened []*Var, err error) {
+func zeroFn(intf interface{}) (string, error) {
+	vs, err := forVars(intf, (*Var).Zero)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(vs, ", "), nil
+}
+
+func flattenFn(intf interface{}) (flattened []*Var, err error) {
 	switch obj := intf.(type) {
 	case *Var:
 		flattened = obj.Flatten()
@@ -59,19 +94,19 @@ func flattenVars(intf interface{}) (flattened []*Var, err error) {
 	return flattened, nil
 }
 
-func forVars(intf interface{}, fn func(v *Var) string) (string, error) {
+func forVars(intf interface{}, fn func(v *Var) string) ([]string, error) {
 	var elems []string
 	switch obj := intf.(type) {
 	case *Var:
-		return fn(obj), nil
+		elems = append(elems, fn(obj))
 	case []*Var:
 		for _, v := range obj {
 			elems = append(elems, fn(v))
 		}
 	default:
-		return "", Error.New("unsupported type %T", obj)
+		return nil, Error.New("unsupported type %T", obj)
 	}
-	return strings.Join(elems, ", "), nil
+	return elems, nil
 }
 
 func structName(m *ir.Model) string {
