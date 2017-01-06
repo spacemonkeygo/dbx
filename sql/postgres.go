@@ -16,6 +16,7 @@ package sql
 
 import (
 	"fmt"
+	"strconv"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -34,7 +35,8 @@ func (p *postgres) Name() string {
 
 func (p *postgres) Features() Features {
 	return Features{
-		Returning: true,
+		Returning:           true,
+		PositionalArguments: true,
 	}
 }
 
@@ -77,3 +79,23 @@ func (p *postgres) ColumnType(field *ir.Field) string {
 		panic(fmt.Sprintf("unhandled field type %s", field.Type))
 	}
 }
+
+func (p *postgres) Rebind(sql string) string {
+	out := make([]byte, 0, len(sql)+10)
+
+	j := 1
+	for i := 0; i < len(sql); i++ {
+		ch := sql[i]
+		if ch != '?' {
+			out = append(out, ch)
+			continue
+		}
+
+		out = append(out, '$')
+		out = append(out, strconv.Itoa(j)...)
+	}
+
+	return string(out)
+}
+
+func (s *postgres) ArgumentPrefix() string { return "$" }

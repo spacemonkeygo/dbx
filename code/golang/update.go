@@ -21,26 +21,30 @@ import (
 )
 
 type Update struct {
-	Suffix            string
-	Struct            *ModelStruct
-	Return            *Var
-	Args              []*Var
-	AutoFields        []*Var
-	SQLPrefix         string
-	SQLSuffix         string
-	SupportsReturning bool
-	NeedsNow          bool
+	Suffix              string
+	Struct              *ModelStruct
+	Return              *Var
+	Args                []*Var
+	AutoFields          []*Var
+	SQLPrefix           string
+	SQLSuffix           string
+	SupportsReturning   bool
+	PositionalArguments bool
+	ArgumentPrefix      string
+	NeedsNow            bool
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 	sql_prefix, sql_suffix := sql.RenderUpdate(dialect, ir_upd)
 	upd := &Update{
-		Suffix:            inflect.Camelize(ir_upd.FuncSuffix()),
-		Struct:            ModelStructFromIR(ir_upd.Model),
-		SQLPrefix:         sql_prefix,
-		SQLSuffix:         sql_suffix,
-		Return:            VarFromModel(ir_upd.Model),
-		SupportsReturning: dialect.Features().Returning,
+		Suffix:              inflect.Camelize(ir_upd.FuncSuffix()),
+		Struct:              ModelStructFromIR(ir_upd.Model),
+		SQLPrefix:           sql_prefix,
+		SQLSuffix:           sql_suffix,
+		Return:              VarFromModel(ir_upd.Model),
+		SupportsReturning:   dialect.Features().Returning,
+		PositionalArguments: dialect.Features().PositionalArguments,
+		ArgumentPrefix:      dialect.ArgumentPrefix(),
 	}
 
 	for _, where := range ir_upd.Where {

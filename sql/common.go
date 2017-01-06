@@ -19,6 +19,8 @@ import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 type Features struct {
 	// Supports the RETURNING syntax on INSERT/UPDATE
 	Returning bool
+	// Supports positional argument placeholders
+	PositionalArguments bool
 }
 
 type Dialect interface {
@@ -26,4 +28,6 @@ type Dialect interface {
 	Features() Features
 	RowId() string
 	ColumnType(field *ir.Field) string
+	Rebind(sql string) string
+	ArgumentPrefix() string
 }

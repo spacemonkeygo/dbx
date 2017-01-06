@@ -22,7 +22,7 @@ const deleteTmpl = `DELETE FROM {{ .From }}
 	{{- end -}}`
 
 func RenderDelete(dialect Dialect, ir_del *ir.Delete) string {
-	return render(deleteTmpl, DeleteFromIR(ir_del, dialect))
+	return render(dialect, deleteTmpl, DeleteFromIR(ir_del, dialect))
 }
 
 type Delete struct {

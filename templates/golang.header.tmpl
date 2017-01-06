@@ -6,132 +6,13 @@ package {{ .Package }}
 import (
 	"database/sql"
 	"fmt"
-	//"strings"
 	"sync"
 	"time"
 
 {{- range .ExtraImports }}
-    {{ .As }} "{{ .Package }}"
+	{{ .As }} "{{ .Package }}"
 {{- end }}
 )
-
-// lru implementation for prepared statements
-type lru struct {
-	mu       sync.Mutex
-	db       *sql.DB
-	capacity int
-	root     entry
-	index    map[string]*entry
-}
-
-// newLRU returns an initialized lru.
-func newLRU(db *sql.DB, capacity int) *lru {
-	l := &lru{
-		db:       db,
-		capacity: capacity,
-		index:    make(map[string]*entry),
-	}
-	l.root.next = &l.root
-	l.root.prev = &l.root
-	return l
-}
-
-// insert inserts e after at, increments l.len.
-func (l *lru) insert(e, at *entry) {
-	n := at.next
-	at.next = e
-	e.prev = at
-	e.next = n
-	n.prev = e
-}
-
-// remove removes e from its list, decrements l.len
-func (l *lru) remove(e *entry) {
-	e.prev.next = e.next
-	e.next.prev = e.prev
-	e.next = nil // avoid memory leaks
-	e.prev = nil // avoid memory leaks
-}
-
-func (l *lru) evict(capacity int) {
-	if capacity < 0 {
-		return
-	}
-
-	to_evict := len(l.index) - capacity
-	current := &l.root
-	for i := 0; i < to_evict; i++ {
-		current = current.prev
-		if current == &l.root {
-			panic("index out of whack. race conditions?")
-		}
-		if current.refs > 0 {
-			continue
-		}
-		// whoa boy is this subtle. l.remove blows away current.next and
-		// current.prev. but current.next.prev will be mutated to be
-		// current.prev for the next iteration!
-		next_current := current.next
-
-		l.remove(current)
-		delete(l.index, current.key)
-		loge(current.Stmt.Close())
-
-		current = next_current
-	}
-}
-
-func (l *lru) Get(key string) (*entry, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	e, ok := l.index[key]
-	if ok {
-		l.remove(e)
-		l.insert(e, &l.root)
-		e.refs++
-
-		return e, nil
-	}
-
-	stmt, err := l.db.Prepare(key)
-	if err != nil {
-		return nil, WrapErr(err)
-	}
-
-	e = &entry{
-		Stmt: stmt,
-		key:   key,
-	}
-	l.insert(e, &l.root)
-	l.index[key] = e
-	e.refs++
-
-	return e, nil
-}
-
-func (l *lru) Replace(e *entry) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	e.refs--
-	l.evict(l.capacity)
-}
-
-func (l *lru) Purge() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	l.evict(0)
-}
-
-type entry struct {
-	Stmt *sql.Stmt
-
-	next, prev *entry
-	key        string
-	refs       int
-}
 
 var WrapErr = func(err error) error {return err}
 var Logger func(format string, args ...interface{})
@@ -145,8 +26,8 @@ func loge(err error) {
 
 type DB struct {
 	*sql.DB
-    lru *lru
-    dbMethods
+	lru *lru
+	dbMethods
 }
 
 func Open(driver, source string, lru_size int) (*DB, error) {
@@ -155,22 +36,22 @@ func Open(driver, source string, lru_size int) (*DB, error) {
 		return nil, WrapErr(err)
 	}
 	
-    lru := newLRU(db, lru_size)
+	lru := newLRU(db, lru_size)
 
-    var impl dbMethods
-    switch driver {
+	var impl dbMethods
+	switch driver {
 {{- range .Dialects }}
-    case {{ .Name | printf "%q" }}:
+	case {{ .Name | printf "%q" }}:
 		impl = &{{ .Name }}DB{lru: lru}
 {{- end }}
-    default:
-        return nil, WrapErr(fmt.Errorf("unsupported driver %s", driver))
-    }
+	default:
+		return nil, WrapErr(fmt.Errorf("unsupported driver %s", driver))
+	}
 
 	return &DB{
 		DB: db,
 		lru: lru,
-        dbMethods: impl,
+		dbMethods: impl,
 	}, nil
 }
 
@@ -181,13 +62,13 @@ func (obj *DB) Close() (err error) {
 
 func (obj *DB) DeleteAll() (total int64, err error) {
 {{- range .StructsReverse }}
-    if n, err := obj.Delete{{ pluralize .Name }}(); err == nil {
-        total += n
-    } else {
-        return total, WrapErr(err)
-    }
+	if n, err := obj.Delete{{ pluralize .Name }}(); err == nil {
+		total += n
+	} else {
+		return total, WrapErr(err)
+	}
 {{- end }}
-    return total, nil
+	return total, nil
 }
 
 func (obj *DB) Open() (*Tx, error) {
@@ -196,12 +77,12 @@ func (obj *DB) Open() (*Tx, error) {
 		return nil, WrapErr(err)
 	}
 
-    return &Tx{tx: tx, methods: obj.begin(tx)}, nil
+	return &Tx{tx: tx, methods: obj.begin(tx)}, nil
 }
 
 type Tx struct {
 	tx *sql.Tx
-    methods
+	methods
 }
 
 func (tx *Tx) Commit() (err error) {
@@ -214,13 +95,13 @@ func (tx *Tx) Rollback() (err error) {
 
 func (tx *Tx) DeleteAll() (total int64, err error) {
 {{- range .StructsReverse }}
-    if n, err := tx.Delete{{ pluralize .Name }}(); err == nil {
-        total += n
-    } else {
-        return total, WrapErr(err)
-    }
+	if n, err := tx.Delete{{ pluralize .Name }}(); err == nil {
+		total += n
+	} else {
+		return total, WrapErr(err)
+	}
 {{- end }}
-    return total, nil
+	return total, nil
 }
 
 {{- range .Dialects }}

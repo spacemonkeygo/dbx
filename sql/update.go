@@ -26,8 +26,9 @@ const (
 
 func RenderUpdate(dialect Dialect, ir_upd *ir.Update) (prefix, suffix string) {
 	upd := UpdateFromIR(ir_upd, dialect)
-	return render(updateTmplPrefix, upd, noTerminate) + " ",
-		" " + render(updateTmplSuffix, upd)
+	prefix = render(dialect, updateTmplPrefix, upd, noTerminate) + " "
+	suffix = " " + render(dialect, updateTmplSuffix, upd)
+	return prefix, suffix
 }
 
 type Update struct {

@@ -12,21 +12,44 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 	var qs []byte
 	var values []interface{}
 
+	{{ if .PositionalArguments }}
+	j := {{ len .Args }}
+	values = append(values, {{ arg .Args }})
+	{{ end -}}
+
+	addArgument := func(name string) {
+		qs = append(qs, name...)
+		{{- if .PositionalArguments }}
+		j++
+		qs = append(qs, " = {{ .ArgumentPrefix }}"...)
+		qs = append(qs, strconv.Itoa(j)...)
+		qs = append(qs, ", "...)
+		{{- else }}
+		qs = append(qs, " = {{ .ArgumentPrefix }}, "...)
+		{{- end }}
+	}
+
 	{{ range .Struct.UpdatableFields }}
 	if update.{{ .Name }} != nil {
-		qs = append(qs, "{{ .Column }} = ?, "...)
+		addArgument("{{ .Column }}")
 		values = append(values, update.{{ .Name }}.value())
 	}
-	{{ end -}}
+	{{ end }}
 
 	{{ range .AutoFields }}
-	qs = append(qs, "{{ .Name }} = ?, "...)
+	addArgument("{{ .Name }}")
 	values = append(values, {{ .InitVal }})
-	{{ end -}}
+	{{ end }}
 
+	{{ if not .AutoFields }}
 	if len(qs) == 0 {
 		return nil, WrapErr(fmt.Errorf("need to update at least one field"))
 	}
+	{{ end }}
+
+	{{ if not .PositionalArguments -}}
+	values = append(values, {{ arg .Args }})
+	{{ end }}
 
 	__stmt := __stmt_prefix + string(qs[:len(qs)-2]) + __stmt_suffix
 	__prepared, __replace, err := obj.prepare(__stmt)
@@ -38,13 +61,13 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 
 	{{ if .SupportsReturning }}
 	{{ init .Return }}
-	err = __prepared.QueryRow({{ arg .Args }}).Scan({{ addrof (flatten .Return) }})
+	err = __prepared.QueryRow(values).Scan({{ addrof (flatten .Return) }})
 	if err != nil {
 		return nil, WrapErr(err)
 	}
 	return {{ arg .Return }}, nil
 	{{ else -}}
-	__res, err := __prepared.Exec({{ arg .Args}})
+	__res, err := __prepared.Exec(values)
 	if err != nil {
 		return nil, WrapErr(err)
 	}
@@ -56,82 +79,3 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 	{{ end -}}
 }
 {{- end -}}
-
-
-{{/*
-================================================================
-  Old update
-================================================================
-
-func (obj *{{ .Dialect }}DB) {{ template "update-func" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "update-func" . }}
-
-{{- define "update-func-name" -}}
-Update{{ .Struct }}{{ .FuncSuffix }}
-{{- end -}}
-
-{{- define "update-func-sig" -}}
-{{ template "update-func-name" . }}(
-{{ param .Args }},
-    updates ...{{ .Struct }}Update) (
-    result *{{ .Struct }}, err error)
-{{- end -}}
-
-{{- define "update-func" -}}
-{{ template "update-func-sig" . }} {
-
-	var qs []string
-	var values []interface{}
-	seen := map[string]int{}
-	addvalue := func(name string, value interface{}) {
-		if idx, ok := seen[name]; ok{
-			values[idx] = value
-		}
-		seen[name] = len(values)
-        qs = append(qs, name + " = ?")
-		values = append(values, value)
-	}
-{{- if .NeedsNow }}
-	now := Now()
-{{- end -}}
-{{- range .AutoFields }}
-	addvalue("{{ .Column }}", {{ .Init }})
-{{- end }}
-	for _, update := range updates {
-		addvalue(update.columnName(), update.value())
-	}
-
-    stmt := strings.Replace(`{{.SQL}}`,
-        "|||QS|||",
-        strings.Join(qs, ", "), 1)
-	prepared, replace, err := obj.prepare(stmt)
-	if err != nil {
-		err = WrapErr(err)
-		return
-	}
-	defer replace()
-	args := append(values, {{- arg .Args -}})	
-	obj.logStmt(stmt, args...)
-
-{{- if .SupportsReturning }}
-    result = &{{ .Struct }}{}
-    err = prepared.QueryRowx(args...).StructScan(result)
-    if err == sql.ErrNoRows {
-        return nil, nil
-    }
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-    return result, nil
-{{- else }}
-    _, err = prepared.Exec(args...)
-    if err != nil {
-        return nil, WrapErr(err)
-    }
-	return obj.{{ template "select-func-name" . }}({{ arg .Args }})
-{{- end -}}
-}
-{{- end -}}
-
-*/}}

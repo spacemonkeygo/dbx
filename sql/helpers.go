@@ -28,7 +28,9 @@ const (
 	noTerminate
 )
 
-func render(s string, param interface{}, ops ...renderOp) (out string) {
+func render(dialect Dialect, s string, param interface{}, ops ...renderOp) (
+	out string) {
+
 	out = mustRender(s, param)
 
 	flatten := true
@@ -49,7 +51,7 @@ func render(s string, param interface{}, ops ...renderOp) (out string) {
 		out = out + ";"
 	}
 
-	return out
+	return dialect.Rebind(out)
 }
 
 func mustRender(s string, param interface{}) string {

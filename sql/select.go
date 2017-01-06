@@ -38,17 +38,17 @@ var (
 )
 
 func RenderSelect(dialect Dialect, ir_sel *ir.Select) string {
-	return render(selectTmpl, SelectFromSelect(ir_sel, dialect))
+	return render(dialect, selectTmpl, SelectFromSelect(ir_sel, dialect))
 }
 
 func RenderCount(dialect Dialect, ir_count *ir.Count) string {
 	sel := SelectFromCount(ir_count, dialect, countFields)
-	return render(selectTmpl, sel)
+	return render(dialect, selectTmpl, sel)
 }
 
 func RenderHas(dialect Dialect, ir_count *ir.Count) string {
 	sel := SelectFromCount(ir_count, dialect, hasFields)
-	return render(hasTmpl, sel)
+	return render(dialect, hasTmpl, sel)
 }
 
 func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
@@ -63,7 +63,7 @@ func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
 			},
 		},
 	}
-	return render(selectTmpl, sel)
+	return render(dialect, selectTmpl, sel)
 }
 
 type Select struct {

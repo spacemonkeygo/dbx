@@ -60,3 +60,9 @@ func (s *sqlite3) ColumnType(field *ir.Field) string {
 		panic(fmt.Sprintf("unhandled field type %s", field.Type))
 	}
 }
+
+func (s *sqlite3) Rebind(sql string) string {
+	return sql
+}
+
+func (s *sqlite3) ArgumentPrefix() string { return "?" }

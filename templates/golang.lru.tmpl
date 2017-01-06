@@ -1,0 +1,117 @@
+// lru implementation for prepared statements
+type lru struct {
+	mu       sync.Mutex
+	db       *sql.DB
+	capacity int
+	root     entry
+	index    map[string]*entry
+}
+
+// newLRU returns an initialized lru.
+func newLRU(db *sql.DB, capacity int) *lru {
+	l := &lru{
+		db:       db,
+		capacity: capacity,
+		index:    make(map[string]*entry),
+	}
+	l.root.next = &l.root
+	l.root.prev = &l.root
+	return l
+}
+
+// insert inserts e after at, increments l.len.
+func (l *lru) insert(e, at *entry) {
+	n := at.next
+	at.next = e
+	e.prev = at
+	e.next = n
+	n.prev = e
+}
+
+// remove removes e from its list, decrements l.len
+func (l *lru) remove(e *entry) {
+	e.prev.next = e.next
+	e.next.prev = e.prev
+	e.next = nil // avoid memory leaks
+	e.prev = nil // avoid memory leaks
+}
+
+func (l *lru) evict(capacity int) {
+	if capacity < 0 {
+		return
+	}
+
+	to_evict := len(l.index) - capacity
+	current := &l.root
+	for i := 0; i < to_evict; i++ {
+		current = current.prev
+		if current == &l.root {
+			panic("index out of whack. race conditions?")
+		}
+		if current.refs > 0 {
+			continue
+		}
+		// whoa boy is this subtle. l.remove blows away current.next and
+		// current.prev. but current.next.prev will be mutated to be
+		// current.prev for the next iteration!
+		next_current := current.next
+
+		l.remove(current)
+		delete(l.index, current.key)
+		loge(current.Stmt.Close())
+
+		current = next_current
+	}
+}
+
+func (l *lru) Get(key string) (*entry, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	e, ok := l.index[key]
+	if ok {
+		l.remove(e)
+		l.insert(e, &l.root)
+		e.refs++
+
+		return e, nil
+	}
+
+	stmt, err := l.db.Prepare(key)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+
+	e = &entry{
+		Stmt: stmt,
+		key:   key,
+	}
+	l.insert(e, &l.root)
+	l.index[key] = e
+	e.refs++
+
+	return e, nil
+}
+
+func (l *lru) Replace(e *entry) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	e.refs--
+	l.evict(l.capacity)
+}
+
+func (l *lru) Purge() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.evict(0)
+}
+
+type entry struct {
+	Stmt *sql.Stmt
+
+	next, prev *entry
+	key        string
+	refs       int
+}

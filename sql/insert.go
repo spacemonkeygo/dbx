@@ -31,7 +31,7 @@ const insertTmpl = `INSERT INTO {{ .Table -}}
 	{{ if .Returning }} RETURNING *{{ end }}`
 
 func RenderInsert(dialect Dialect, ins *ir.Insert) string {
-	return render(insertTmpl, InsertFromIR(ins, dialect))
+	return render(dialect, insertTmpl, InsertFromIR(ins, dialect))
 }
 
 type Insert struct {
