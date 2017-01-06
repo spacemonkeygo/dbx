@@ -41,6 +41,13 @@ func SelectFromIR(ir_sel *ir.Select, dialect sql.Dialect) *Select {
 		}
 	}
 
+	if ir_sel.Limit != nil && ir_sel.Limit.Amount == 0 {
+		sel.Args = append(sel.Args, &Var{
+			Name: "limit",
+			Type: "int",
+		})
+	}
+
 	vars := VarsFromSelectables(ir_sel.Fields)
 	if len(vars) == 1 {
 		sel.Row = vars[0]

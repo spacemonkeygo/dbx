@@ -24,7 +24,8 @@ type GenerateOptions struct {
 	DeleteByUnique     bool
 	UpdateByPrimaryKey bool
 	UpdateByUnique     bool
-	Count              bool
+	SelectCount        bool
+	SelectPaged        bool
 }
 
 func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
@@ -37,10 +38,17 @@ func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
 			generateBasicUpdates(model, options)...)
 	}
 
-	// add a count for each select
-	if options.Count {
-		for _, sel := range root.Selects {
-			root.Counts = append(root.Counts, CountFromSelect(sel))
+	for _, sel := range root.Selects {
+		// add a count variant for each select that doesn't have a limit
+		if options.SelectCount && sel.Limit == nil {
+			if sel.Limit == nil {
+				root.Counts = append(root.Counts, CountFromSelect(sel))
+			}
+		}
+
+		// add a paged variant for each select that doesn't have a limit and
+		// has the potential to obtain more than one result.
+		if options.SelectPaged && !sel.One() && sel.Limit == nil {
 		}
 	}
 	return nil

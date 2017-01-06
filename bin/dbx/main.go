@@ -66,7 +66,8 @@ func main() {
 			DeleteByUnique:     true,
 			UpdateByPrimaryKey: true,
 			UpdateByUnique:     true,
-			Count:              true,
+			SelectCount:        true,
+			SelectPaged:        true,
 		})
 		die(err)
 

@@ -15,6 +15,7 @@
 package ir
 
 import (
+	"fmt"
 	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
@@ -351,6 +352,18 @@ func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
 		sel.OrderBy = &OrderBy{
 			Fields:     fields,
 			Descending: ast_sel.OrderBy.Descending,
+		}
+	}
+
+	if ast_sel.Limit != nil {
+		if ast_sel.Limit.Amount < 1 {
+			func_suffix = append(func_suffix, "with", "limit")
+		} else {
+			func_suffix = append(func_suffix, "limit", "to",
+				fmt.Sprint(ast_sel.Limit.Amount))
+		}
+		sel.Limit = &Limit{
+			Amount: ast_sel.Limit.Amount,
 		}
 	}
 
