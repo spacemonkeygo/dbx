@@ -1,13 +1,21 @@
 
-
-type methods interface {
+type TXMethods interface {
 {{- range .Funcs }}
-    {{ . }}
-{{- end -}}   
+	{{ . }}
+{{- end -}}
+}
+
+type txMethods interface {
+	TXMethods
+}
+
+type DBMethods interface {
+	Schema() string
+	TXMethods
 }
 
 type dbMethods interface {
-	Schema() string
-	begin(tx *sql.Tx) methods
-	methods
+	DBMethods
+
+	wrapTx(tx *sql.Tx) txMethods
 }

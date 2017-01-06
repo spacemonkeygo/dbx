@@ -6,7 +6,7 @@ Has{{ .Suffix }}({{ param .Args }}) (has bool, err error)
 	const __stmt=`{{ .SQL }}`
 	obj.logStmt(__stmt, {{ arg .Args }})
 
-	err = obj.impl.QueryRow(__stmt, {{ arg .Args }}).Scan(&has)
+	err = obj.driver.QueryRow(__stmt, {{ arg .Args }}).Scan(&has)
 	if err != nil {
 		return false, WrapErr(err)
 	}

@@ -6,7 +6,7 @@ Delete{{ .Suffix }}({{ param .Args }}) (deleted bool, err error)
 	const __stmt=`{{ .SQL }}`
 	obj.logStmt(__stmt, {{ arg .Args }})
 
-	__res, err := obj.impl.Exec(__stmt, {{ arg .Args }})
+	__res, err := obj.driver.Exec(__stmt, {{ arg .Args }})
 	if err != nil {
 		return false, WrapErr(err)
 	}

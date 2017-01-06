@@ -6,7 +6,7 @@ Count{{ .Suffix }}({{ param .Args }}) (count int64, err error)
 	const __stmt=`{{ .SQL }}`
 	obj.logStmt(__stmt, {{ arg .Args }})
 
-	err = obj.impl.QueryRow(__stmt, {{ arg .Args }}).Scan(&count)
+	err = obj.driver.QueryRow(__stmt, {{ arg .Args }}).Scan(&count)
 	if err != nil {
 		return 0, WrapErr(err)
 	}

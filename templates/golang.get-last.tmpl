@@ -7,7 +7,7 @@ getLast{{ .Return.Type }}(pk int64) ({{ param .Return }}, err error)
 	obj.logStmt(__stmt, pk)
 
 	{{ init .Return }}
-	err = obj.impl.QueryRow(__stmt, pk).Scan({{ addrof (flatten .Return) }})
+	err = obj.driver.QueryRow(__stmt, pk).Scan({{ addrof (flatten .Return) }})
 	if err != nil {
 		return {{ zero .Return }}, WrapErr(err)
 	}

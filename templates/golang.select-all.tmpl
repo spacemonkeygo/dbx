@@ -6,7 +6,7 @@ GetAll{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, err error)
 	const __stmt=`{{ .SQL }}`
 	obj.logStmt(__stmt, {{ arg .Args }})
 
-	__rows, err := obj.impl.Query(__stmt, {{ arg .Args}})
+	__rows, err := obj.driver.Query(__stmt, {{ arg .Args}})
 	if err != nil {
 		return nil, WrapErr(err)
 	}

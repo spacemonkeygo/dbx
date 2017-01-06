@@ -13,13 +13,13 @@ Create{{ .Suffix }}({{ param .Args }}) ({{ param .Return }}, err error)
 
 	{{ if .SupportsReturning }}
 	{{ init .Return }}
-	err = obj.impl.QueryRow(__stmt, {{ arg .Fields }}).Scan({{ addrof (flatten .Return) }})
+	err = obj.driver.QueryRow(__stmt, {{ arg .Fields }}).Scan({{ addrof (flatten .Return) }})
 	if err != nil {
 		return nil, WrapErr(err)
 	}
 	return {{ arg .Return }}, nil
 	{{ else -}}
-	__res, err := obj.impl.Exec(__stmt, {{ arg .Fields}})
+	__res, err := obj.driver.Exec(__stmt, {{ arg .Fields}})
 	if err != nil {
 		return nil, WrapErr(err)
 	}

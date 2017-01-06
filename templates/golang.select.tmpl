@@ -7,7 +7,7 @@ Get{{ .Suffix }}({{ param .Args }}) ({{ param .Row }}, err error)
 	obj.logStmt(__stmt, {{ arg .Args }})
 
 	{{ init .Row }}
-	err = obj.impl.QueryRow(__stmt, {{ arg .Args }}).Scan({{ addrof (flatten .Row) }})
+	err = obj.driver.QueryRow(__stmt, {{ arg .Args }}).Scan({{ addrof (flatten .Row) }})
 	if err == sql.ErrNoRows {
 		return {{ zero .Row }}, nil
 	}

@@ -18,6 +18,12 @@ var WrapErr = func(err error) error {return err}
 var Logger func(format string, args ...interface{})
 var Now = time.Now
 
+type driver interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
 type DB struct {
 	*sql.DB
 	dbMethods
@@ -33,7 +39,7 @@ func Open(driver, source string) (*DB, error) {
 	switch driver {
 {{- range .Dialects }}
 	case {{ .Name | printf "%q" }}:
-		impl = &{{ .Name }}DB{impl: db}
+		impl = new{{ .Name }}(db)
 {{- end }}
 	default:
 		return nil, WrapErr(fmt.Errorf("unsupported driver %s", driver))
@@ -66,12 +72,15 @@ func (obj *DB) Open() (*Tx, error) {
 		return nil, WrapErr(err)
 	}
 
-	return &Tx{tx: tx, methods: obj.begin(tx)}, nil
+	return &Tx{
+		tx: tx,
+		txMethods: obj.wrapTx(tx),
+	}, nil
 }
 
 type Tx struct {
 	tx *sql.Tx
-	methods
+	txMethods
 }
 
 func (tx *Tx) Commit() (err error) {
@@ -97,9 +106,28 @@ func (tx *Tx) DeleteAll() (total int64, err error) {
 
 {{ $dbtype := .Name | printf "%sDB" }}
 {{ $txtype := .Name | printf "%sTx" }}
+{{ $impltype := .Name | printf "%sImpl" }}
+
+type {{ $impltype }} struct {
+	driver driver
+}
+
+func (obj *{{ $impltype }}) logStmt(stmt string, args... interface{}) {
+	{{ .Name }}LogStmt(stmt, args...)
+}
 
 type {{ $dbtype }} struct {
-	impl *sql.DB
+	db *sql.DB
+	*{{ $impltype }}
+}
+
+func new{{ .Name }}(db *sql.DB) *{{ $dbtype }} {
+	return &{{ $dbtype }}{
+		db: db,
+		{{ $impltype }}: &{{ $impltype }}{
+			driver: db,
+		},
+	}
 }
 
 func (obj *{{ $dbtype }}) Schema() string {
@@ -108,22 +136,18 @@ return `
 `
 }
 
-func (obj *{{ $dbtype }}) logStmt(stmt string, args... interface{}) {
-	{{ .Name }}LogStmt(stmt, args...)
-}
-
-func (obj *{{ $dbtype }}) begin(tx *sql.Tx) methods {
+func (obj *{{ $dbtype }}) wrapTx(tx *sql.Tx) txMethods {
 	return &{{ $txtype }}{
-		impl: tx,
+		tx: tx,
+		{{ $impltype }}: &{{ $impltype }}{
+			driver: tx,
+		},
 	}
 }
 
 type {{ $txtype }} struct {
-	impl *sql.Tx
-}
-
-func (obj *{{ $txtype }}) logStmt(stmt string, args... interface{}) {
-	{{ .Name }}LogStmt(stmt, args...)
+	tx *sql.Tx
+	*{{ $impltype }}
 }
 
 func {{ .Name }}LogStmt(stmt string, args ...interface{}) {

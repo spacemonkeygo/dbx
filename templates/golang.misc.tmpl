@@ -1,7 +1,5 @@
 {{- define "decl" }}
-func (obj *{{ .ReceiverBase }}DB) {{ .Signature }} {{ .Body }}
-
-func (obj *{{ .ReceiverBase }}Tx) {{ .Signature }} {{ .Body }}
+func (obj *{{ .ReceiverBase }}Impl) {{ .Signature }} {{ .Body }}
 {{ end -}}
 
 {{- define "struct" }}
