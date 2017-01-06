@@ -1,41 +1,20 @@
-{{/*
-================================================================
-  COUNT METHOD
-================================================================
-*/}}
-{{ define "count" }}
-func (obj *{{ .Dialect }}DB) {{ template "count-func" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "count-func" . }}
-{{ end }}
-
-{{- define "count-func-name" -}}
-Count{{ .Struct }}{{ .FuncSuffix }}
+{{- define "signature" -}}
+Count{{ .Suffix }}({{ param .Args }}) (count int64, err error)
 {{- end -}}
 
-{{- define "count-func-sig" -}}
-{{ template "count-func-name" .}}(
-{{ param .Args }}) (
-    result int, err error)
-{{- end -}}
-
-{{- define "count-func" -}}
-{{- template "count-func-sig" . }} {
-	const stmt=`{{ .SQL }}`
-	prepared, replace, err := obj.prepare(stmt)
-	if err != nil {
-		err = WrapErr(err)
-		return
-	}
-	defer replace()
-	obj.logStmt(stmt, {{ arg .Args }})
-
-    err = prepared.QueryRowx({{ arg .Args }}).Scan(&result)
+{{- define "body" }}{
+	const __stmt=`{{ .SQL }}`
+	__prepared, __replace, err := obj.prepare(__stmt)
 	if err != nil {
 		return 0, WrapErr(err)
 	}
-	return result, nil
+	defer __replace()
+	obj.logStmt(__stmt, {{ arg .Args }})
+
+    err = __prepared.QueryRow({{ arg .Args }}).Scan(&count)
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+    return count, nil
 }
-{{- end -}}
-
-
+{{ end -}}

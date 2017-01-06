@@ -1,31 +1,20 @@
-{{/*
-================================================================
-  HAS METHOD
-================================================================
-*/}}
-{{ define "has" }}
-func (obj *{{ .Dialect }}DB) {{ template "has-func" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "has-func" . }}
-{{ end }}
-
-{{- define "has-func-name" -}}
-Has{{ .Struct }}{{ .FuncSuffix }}
+{{- define "signature" -}}
+Has{{ .Suffix }}({{ param .Args }}) (has bool, err error)
 {{- end -}}
 
-{{- define "has-func-sig" -}}
-{{ template "has-func-name" . }}(
-{{ param .Args }}) (
-    result bool, err error)
-{{- end -}}
-
-{{- define "has-func" -}}
-{{- template "has-func-sig" . }} {
-count, err :=  obj.Count{{ .Struct }}{{ .FuncSuffix }}({{ arg .Args }})
+{{- define "body" }}{
+	const __stmt=`{{ .SQL }}`
+	__prepared, __replace, err := obj.prepare(__stmt)
 	if err != nil {
-		return false, err
+		return false, WrapErr(err)
 	}
-	return count > 0, nil
-}
-{{- end -}}
+	defer __replace()
+	obj.logStmt(__stmt, {{ arg .Args }})
 
+    err = __prepared.QueryRow({{ arg .Args }}).Scan(&has)
+	if err != nil {
+		return false, WrapErr(err)
+	}
+    return has, nil
+}
+{{ end -}}

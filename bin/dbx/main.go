@@ -66,6 +66,7 @@ func main() {
 			DeleteByUnique:     true,
 			UpdateByPrimaryKey: true,
 			UpdateByUnique:     true,
+			Count:              true,
 		})
 		die(err)
 

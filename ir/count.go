@@ -14,32 +14,22 @@
 
 package ir
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
-
-type Root struct {
-	Models  *Models
-	Inserts []*Insert
-	Updates []*Update
-	Selects []*Select
-	Counts  []*Count
-	Deletes []*Delete
+type Count struct {
+	FuncSuffix string
+	From       *Model
+	Joins      []*Join
+	Where      []*Where
 }
 
-func Transform(ast_root *ast.Root) (root *Root, err error) {
-	root = new(Root)
+func (c *Count) One() bool {
+	return WhereSetUnique(c.Where)
+}
 
-	root.Models, err = TransformModels(ast_root.Models)
-	if err != nil {
-		return nil, err
+func CountFromSelect(sel *Select) *Count {
+	return &Count{
+		FuncSuffix: sel.FuncSuffix,
+		From:       sel.From,
+		Joins:      sel.Joins,
+		Where:      sel.Where,
 	}
-
-	for _, ast_sel := range ast_root.Selects {
-		sel, err := root.Models.CreateSelect(ast_sel)
-		if err != nil {
-			return nil, err
-		}
-		root.Selects = append(root.Selects, sel)
-	}
-
-	return root, nil
 }

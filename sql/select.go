@@ -38,18 +38,16 @@ var (
 )
 
 func RenderSelect(dialect Dialect, ir_sel *ir.Select) string {
-	return render(selectTmpl, SelectFromIR(ir_sel, dialect))
+	return render(selectTmpl, SelectFromSelect(ir_sel, dialect))
 }
 
-func RenderCount(dialect Dialect, ir_sel *ir.Select) string {
-	sel := SelectFromIR(ir_sel, dialect)
-	sel.Fields = countFields
+func RenderCount(dialect Dialect, ir_count *ir.Count) string {
+	sel := SelectFromCount(ir_count, dialect, countFields)
 	return render(selectTmpl, sel)
 }
 
-func RenderHas(dialect Dialect, ir_sel *ir.Select) string {
-	sel := SelectFromIR(ir_sel, dialect)
-	sel.Fields = hasFields
+func RenderHas(dialect Dialect, ir_count *ir.Count) string {
+	sel := SelectFromCount(ir_count, dialect, hasFields)
 	return render(hasTmpl, sel)
 }
 
@@ -68,29 +66,24 @@ func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
 	return render(selectTmpl, sel)
 }
 
-func SelectFromIR(ir_sel *ir.Select, dialect Dialect) *Select {
+type Select struct {
+	From    string
+	Fields  []string
+	Joins   []Join
+	Where   []Where
+	OrderBy *OrderBy
+	Limit   string
+}
+
+func SelectFromSelect(ir_sel *ir.Select, dialect Dialect) *Select {
 	sel := &Select{
 		From:  ir_sel.From.TableName(),
 		Where: WheresFromIR(ir_sel.Where),
+		Joins: JoinsFromIR(ir_sel.Joins),
 	}
 
 	for _, ir_field := range ir_sel.Fields {
 		sel.Fields = append(sel.Fields, ir_field.SelectRefs()...)
-	}
-
-	for _, ir_join := range ir_sel.Joins {
-		join := Join{
-			Table: ir_join.Right.Model.TableName(),
-			Left:  ir_join.Left.ColumnRef(),
-			Right: ir_join.Right.ColumnRef(),
-		}
-		switch ir_join.Type {
-		case ast.LeftJoin:
-			join.Type = "LEFT"
-		default:
-			panic(fmt.Sprintf("unhandled join type %d", join.Type))
-		}
-		sel.Joins = append(sel.Joins, join)
 	}
 
 	if ir_sel.OrderBy != nil {
@@ -114,13 +107,14 @@ func SelectFromIR(ir_sel *ir.Select, dialect Dialect) *Select {
 	return sel
 }
 
-type Select struct {
-	From    string
-	Fields  []string
-	Joins   []Join
-	Where   []Where
-	OrderBy *OrderBy
-	Limit   string
+func SelectFromCount(ir_count *ir.Count, dialect Dialect, fields []string) (
+	sel *Select) {
+	return &Select{
+		From:   ir_count.From.TableName(),
+		Fields: fields,
+		Where:  WheresFromIR(ir_count.Where),
+		Joins:  JoinsFromIR(ir_count.Joins),
+	}
 }
 
 type Where struct {
@@ -160,4 +154,22 @@ type Join struct {
 	Table string
 	Left  string
 	Right string
+}
+
+func JoinsFromIR(ir_joins []*ir.Join) (joins []Join) {
+	for _, ir_join := range ir_joins {
+		join := Join{
+			Table: ir_join.Right.Model.TableName(),
+			Left:  ir_join.Left.ColumnRef(),
+			Right: ir_join.Right.ColumnRef(),
+		}
+		switch ir_join.Type {
+		case ast.LeftJoin:
+			join.Type = "LEFT"
+		default:
+			panic(fmt.Sprintf("unhandled join type %d", join.Type))
+		}
+		joins = append(joins, join)
+	}
+	return joins
 }

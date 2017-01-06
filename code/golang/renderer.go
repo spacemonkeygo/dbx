@@ -181,6 +181,12 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 				return nil, err
 			}
 		}
+		for _, count := range root.Counts {
+			if err := r.renderCount(&buf, count, dialect); err != nil {
+				return nil, err
+			}
+		}
+
 		//		for _, upd := range root.Updates {
 		//			gets = append(gets, upd.Model)
 		//			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
@@ -309,15 +315,21 @@ func (r *Renderer) renderSelect(w io.Writer, ir_sel *ir.Select,
 		//		}
 	}
 
-	//	sel.SQL = sql.RenderCount(dialect, ir_sel)
-	//	if err := r.renderFunc(r.has, w, sel, dialect); err != nil {
-	//		return err
-	//	}
-	//
-	//	sel.SQL = sql.RenderCount(dialect, ir_sel)
-	//	if err := r.renderFunc(r.count, w, sel, dialect); err != nil {
-	//		return err
-	//	}
+	return nil
+}
+
+func (r *Renderer) renderCount(w io.Writer, ir_count *ir.Count,
+	dialect sql.Dialect) error {
+
+	count := CountFromIR(ir_count, dialect)
+	if err := r.renderFunc(r.count, w, count, dialect); err != nil {
+		return err
+	}
+
+	count.SQL = sql.RenderHas(dialect, ir_count)
+	if err := r.renderFunc(r.has, w, count, dialect); err != nil {
+		return err
+	}
 
 	return nil
 }

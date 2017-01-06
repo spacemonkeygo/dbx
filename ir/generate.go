@@ -24,6 +24,7 @@ type GenerateOptions struct {
 	DeleteByUnique     bool
 	UpdateByPrimaryKey bool
 	UpdateByUnique     bool
+	Count              bool
 }
 
 func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
@@ -34,6 +35,13 @@ func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
 			generateBasicDeletes(model, options)...)
 		root.Updates = append(root.Updates,
 			generateBasicUpdates(model, options)...)
+	}
+
+	// add a count for each select
+	if options.Count {
+		for _, sel := range root.Selects {
+			root.Counts = append(root.Counts, CountFromSelect(sel))
+		}
 	}
 	return nil
 }

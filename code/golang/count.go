@@ -12,34 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package golang
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"bitbucket.org/pkg/inflect"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+)
 
-type Root struct {
-	Models  *Models
-	Inserts []*Insert
-	Updates []*Update
-	Selects []*Select
-	Counts  []*Count
-	Deletes []*Delete
+type Count struct {
+	Suffix string
+	Args   []*Var
+	SQL    string
 }
 
-func Transform(ast_root *ast.Root) (root *Root, err error) {
-	root = new(Root)
-
-	root.Models, err = TransformModels(ast_root.Models)
-	if err != nil {
-		return nil, err
+func CountFromIR(ir_count *ir.Count, dialect sql.Dialect) *Count {
+	count := &Count{
+		Suffix: inflect.Camelize(ir_count.FuncSuffix),
+		SQL:    sql.RenderCount(dialect, ir_count),
 	}
 
-	for _, ast_sel := range ast_root.Selects {
-		sel, err := root.Models.CreateSelect(ast_sel)
-		if err != nil {
-			return nil, err
+	for _, where := range ir_count.Where {
+		if where.Right == nil {
+			count.Args = append(count.Args, VarFromField(where.Left))
 		}
-		root.Selects = append(root.Selects, sel)
 	}
 
-	return root, nil
+	return count
 }
