@@ -10,7 +10,7 @@ Create{{ .Suffix }}({{ param .Args }}) ({{ param .Return }}, err error)
 	const __stmt=`{{ .SQL }}`
 	__prepared, __replace, err := obj.prepare(__stmt)
 	if err != nil {
-        return {{ zero .Return }}, WrapErr(err)
+        return nil, WrapErr(err)
 	}
 	defer __replace()
 	obj.logStmt(__stmt, {{ arg .Fields }})
@@ -19,17 +19,17 @@ Create{{ .Suffix }}({{ param .Args }}) ({{ param .Return }}, err error)
     {{ init .Return }}
     err = __prepared.QueryRow({{ arg .Fields }}).Scan({{ addrof (flatten .Return) }})
     if err != nil {
-        return {{ zero .Return }}, WrapErr(err)
+        return nil, WrapErr(err)
     }
     return {{ arg .Return }}, nil
     {{ else -}}
     __res, err := __prepared.Exec({{ arg .Fields}})
     if err != nil {
-        return {{ zero .Return}}, WrapErr(err)
+        return nil, WrapErr(err)
     }
     __pk, err := __res.LastInsertId()
     if err != nil {
-        return {{ zero .Return }}, WrapErr(err) 
+        return nil, WrapErr(err)
     }
     return obj.getLast{{ .Return.Type }}(__pk)
     {{ end -}}

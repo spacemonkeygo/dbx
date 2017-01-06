@@ -20,7 +20,7 @@ import (
 )
 
 type Update struct {
-	Struct  *Struct
+	Struct  *ModelStruct
 	Dialect string
 	Suffix  string
 	Args    []*Var
@@ -29,7 +29,7 @@ type Update struct {
 
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 	upd := &Update{
-		Struct:  StructFromIR(ir_upd.Model),
+		Struct:  ModelStructFromIR(ir_upd.Model),
 		Dialect: dialect.Name(),
 		SQL:     sql.RenderUpdate(dialect, ir_upd),
 	}

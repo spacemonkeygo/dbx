@@ -44,9 +44,13 @@ type Options struct {
 type Renderer struct {
 	header     *template.Template
 	footer     *template.Template
-	funcs      *template.Template
+	misc       *template.Template
 	ins        *template.Template
 	sel        *template.Template
+	sel_all    *template.Template
+	sel_paged  *template.Template
+	has        *template.Template
+	count      *template.Template
 	upd        *template.Template
 	del        *template.Template
 	del_all    *template.Template
@@ -75,12 +79,13 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
-	r.funcs, err = loader.Load("golang.funcs.tmpl", nil)
+	r.misc, err = loader.Load("golang.misc.tmpl", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	funcs := template.FuncMap{
+		"sliceof":  sliceofFn,
 		"param":    paramFn,
 		"arg":      argFn,
 		"zero":     zeroFn,
@@ -97,6 +102,26 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	r.sel, err = loader.Load("golang.select.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.sel_all, err = loader.Load("golang.select-all.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.sel_paged, err = loader.Load("golang.select-paged.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.has, err = loader.Load("golang.has.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.count, err = loader.Load("golang.count.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +157,17 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 		return nil, err
 	}
 
+	// Render any result structs for multi-field selects
+	for _, sel := range root.Selects {
+		if len(sel.Fields) < 2 {
+			continue
+		}
+		s := ResultStructFromSelect(sel)
+		if err := r.renderStruct(&buf, s); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, dialect := range dialects {
 		var gets []*ir.Model
 		for _, ins := range root.Inserts {
@@ -140,22 +176,22 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 				return nil, err
 			}
 		}
-		//		for _, sel := range root.Selects {
-		//			if err := r.renderSelect(&buf, sel, dialect); err != nil {
-		//				return nil, err
-		//			}
-		//		}
+		for _, sel := range root.Selects {
+			if err := r.renderSelect(&buf, sel, dialect); err != nil {
+				return nil, err
+			}
+		}
 		//		for _, upd := range root.Updates {
 		//			gets = append(gets, upd.Model)
 		//			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
 		//				return nil, err
 		//			}
 		//		}
-		for _, del := range root.Deletes {
-			if err := r.renderDelete(&buf, del, dialect); err != nil {
-				return nil, err
-			}
-		}
+		//for _, del := range root.Deletes {
+		//	if err := r.renderDelete(&buf, del, dialect); err != nil {
+		//		return nil, err
+		//	}
+		//}
 		// 	if err := r.renderDelete(&buf, del, dialect); err != nil {
 		// 		return nil, err
 		// 	}
@@ -208,13 +244,13 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 		Package        string
 		ExtraImports   []headerImport
 		Dialects       []headerDialect
-		Structs        []*Struct
-		StructsReverse []*Struct
+		Structs        []*ModelStruct
+		StructsReverse []*ModelStruct
 	}
 
 	params := headerParams{
 		Package: r.options.Package,
-		Structs: StructsFromIR(root.Models.Models()),
+		Structs: ModelStructsFromIR(root.Models.Models()),
 	}
 
 	for i := len(params.Structs) - 1; i >= 0; i-- {
@@ -259,7 +295,31 @@ func (r *Renderer) renderSelect(w io.Writer, ir_sel *ir.Select,
 	dialect sql.Dialect) error {
 
 	sel := SelectFromIR(ir_sel, dialect)
-	return r.renderFunc(r.sel, w, sel, dialect)
+	if ir_sel.One() {
+		if err := r.renderFunc(r.sel, w, sel, dialect); err != nil {
+			return err
+		}
+	} else {
+		if err := r.renderFunc(r.sel_all, w, sel, dialect); err != nil {
+			return err
+		}
+		//		sel.SQL = sql.RenderCount(dialect, ir_sel)
+		//		if err := r.renderFunc(r.sel_paged, w, sel, dialect); err != nil {
+		//			return err
+		//		}
+	}
+
+	//	sel.SQL = sql.RenderCount(dialect, ir_sel)
+	//	if err := r.renderFunc(r.has, w, sel, dialect); err != nil {
+	//		return err
+	//	}
+	//
+	//	sel.SQL = sql.RenderCount(dialect, ir_sel)
+	//	if err := r.renderFunc(r.count, w, sel, dialect); err != nil {
+	//		return err
+	//	}
+
+	return nil
 }
 
 func (r *Renderer) renderUpdate(w io.Writer, ir_upd *ir.Update,
@@ -307,7 +367,7 @@ func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,
 		Body:         body.String(),
 	}
 
-	err = tmplutil.Render(r.funcs, w, "decl", decl)
+	err = tmplutil.Render(r.misc, w, "decl", decl)
 	if err != nil {
 		return err
 	}
@@ -317,6 +377,10 @@ func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,
 	}
 
 	return nil
+}
+
+func (r *Renderer) renderStruct(w io.Writer, s *Struct) (err error) {
+	return tmplutil.Render(r.misc, w, "struct", s)
 }
 
 func isExported(signature string) bool {

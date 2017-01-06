@@ -1,0 +1,41 @@
+{{/*
+================================================================
+  COUNT METHOD
+================================================================
+*/}}
+{{ define "count" }}
+func (obj *{{ .Dialect }}DB) {{ template "count-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "count-func" . }}
+{{ end }}
+
+{{- define "count-func-name" -}}
+Count{{ .Struct }}{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "count-func-sig" -}}
+{{ template "count-func-name" .}}(
+{{ param .Args }}) (
+    result int, err error)
+{{- end -}}
+
+{{- define "count-func" -}}
+{{- template "count-func-sig" . }} {
+	const stmt=`{{ .SQL }}`
+	prepared, replace, err := obj.prepare(stmt)
+	if err != nil {
+		err = WrapErr(err)
+		return
+	}
+	defer replace()
+	obj.logStmt(stmt, {{ arg .Args }})
+
+    err = prepared.QueryRowx({{ arg .Args }}).Scan(&result)
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+	return result, nil
+}
+{{- end -}}
+
+

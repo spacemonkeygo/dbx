@@ -14,33 +14,48 @@
 
 package golang
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
+import (
+	"fmt"
 
-// Struct is used for generating go structures
+	"bitbucket.org/pkg/inflect"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
+
 type Struct struct {
 	Name   string
-	Fields []*Field
+	Fields []Field
 }
 
-func StructFromIR(model *ir.Model) *Struct {
-	return &Struct{
-		Name:   structName(model),
-		Fields: FieldsFromIR(model.Fields),
+type Field struct {
+	Name string
+	Type string
+	Tags []Tag
+}
+
+type Tag struct {
+	Key   string
+	Value string
+}
+
+func FieldFromSelectable(selectable ir.Selectable) Field {
+	var name string
+	switch obj := selectable.(type) {
+	case *ir.Model:
+		name = inflect.Camelize(obj.Name)
+	case *ir.Field:
+		name = inflect.Camelize(obj.Name)
+	default:
+		panic(fmt.Sprintf("unhandled selectable type %T", obj))
+	}
+	return Field{
+		Name: name,
+		Type: name,
 	}
 }
 
-func StructsFromIR(models []*ir.Model) (out []*Struct) {
-	for _, model := range models {
-		out = append(out, StructFromIR(model))
-	}
-	return out
-}
-
-func (s *Struct) UpdatableFields() (fields []*Field) {
-	for _, field := range s.Fields {
-		if field.Updatable {
-			fields = append(fields, field)
-		}
+func FieldsFromSelectables(selectables []ir.Selectable) (fields []Field) {
+	for _, selectable := range selectables {
+		fields = append(fields, FieldFromSelectable(selectable))
 	}
 	return fields
 }

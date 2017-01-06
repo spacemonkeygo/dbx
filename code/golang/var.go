@@ -21,15 +21,27 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
-func VarFromModel(model *ir.Model) *Var {
-	v := &Var{
-		Name:   model.Name,
-		Type:   structName(model),
-		Fields: VarsFromFields(model.Fields),
+func VarFromSelectable(selectable ir.Selectable) *Var {
+	switch obj := selectable.(type) {
+	case *ir.Model:
+		return VarFromModel(obj)
+	case *ir.Field:
+		return VarFromField(obj)
+	default:
+		panic(fmt.Sprintf("unhandled selectable type %T", obj))
 	}
-	v.InitVal = fmt.Sprintf("&%s{}", v.Type)
-	v.ZeroVal = "nil"
-	return v
+}
+
+func VarsFromSelectables(selectables []ir.Selectable) (vars []*Var) {
+	for _, selectable := range selectables {
+		vars = append(vars, VarFromSelectable(selectable))
+	}
+	return vars
+}
+
+func VarFromModel(model *ir.Model) *Var {
+	return StructVar(model.Name, structName(model),
+		VarsFromFields(model.Fields))
 }
 
 func VarFromField(field *ir.Field) *Var {
@@ -71,6 +83,16 @@ func VarsFromFields(fields []*ir.Field) (vars []*Var) {
 		vars = append(vars, VarFromField(field))
 	}
 	return vars
+}
+
+func StructVar(name string, typ string, vars []*Var) *Var {
+	return &Var{
+		Name:    name,
+		Type:    typ,
+		Fields:  vars,
+		InitVal: fmt.Sprintf("&%s{}", typ),
+		ZeroVal: "nil",
+	}
 }
 
 type Var struct {
@@ -118,6 +140,13 @@ func (v *Var) Param() string {
 		return fmt.Sprintf("%s *%s", v.Name, v.Type)
 	}
 	return fmt.Sprintf("%s %s", v.Name, v.Type)
+}
+
+func (v *Var) SliceOf() string {
+	if v.IsStruct() {
+		return fmt.Sprintf("[]*%s", v.Type)
+	}
+	return fmt.Sprintf("[]%s", v.Type)
 }
 
 func (v *Var) IsStruct() bool {

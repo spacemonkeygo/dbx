@@ -1,0 +1,15 @@
+{{- define "decl" }}
+func (obj *{{ .ReceiverBase }}DB) {{ .Signature }} {{ .Body }}
+
+func (obj *{{ .ReceiverBase }}Tx) {{ .Signature }} {{ .Body }}
+{{ end -}}
+
+{{- define "struct" }}
+type {{ .Name }} struct {
+{{ range .Fields }}
+	{{ if .Name }}{{ .Name }} {{ end }}{{ .Type }}{{ if .Tags -}}
+	`{{ range $i, $t := .Tags -}}{{ if $i }} {{ end }}{{ .Key }}:{{ .Value | printf "%q" }}{{ end }}`
+	{{- end -}}
+{{ end }}
+}
+{{ end -}}

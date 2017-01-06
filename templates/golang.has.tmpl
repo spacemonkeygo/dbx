@@ -1,0 +1,31 @@
+{{/*
+================================================================
+  HAS METHOD
+================================================================
+*/}}
+{{ define "has" }}
+func (obj *{{ .Dialect }}DB) {{ template "has-func" . }}
+
+func (obj *{{ .Dialect }}Tx) {{ template "has-func" . }}
+{{ end }}
+
+{{- define "has-func-name" -}}
+Has{{ .Struct }}{{ .FuncSuffix }}
+{{- end -}}
+
+{{- define "has-func-sig" -}}
+{{ template "has-func-name" . }}(
+{{ param .Args }}) (
+    result bool, err error)
+{{- end -}}
+
+{{- define "has-func" -}}
+{{- template "has-func-sig" . }} {
+count, err :=  obj.Count{{ .Struct }}{{ .FuncSuffix }}({{ arg .Args }})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+{{- end -}}
+

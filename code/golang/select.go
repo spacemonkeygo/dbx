@@ -23,50 +23,41 @@ import (
 )
 
 type Select struct {
-	sel     *ir.Select
-	dialect sql.Dialect
+	Suffix string
+	Row    *Var
+	Args   []*Var
+	SQL    string
 }
 
-func SelectFromIR(sel *ir.Select,
-	dialect sql.Dialect) *Select {
-
-	return &Select{
-		sel:     sel,
-		dialect: dialect,
+func SelectFromIR(ir_sel *ir.Select, dialect sql.Dialect) *Select {
+	sel := &Select{
+		Suffix: inflect.Camelize(ir_sel.FuncSuffix),
+		SQL:    sql.RenderSelect(dialect, ir_sel),
 	}
-}
 
-func (g *Select) SQL() string {
-	return sql.RenderSelect(g.dialect, g.sel)
-}
-
-func (g *Select) Dialect() string {
-	return g.dialect.Name()
-}
-
-func (g *Select) FuncSuffix() string {
-	return inflect.Camelize(g.sel.FuncSuffix)
-}
-
-func (g *Select) Args() (args []*Field) {
-	for _, where := range g.sel.Where {
+	for _, where := range ir_sel.Where {
 		if where.Right == nil {
-			args = append(args, FieldFromIR(where.Left))
+			sel.Args = append(sel.Args, VarFromField(where.Left))
 		}
 	}
-	return args
+
+	vars := VarsFromSelectables(ir_sel.Fields)
+	if len(vars) == 1 {
+		sel.Row = vars[0]
+	} else {
+		sel.Row = StructVar("row", resultStructName(ir_sel.FuncSuffix), vars)
+	}
+
+	return sel
 }
 
-func (g *Select) Returns() (returns []interface{}) {
-	for _, selectable := range g.sel.Fields {
-		switch t := selectable.(type) {
-		case *ir.Model:
-			returns = append(returns, StructFromIR(t))
-		case *ir.Field:
-			returns = append(returns, FieldFromIR(t))
-		default:
-			panic(fmt.Sprintf("unhandled selectable type %T", t))
-		}
+func ResultStructFromSelect(ir_sel *ir.Select) *Struct {
+	return &Struct{
+		Name:   resultStructName(ir_sel.FuncSuffix),
+		Fields: FieldsFromSelectables(ir_sel.Fields),
 	}
-	return returns
+}
+
+func resultStructName(suffix string) string {
+	return fmt.Sprintf("%sRow", inflect.Camelize(suffix))
 }

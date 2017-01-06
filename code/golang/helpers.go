@@ -25,6 +25,14 @@ func cleanSignature(in string) (out string) {
 	return reCollapseSpace.ReplaceAllString(strings.TrimSpace(in), " ")
 }
 
+func sliceofFn(intf interface{}) (string, error) {
+	vs, err := forVars(intf, (*Var).SliceOf)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(vs, ", "), nil
+}
+
 func paramFn(intf interface{}) (string, error) {
 	vs, err := forVars(intf, (*Var).Param)
 	if err != nil {

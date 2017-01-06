@@ -1,0 +1,33 @@
+{{- define "signature" -}}
+Get{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, err error)
+{{- end -}}
+
+{{- define "body" }}{
+	const __stmt=`{{ .SQL }}`
+	__prepared, __replace, err := obj.prepare(__stmt)
+	if err != nil {
+        return nil, WrapErr(err)
+	}
+	defer __replace()
+	obj.logStmt(__stmt, {{ arg .Args }})
+
+	__rows, err := __prepared.Query({{ arg .Args}})
+	if err != nil {
+        return nil, WrapErr(err)
+	}
+	defer __rows.Close()
+
+	for __rows.Next() {
+		{{ initnew .Row }}
+		err = __rows.Scan({{ addrof (flatten .Row) }})
+		if err != nil {
+			return nil, WrapErr(err)
+		}
+		rows = append(rows, {{ arg .Row }})
+	}
+	if err := __rows.Err(); err != nil {
+		return nil, WrapErr(err)
+	}
+	return rows, nil
+}
+{{ end -}}
