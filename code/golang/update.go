@@ -15,26 +15,44 @@
 package golang
 
 import (
+	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
 type Update struct {
-	Struct  *ModelStruct
-	Dialect string
-	Suffix  string
-	Args    []*Var
-	SQL     string
+	Suffix            string
+	Struct            *ModelStruct
+	Return            *Var
+	Args              []*Var
+	AutoFields        []*Var
+	SQLPrefix         string
+	SQLSuffix         string
+	SupportsReturning bool
+	NeedsNow          bool
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
+	sql_prefix, sql_suffix := sql.RenderUpdate(dialect, ir_upd)
 	upd := &Update{
-		Struct:  ModelStructFromIR(ir_upd.Model),
-		Dialect: dialect.Name(),
-		SQL:     sql.RenderUpdate(dialect, ir_upd),
+		Suffix:            inflect.Camelize(ir_upd.FuncSuffix()),
+		Struct:            ModelStructFromIR(ir_upd.Model),
+		SQLPrefix:         sql_prefix,
+		SQLSuffix:         sql_suffix,
+		Return:            VarFromModel(ir_upd.Model),
+		SupportsReturning: dialect.Features().Returning,
 	}
 
-	// TODO(jeff): args
+	for _, where := range ir_upd.Where {
+		if where.Right == nil {
+			upd.Args = append(upd.Args, VarFromField(where.Left))
+		}
+	}
+
+	for _, field := range ir_upd.AutoFields() {
+		upd.NeedsNow = upd.NeedsNow || field.IsTime()
+		upd.AutoFields = append(upd.AutoFields, VarFromField(field))
+	}
 
 	return upd
 }

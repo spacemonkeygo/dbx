@@ -16,7 +16,7 @@ package sql
 
 import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
-var insertTmpl = `INSERT INTO {{ .Table -}}
+const insertTmpl = `INSERT INTO {{ .Table -}}
 	{{ if .Columns }}(
 		{{- range $i, $col := .Columns }}
 			{{- if $i }}, {{ end }}{{ $col }}

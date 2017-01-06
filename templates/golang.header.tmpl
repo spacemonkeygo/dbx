@@ -295,7 +295,7 @@ type {{ $struct }} struct {
 
 {{- if .UpdatableFields }}
 
-type Update{{ $struct }} struct {
+type {{ .UpdateStructName }} struct {
 {{- range .UpdatableFields }}
 {{- $fstruct := printf "%s%sField" $struct .Name }}
 	{{ .Name }} *{{ $fstruct }}

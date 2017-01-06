@@ -186,13 +186,12 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 				return nil, err
 			}
 		}
-
-		//		for _, upd := range root.Updates {
-		//			gets = append(gets, upd.Model)
-		//			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
-		//				return nil, err
-		//			}
-		//		}
+		for _, upd := range root.Updates {
+			gets = append(gets, upd.Model)
+			if err := r.renderUpdate(&buf, upd, dialect); err != nil {
+				return nil, err
+			}
+		}
 		//for _, del := range root.Deletes {
 		//	if err := r.renderDelete(&buf, del, dialect); err != nil {
 		//		return nil, err

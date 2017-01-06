@@ -27,7 +27,6 @@ type Insert struct {
 	Return            *Var
 	Args              []*Var
 	Fields            []*Var
-	AutoFields        *AutoInit
 	SQL               string
 	SupportsReturning bool
 	NeedsNow          bool

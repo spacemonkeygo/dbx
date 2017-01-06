@@ -14,7 +14,57 @@
 
 package ir
 
+import (
+	"fmt"
+	"strings"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+)
+
 type Update struct {
 	Model *Model
 	Where []*Where
+}
+
+func (upd *Update) Fields() []*Field {
+	return upd.Model.UpdatableFields()
+}
+
+func (upd *Update) AutoFields() (fields []*Field) {
+	for _, field := range upd.Fields() {
+		if field.AutoUpdate {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+func (upd *Update) FuncSuffix() string {
+	var parts []string
+	parts = append(parts, upd.Model.Name)
+
+	for _, where := range upd.Where {
+		if where.Right != nil {
+			continue
+		}
+		parts = append(parts, "by", where.Left.Name)
+		switch where.Op {
+		case ast.LT:
+			parts = append(parts, "less")
+		case ast.LE:
+			parts = append(parts, "less_or_equal")
+		case ast.GT:
+			parts = append(parts, "greater")
+		case ast.GE:
+			parts = append(parts, "greater_or_equal")
+		case ast.EQ:
+		case ast.NE:
+			parts = append(parts, "not")
+		case ast.Like:
+			parts = append(parts, "like")
+		default:
+			panic(fmt.Sprintf("unhandled operation %q", where.Op))
+		}
+	}
+	return strings.Join(parts, "_")
 }

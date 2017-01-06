@@ -28,8 +28,10 @@ type ModelStruct struct {
 }
 
 func ModelStructFromIR(model *ir.Model) *ModelStruct {
+	name := structName(model)
+
 	return &ModelStruct{
-		Name:   structName(model),
+		Name:   name,
 		Fields: ModelFieldsFromIR(model.Fields),
 	}
 }
@@ -43,11 +45,15 @@ func ModelStructsFromIR(models []*ir.Model) (out []*ModelStruct) {
 
 func (s *ModelStruct) UpdatableFields() (fields []*ModelField) {
 	for _, field := range s.Fields {
-		if field.Updatable {
+		if field.Updatable && !field.AutoUpdate {
 			fields = append(fields, field)
 		}
 	}
 	return fields
+}
+
+func (s *ModelStruct) UpdateStructName() string {
+	return "Update" + s.Name
 }
 
 type ModelField struct {

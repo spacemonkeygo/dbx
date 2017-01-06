@@ -74,6 +74,8 @@ func VarFromField(field *ir.Field) *Var {
 		v.InitVal = "__now"
 	case "*time.Time":
 		v.InitVal = "&__now"
+	default:
+		v.InitVal = v.ZeroVal
 	}
 	return v
 }

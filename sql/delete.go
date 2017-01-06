@@ -16,7 +16,7 @@ package sql
 
 import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
-var deleteTmpl = `DELETE FROM {{ .From }}
+const deleteTmpl = `DELETE FROM {{ .From }}
 	{{- if .Where }} WHERE
 	{{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }}
 	{{- end -}}`

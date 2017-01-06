@@ -16,20 +16,30 @@ package sql
 
 import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
-var updateTmpl = ``
+const (
+	updateTmplPrefix = `
+	UPDATE {{ .Table }} SET`
+	updateTmplSuffix = `
+	{{ if .Where }} WHERE {{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }} {{- end -}}
+	{{ if .Returning }} RETURNING *{{ end }}`
+)
 
-func RenderUpdate(dialect Dialect, ir_upd *ir.Update) string {
-	return render(updateTmpl, UpdateFromIR(ir_upd, dialect))
+func RenderUpdate(dialect Dialect, ir_upd *ir.Update) (prefix, suffix string) {
+	upd := UpdateFromIR(ir_upd, dialect)
+	return render(updateTmplPrefix, upd, noTerminate) + " ",
+		" " + render(updateTmplSuffix, upd)
 }
 
 type Update struct {
-	From  string
-	Where []Where
+	Table     string
+	Where     []Where
+	Returning bool
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect Dialect) *Update {
 	return &Update{
-		From:  ir_upd.Model.TableName(),
-		Where: WheresFromIR(ir_upd.Where),
+		Table:     ir_upd.Model.TableName(),
+		Where:     WheresFromIR(ir_upd.Where),
+		Returning: dialect.Features().Returning,
 	}
 }

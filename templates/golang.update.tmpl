@@ -1,9 +1,59 @@
 {{- define "signature" -}}
-Update{{ .Suffix }}({{ param .Args }}update Update{{ .Struct.Name }}) (result *{{ .Struct.Name }}, err error)
+Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{
-	return nil, nil
+	{{- if .NeedsNow }}
+	__now := Now().UTC()
+	{{ end -}}
+	const __stmt_prefix=`{{ .SQLPrefix }}`
+	const __stmt_suffix=`{{ .SQLSuffix }}`
+
+	var qs []byte
+	var values []interface{}
+
+	{{ range .Struct.UpdatableFields }}
+	if update.{{ .Name }} != nil {
+		qs = append(qs, "{{ .Column }} = ?, "...)
+		values = append(values, update.{{ .Name }}.value())
+	}
+	{{ end -}}
+
+	{{ range .AutoFields }}
+	qs = append(qs, "{{ .Name }} = ?, "...)
+	values = append(values, {{ .InitVal }})
+	{{ end -}}
+
+	if len(qs) == 0 {
+		return nil, WrapErr(error.New("need to update at least one field"))
+	}
+
+	__stmt := __stmt_prefix + string(qs[:len(qs)-2]) + __stmt_suffix
+	__prepared, __replace, err := obj.prepare(__stmt)
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	defer __replace()
+	obj.logStmt(__stmt, {{ arg .Args }})
+
+	{{ if .SupportsReturning }}
+	{{ init .Return }}
+	err = __prepared.QueryRow({{ arg .Args }}).Scan({{ addrof (flatten .Return) }})
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return {{ arg .Return }}, nil
+	{{ else -}}
+	__res, err := __prepared.Exec({{ arg .Args}})
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	__pk, err := __res.LastInsertId()
+	if err != nil {
+		return nil, WrapErr(err)
+	}
+	return obj.getLast{{ .Return.Type }}(__pk)
+	{{ end -}}
 }
 {{- end -}}
 

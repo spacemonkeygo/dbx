@@ -136,6 +136,10 @@ func generateBasicDeletes(model *Model, options GenerateOptions) (
 func generateBasicUpdates(model *Model, options GenerateOptions) (
 	updates []*Update) {
 
+	if len(model.UpdatableFields()) == 0 {
+		return nil
+	}
+
 	// Update by primary key
 	if options.UpdateByPrimaryKey && model.PrimaryKey != nil {
 		updates = append(updates, &Update{
@@ -153,5 +157,6 @@ func generateBasicUpdates(model *Model, options GenerateOptions) (
 			})
 		}
 	}
+
 	return updates
 }
