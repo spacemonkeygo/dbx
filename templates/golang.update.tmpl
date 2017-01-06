@@ -25,7 +25,7 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 	{{ end -}}
 
 	if len(qs) == 0 {
-		return nil, WrapErr(error.New("need to update at least one field"))
+		return nil, WrapErr(fmt.Errorf("need to update at least one field"))
 	}
 
 	__stmt := __stmt_prefix + string(qs[:len(qs)-2]) + __stmt_suffix

@@ -8,6 +8,6 @@ type methods interface {
 
 type dbMethods interface {
 	Schema() string
-	begin(tx *sqlx.Tx) methods
+	begin(tx *sql.Tx) methods
 	methods
 }
