@@ -27,7 +27,8 @@ const (
 	{{ range .Joins }}{{ .Type }} JOIN {{ .Table }} ON {{ .Left }} = {{ if .Right }}{{ .Right }}{{ else }}?{{ end }}{{- end -}}
 	{{ if .Where }} WHERE {{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }} {{- end -}}
 	{{ if .OrderBy }} ORDER BY {{- range $i, $field := .OrderBy.Fields }}{{ if $i }}, {{ end }} {{ $field }}{{ end }}{{ if .OrderBy.Descending }} DESC{{ end }} {{- end -}}
-	{{ if .Limit }} LIMIT {{ .Limit }} {{- end -}}`
+	{{ if .Limit }} LIMIT {{ .Limit }} {{- end -}}
+	{{ if .Offset }} OFFSET {{ .Offset }} {{- end -}}`
 
 	hasTmpl = `SELECT COALESCE((` + selectTmpl + `), 0)`
 )
@@ -73,6 +74,7 @@ type Select struct {
 	Where   []Where
 	OrderBy *OrderBy
 	Limit   string
+	Offset  string
 }
 
 func SelectFromSelect(ir_sel *ir.Select, dialect Dialect) *Select {
@@ -96,12 +98,30 @@ func SelectFromSelect(ir_sel *ir.Select, dialect Dialect) *Select {
 		sel.OrderBy = order_by
 	}
 
-	if ir_sel.Limit != nil {
-		if ir_sel.Limit.Amount <= 0 {
-			sel.Limit = "?"
-		} else {
-			sel.Limit = fmt.Sprint(ir_sel.Limit.Amount)
+	switch ir_sel.View {
+	case ir.All:
+	case ir.Limit:
+		sel.Limit = "?"
+	case ir.Offset:
+		if dialect.Features().NeedsLimitOnOffset {
+			sel.Limit = dialect.Features().NoLimitToken
 		}
+		sel.Offset = "?"
+	case ir.LimitOffset:
+		sel.Limit = "?"
+		sel.Offset = "?"
+	case ir.Paged:
+		pk := ir_sel.From.BasicPrimaryKey()
+		sel.Where = append(sel.Where, WhereFromIR(&ir.Where{
+			Left: pk,
+			Op:   ast.EQ,
+		}))
+		sel.OrderBy = &OrderBy{
+			Fields: []string{pk.ColumnRef()},
+		}
+		sel.Limit = "?"
+	default:
+		panic(fmt.Sprintf("unsupported select view %s", ir_sel.View))
 	}
 
 	return sel

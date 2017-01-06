@@ -37,6 +37,8 @@ func (p *postgres) Features() Features {
 	return Features{
 		Returning:           true,
 		PositionalArguments: true,
+		NeedsLimitOnOffset:  false,
+		NoLimitToken:        "ALL",
 	}
 }
 

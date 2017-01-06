@@ -39,16 +39,9 @@ func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
 	}
 
 	for _, sel := range root.Selects {
-		// add a count variant for each select that doesn't have a limit
-		if options.SelectCount && sel.Limit == nil {
-			if sel.Limit == nil {
-				root.Counts = append(root.Counts, CountFromSelect(sel))
-			}
-		}
-
-		// add a paged variant for each select that doesn't have a limit and
-		// has the potential to obtain more than one result.
-		if options.SelectPaged && !sel.One() && sel.Limit == nil {
+		// add a count variant for each select that has no special view
+		if options.SelectCount && sel.View == All {
+			root.Counts = append(root.Counts, CountFromSelect(sel))
 		}
 	}
 	return nil
@@ -157,6 +150,5 @@ func generateBasicUpdates(model *Model, options GenerateOptions) (
 			})
 		}
 	}
-
 	return updates
 }

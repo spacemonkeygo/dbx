@@ -15,7 +15,6 @@
 package ir
 
 import (
-	"fmt"
 	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
@@ -190,8 +189,10 @@ func (m *Models) transformField(field_link *fieldLink) (err error) {
 	return nil
 }
 
-func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
-	sel = new(Select)
+func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
+	err error) {
+
+	sel_tmpl := new(Select)
 
 	var func_suffix []string
 	if ast_sel.Fields == nil || len(ast_sel.Fields.Refs) == 0 {
@@ -224,14 +225,14 @@ func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
 			if err != nil {
 				return nil, err
 			}
-			sel.Fields = append(sel.Fields, model)
+			sel_tmpl.Fields = append(sel_tmpl.Fields, model)
 			func_suffix = append(func_suffix, ast_fieldref.Model)
 		} else {
 			field, err := m.linker.FindField(ast_fieldref)
 			if err != nil {
 				return nil, err
 			}
-			sel.Fields = append(sel.Fields, field)
+			sel_tmpl.Fields = append(sel_tmpl.Fields, field)
 			func_suffix = append(func_suffix,
 				ast_fieldref.Model, ast_fieldref.Field)
 		}
@@ -259,11 +260,11 @@ func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
 				return nil, err
 			}
 			next = join.Right.Model
-			if sel.From == nil {
-				sel.From = left.Model
+			if sel_tmpl.From == nil {
+				sel_tmpl.From = left.Model
 				models[join.Left.Model] = join.Left
 			}
-			sel.Joins = append(sel.Joins, &Join{
+			sel_tmpl.Joins = append(sel_tmpl.Joins, &Join{
 				Type:  join.Type,
 				Left:  left,
 				Right: right,
@@ -279,7 +280,7 @@ func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
 		if err != nil {
 			return nil, err
 		}
-		sel.From = from
+		sel_tmpl.From = from
 		models[from.Name] = ast_sel.Fields.Refs[0]
 	default:
 		return nil, Error.New(
@@ -328,7 +329,7 @@ func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
 				ast_where.Left.Model, ast_where.Left.Field)
 		}
 
-		sel.Where = append(sel.Where, &Where{
+		sel_tmpl.Where = append(sel_tmpl.Where, &Where{
 			Op:    ast_where.Op,
 			Left:  left,
 			Right: right,
@@ -349,27 +350,73 @@ func (m *Models) CreateSelect(ast_sel *ast.Select) (sel *Select, err error) {
 			}
 		}
 
-		sel.OrderBy = &OrderBy{
+		sel_tmpl.OrderBy = &OrderBy{
 			Fields:     fields,
 			Descending: ast_sel.OrderBy.Descending,
 		}
 	}
 
-	if ast_sel.Limit != nil {
-		if ast_sel.Limit.Amount < 1 {
-			func_suffix = append(func_suffix, "with", "limit")
-		} else {
-			func_suffix = append(func_suffix, "limit", "to",
-				fmt.Sprint(ast_sel.Limit.Amount))
-		}
-		sel.Limit = &Limit{
-			Amount: ast_sel.Limit.Amount,
+	if sel_tmpl.FuncSuffix == "" {
+		sel_tmpl.FuncSuffix = strings.Join(func_suffix, "_")
+	}
+
+	// Now emit one select per view type (or one for all if unspecified)
+	view := ast_sel.View
+	if view == nil {
+		view = &ast.View{
+			All: true,
 		}
 	}
 
-	if sel.FuncSuffix == "" {
-		sel.FuncSuffix = strings.Join(func_suffix, "_")
+	appendsel := func(v View, suffix string) {
+		sel_copy := *sel_tmpl
+		sel_copy.View = v
+		sel_copy.FuncSuffix += suffix
+		selects = append(selects, &sel_copy)
 	}
 
-	return sel, nil
+	if view.All {
+		// template is already sufficient for "all"
+		appendsel(All, "")
+	}
+	if view.Limit {
+		if sel_tmpl.One() {
+			return nil, Error.New("%s: cannot limit unique select",
+				view.Pos)
+		}
+		appendsel(Limit, "_limit")
+	}
+	if view.LimitOffset {
+		if sel_tmpl.One() {
+			return nil, Error.New("%s: cannot limit/offset unique select",
+				view.Pos)
+		}
+		appendsel(LimitOffset, "_limit_offset")
+	}
+	if view.Offset {
+		if sel_tmpl.One() {
+			return nil, Error.New("%s: cannot offset unique select",
+				view.Pos)
+		}
+		appendsel(Offset, "_offset")
+	}
+	if view.Paged {
+		if sel_tmpl.OrderBy != nil {
+			return nil, Error.New(
+				"%s: cannot page on table %s with order by",
+				view.Pos, sel_tmpl.From)
+		}
+		if sel_tmpl.From.BasicPrimaryKey() == nil {
+			return nil, Error.New(
+				"%s: cannot page on table %s with composite primary key",
+				view.Pos, sel_tmpl.From)
+		}
+		if sel_tmpl.One() {
+			return nil, Error.New("%s: cannot page unique select",
+				view.Pos)
+		}
+		appendsel(Paged, "")
+	}
+
+	return selects, nil
 }

@@ -28,12 +28,22 @@ type Select struct {
 	Joins      []*Join
 	Where      []*Where
 	OrderBy    *OrderBy
-	Limit      *Limit
+	View       View
 }
 
 func (s *Select) One() bool {
 	return WhereSetUnique(s.Where)
 }
+
+type View int
+
+const (
+	All View = iota
+	Limit
+	Offset
+	LimitOffset
+	Paged
+)
 
 type Join struct {
 	Type  ast.JoinType
@@ -44,8 +54,4 @@ type Join struct {
 type OrderBy struct {
 	Fields     []*Field
 	Descending bool
-}
-
-type Limit struct {
-	Amount int
 }

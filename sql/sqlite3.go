@@ -33,7 +33,11 @@ func (s *sqlite3) Name() string {
 }
 
 func (s *sqlite3) Features() Features {
-	return Features{}
+	return Features{
+		Returning:          false,
+		NeedsLimitOnOffset: true,
+		NoLimitToken:       "-1",
+	}
 }
 
 func (s *sqlite3) RowId() string {

@@ -296,18 +296,23 @@ func (r *Renderer) renderSelect(w io.Writer, ir_sel *ir.Select,
 	dialect sql.Dialect) error {
 
 	sel := SelectFromIR(ir_sel, dialect)
-	if ir_sel.One() {
-		if err := r.renderFunc(r.sel, w, sel, dialect); err != nil {
+	switch ir_sel.View {
+	case ir.All, ir.Offset, ir.Limit, ir.LimitOffset:
+		if ir_sel.One() {
+			if err := r.renderFunc(r.sel, w, sel, dialect); err != nil {
+				return err
+			}
+		} else {
+			if err := r.renderFunc(r.sel_all, w, sel, dialect); err != nil {
+				return err
+			}
+		}
+	case ir.Paged:
+		if err := r.renderFunc(r.sel_paged, w, sel, dialect); err != nil {
 			return err
 		}
-	} else {
-		if err := r.renderFunc(r.sel_all, w, sel, dialect); err != nil {
-			return err
-		}
-		//		sel.SQL = sql.RenderCount(dialect, ir_sel)
-		//		if err := r.renderFunc(r.sel_paged, w, sel, dialect); err != nil {
-		//			return err
-		//		}
+	default:
+		return Error.New("unhandled select view %s", ir_sel.View)
 	}
 
 	return nil

@@ -1,57 +1,41 @@
-{{/*
-================================================================
-  SELECT PAGED METHOD
-================================================================
-*/}}
-{{ define "select-paged" }}
-func (obj *{{ .Dialect }}DB) {{ template "select-paged-func" . }}
-
-func (obj *{{ .Dialect }}Tx) {{ template "select-paged-func" . }}
-{{ end }}
-
-{{- define "select-paged-func-name" -}}
-PagedGet{{ pluralize .Struct }}{{ .FuncSuffix }}
+{{- define "signature" -}}
+PagedGet{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, ctokenout string, err error)
 {{- end -}}
 
-{{- define "select-paged-func-sig" -}}
-{{ template "select-paged-func-name" . }}(
-{{ param .Args }}{{ if .Args }},
-{{ end -}}
-    ctoken string, limit int) (
-    result []*{{ .Struct }}, ctokenout string, err error)
-{{- end -}}
-
-{{- define "select-paged-func" -}}
-{{- template "select-paged-func-sig" . }} {
-
-	const stmt=`{{ .SQL }}`
-	prepared, replace, err := obj.prepare(stmt)
-	if err != nil {
-		err = WrapErr(err)
-		return
-	}
-	defer replace()
-    obj.logStmt(stmt, {{ if .Args }}{{ arg .Args }}, {{end}}ctoken, limit)
-
+{{- define "body" }}{
     if ctoken == "" {
         ctoken = "0"
     }
 
-	err = prepared.Select(&result, {{ if .Args }}{{ arg .Args }}, {{end}} ctoken, limit)
+	const __stmt=`{{ .SQL }}`
+	obj.logStmt(__stmt, {{ arg .Args }})
+
+	__rows, err := obj.driver.Query(__stmt, {{ arg .Args}})
 	if err != nil {
+		return nil, "", WrapErr(err)
+	}
+	defer __rows.Close()
+
+	for __rows.Next() {
+		{{ initnew .Row }}
+		err = __rows.Scan({{ addrof (flatten .Row) }})
+		if err != nil {
+			return nil, "", WrapErr(err)
+		}
+		rows = append(rows, {{ arg .Row }})
+	}
+	if err := __rows.Err(); err != nil {
 		return nil, "", WrapErr(err)
 	}
 
     if limit > 0 {
-        if len(result) == limit {
-            ctokenout = fmt.Sprint(result[limit-1].{{ .PagedOn }})
+        if len(rows) == limit {
+            ctokenout = fmt.Sprint(rows[limit-1].{{ .PagedOn }})
         }
     } else {
         ctokenout = ctoken
     }
 
-    return {{ arg .Returns }}, ctokenout, nil
+	return rows, ctokenout, nil
 }
-{{- end -}}
-
-
+{{ end -}}

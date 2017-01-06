@@ -34,11 +34,11 @@ func Transform(ast_root *ast.Root) (root *Root, err error) {
 	}
 
 	for _, ast_sel := range ast_root.Selects {
-		sel, err := root.Models.CreateSelect(ast_sel)
+		selects, err := root.Models.CreateSelects(ast_sel)
 		if err != nil {
 			return nil, err
 		}
-		root.Selects = append(root.Selects, sel)
+		root.Selects = append(root.Selects, selects...)
 	}
 
 	return root, nil

@@ -19,8 +19,15 @@ import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 type Features struct {
 	// Supports the RETURNING syntax on INSERT/UPDATE
 	Returning bool
+
 	// Supports positional argument placeholders
 	PositionalArguments bool
+
+	// Needs to emit a LIMIT whenever an OFFSET is used (i.e. sqlite3)
+	NeedsLimitOnOffset bool
+
+	// Token used with LIMIT to mean "no limit"
+	NoLimitToken string
 }
 
 type Dialect interface {

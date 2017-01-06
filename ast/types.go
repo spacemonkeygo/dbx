@@ -170,16 +170,20 @@ type Index struct {
 type Select struct {
 	Pos        scanner.Position
 	FuncSuffix string
-	Limit      *Limit
 	Fields     *FieldRefs
 	Joins      []*Join
 	Where      []*Where
 	OrderBy    *OrderBy
+	View       *View
 }
 
-type Limit struct {
-	Pos    scanner.Position
-	Amount int
+type View struct {
+	Pos         scanner.Position
+	All         bool
+	Limit       bool
+	Offset      bool
+	LimitOffset bool
+	Paged       bool
 }
 
 type FieldRefs struct {

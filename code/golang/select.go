@@ -23,10 +23,11 @@ import (
 )
 
 type Select struct {
-	Suffix string
-	Row    *Var
-	Args   []*Var
-	SQL    string
+	Suffix  string
+	Row     *Var
+	Args    []*Var
+	SQL     string
+	PagedOn string
 }
 
 func SelectFromIR(ir_sel *ir.Select, dialect sql.Dialect) *Select {
@@ -41,11 +42,39 @@ func SelectFromIR(ir_sel *ir.Select, dialect sql.Dialect) *Select {
 		}
 	}
 
-	if ir_sel.Limit != nil && ir_sel.Limit.Amount == 0 {
+	switch ir_sel.View {
+	case ir.All:
+	case ir.Limit:
 		sel.Args = append(sel.Args, &Var{
 			Name: "limit",
 			Type: "int",
 		})
+	case ir.Offset:
+		sel.Args = append(sel.Args, &Var{
+			Name: "offset",
+			Type: "int64",
+		})
+	case ir.LimitOffset:
+		sel.Args = append(sel.Args, &Var{
+			Name: "limit",
+			Type: "int",
+		})
+		sel.Args = append(sel.Args, &Var{
+			Name: "offset",
+			Type: "int64",
+		})
+	case ir.Paged:
+		sel.Args = append(sel.Args, &Var{
+			Name: "ctoken",
+			Type: "string",
+		})
+		sel.Args = append(sel.Args, &Var{
+			Name: "limit",
+			Type: "int",
+		})
+		sel.PagedOn = ModelFieldFromIR(ir_sel.From.BasicPrimaryKey()).Name
+	default:
+		panic(fmt.Sprintf("unhandled view type %s", ir_sel.View))
 	}
 
 	vars := VarsFromSelectables(ir_sel.Fields)

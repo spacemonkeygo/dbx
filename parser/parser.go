@@ -459,8 +459,12 @@ func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
 				return nil, err
 			}
 			sel.Joins = append(sel.Joins, join)
-		case "limit":
-			sel.Limit, err = parseLimit(scanner)
+		case "view":
+			if sel.View != nil {
+				return nil, Error.New("%s: views can only be specified once",
+					pos)
+			}
+			sel.View, err = parseView(scanner)
 			if err != nil {
 				return nil, err
 			}
@@ -475,31 +479,56 @@ func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
 			}
 		default:
 			return nil, expectedKeyword(pos, text,
-				"fields", "where", "join", "limit")
+				"suffix", "fields", "where", "join", "view", "orderby")
 		}
 	}
 }
 
-func parseLimit(scanner *Scanner) (limit *ast.Limit, err error) {
-	limit = new(ast.Limit)
-	limit.Pos = scanner.Pos()
+func parseView(scanner *Scanner) (view *ast.View, err error) {
+	view = new(ast.View)
+	view.Pos = scanner.Pos()
 
-	if _, _, ok := scanner.ScanIf(Question); ok {
-		return limit, nil
-	}
-	_, text, err := scanner.ScanExact(Int)
-	if err != nil {
-		return nil, err
-	}
+	for {
+		pos, text, err := scanner.ScanExact(Ident)
+		if err != nil {
+			return nil, err
+		}
 
-	limit.Amount, err = strconv.Atoi(text)
-	if err != nil {
-		return nil, Error.Wrap(err)
+		switch strings.ToLower(text) {
+		case "all":
+			if view.All {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			view.All = true
+		case "limit":
+			if view.Limit {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			view.Limit = true
+		case "limitoffset":
+			if view.LimitOffset {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			view.LimitOffset = true
+		case "offset":
+			if view.Offset {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			view.Offset = true
+		case "paged":
+			if view.Paged {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			view.Paged = true
+		default:
+			return nil, expectedKeyword(pos, text, "all", "limit",
+				"limitoffset", "offset", "paged")
+		}
+
+		if _, _, ok := scanner.ScanIf(Comma); !ok {
+			return view, nil
+		}
 	}
-	if limit.Amount <= 0 {
-		return nil, Error.New("limit amount must be greater than zero")
-	}
-	return limit, nil
 }
 
 func parseOrderBy(scanner *Scanner) (order_by *ast.OrderBy, err error) {
