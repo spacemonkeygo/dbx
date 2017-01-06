@@ -6,8 +6,8 @@ package {{ .Package }}
 import (
 	"database/sql"
 	"fmt"
-	"sync"
 	"time"
+	"strconv"
 
 {{- range .ExtraImports }}
 	{{ .As }} "{{ .Package }}"
@@ -18,31 +18,22 @@ var WrapErr = func(err error) error {return err}
 var Logger func(format string, args ...interface{})
 var Now = time.Now
 
-func loge(err error) {
-	if Logger != nil && err != nil {
-		Logger("error closing statement: %v", err)
-	}
-}
-
 type DB struct {
 	*sql.DB
-	lru *lru
 	dbMethods
 }
 
-func Open(driver, source string, lru_size int) (*DB, error) {
+func Open(driver, source string) (*DB, error) {
 	db, err := sql.Open(driver, source)
 	if err != nil {
 		return nil, WrapErr(err)
 	}
 	
-	lru := newLRU(db, lru_size)
-
 	var impl dbMethods
 	switch driver {
 {{- range .Dialects }}
 	case {{ .Name | printf "%q" }}:
-		impl = &{{ .Name }}DB{lru: lru}
+		impl = &{{ .Name }}DB{impl: db}
 {{- end }}
 	default:
 		return nil, WrapErr(fmt.Errorf("unsupported driver %s", driver))
@@ -50,13 +41,11 @@ func Open(driver, source string, lru_size int) (*DB, error) {
 
 	return &DB{
 		DB: db,
-		lru: lru,
 		dbMethods: impl,
 	}, nil
 }
 
 func (obj *DB) Close() (err error) {
-	obj.lru.Purge()
 	return WrapErr(obj.DB.Close())
 }
 
@@ -110,7 +99,7 @@ func (tx *Tx) DeleteAll() (total int64, err error) {
 {{ $txtype := .Name | printf "%sTx" }}
 
 type {{ $dbtype }} struct {
-	lru *lru
+	impl *sql.DB
 }
 
 func (obj *{{ $dbtype }}) Schema() string {
@@ -119,36 +108,18 @@ return `
 `
 }
 
-func (obj *{{ $dbtype }}) prepare(stmt string) (prepared *sql.Stmt, replace func(), err error) {
-	entry, err := obj.lru.Get(stmt)
-	if err != nil {
-		return nil, nil, err
-	}
-	return entry.Stmt, func() { obj.lru.Replace(entry) }, nil
-}
-
 func (obj *{{ $dbtype }}) logStmt(stmt string, args... interface{}) {
 	{{ .Name }}LogStmt(stmt, args...)
 }
 
 func (obj *{{ $dbtype }}) begin(tx *sql.Tx) methods {
 	return &{{ $txtype }}{
-		tx: tx,
-		lru: obj.lru,
+		impl: tx,
 	}
 }
 
 type {{ $txtype }} struct {
-	tx *sql.Tx
-	lru *lru
-}
-
-func (obj *{{ $txtype }}) prepare(stmt string) (prepared *sql.Stmt, replace func(), err error) {
-	entry, err := obj.lru.Get(stmt)
-	if err != nil {
-		return nil, nil, err
-	}
-	return obj.tx.Stmt(entry.Stmt), func() { obj.lru.Replace(entry) }, nil
+	impl *sql.Tx
 }
 
 func (obj *{{ $txtype }}) logStmt(stmt string, args... interface{}) {

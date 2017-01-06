@@ -93,6 +93,7 @@ func (p *postgres) Rebind(sql string) string {
 
 		out = append(out, '$')
 		out = append(out, strconv.Itoa(j)...)
+		j++
 	}
 
 	return string(out)

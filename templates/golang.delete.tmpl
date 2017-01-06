@@ -4,22 +4,18 @@ Delete{{ .Suffix }}({{ param .Args }}) (deleted bool, err error)
 
 {{- define "body" -}}{
 	const __stmt=`{{ .SQL }}`
-	__prepared, __replace, err := obj.prepare(__stmt)
-	if err != nil {
-        return false, WrapErr(err)
-	}
-	defer __replace()
 	obj.logStmt(__stmt, {{ arg .Args }})
 
-    __res, err := __prepared.Exec({{ arg .Args }})
+	__res, err := obj.impl.Exec(__stmt, {{ arg .Args }})
 	if err != nil {
-        return false, WrapErr(err)
-	}
-	__count, err := __res.RowsAffected()
-	if err != nil {
-        return false, WrapErr(err)
+		return false, WrapErr(err)
 	}
 
-    return __count > 0, nil
+	__count, err := __res.RowsAffected()
+	if err != nil {
+		return false, WrapErr(err)
+	}
+
+	return __count > 0, nil
 }
 {{ end -}}

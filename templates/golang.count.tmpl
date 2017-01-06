@@ -4,17 +4,13 @@ Count{{ .Suffix }}({{ param .Args }}) (count int64, err error)
 
 {{- define "body" }}{
 	const __stmt=`{{ .SQL }}`
-	__prepared, __replace, err := obj.prepare(__stmt)
-	if err != nil {
-		return 0, WrapErr(err)
-	}
-	defer __replace()
 	obj.logStmt(__stmt, {{ arg .Args }})
 
-    err = __prepared.QueryRow({{ arg .Args }}).Scan(&count)
+	err = obj.impl.QueryRow(__stmt, {{ arg .Args }}).Scan(&count)
 	if err != nil {
 		return 0, WrapErr(err)
 	}
-    return count, nil
+
+	return count, nil
 }
 {{ end -}}

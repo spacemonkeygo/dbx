@@ -3,9 +3,6 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 {{- end -}}
 
 {{- define "body" -}}{
-	{{- if .NeedsNow }}
-	__now := Now().UTC()
-	{{ end -}}
 	const __stmt_prefix=`{{ .SQLPrefix }}`
 	const __stmt_suffix=`{{ .SQLSuffix }}`
 
@@ -36,6 +33,9 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 	}
 	{{ end }}
 
+	{{- if .NeedsNow }}
+	__now := Now().UTC()
+	{{ end -}}
 	{{ range .AutoFields }}
 	addArgument("{{ .Name }}")
 	values = append(values, {{ .InitVal }})
@@ -52,22 +52,17 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 	{{ end }}
 
 	__stmt := __stmt_prefix + string(qs[:len(qs)-2]) + __stmt_suffix
-	__prepared, __replace, err := obj.prepare(__stmt)
-	if err != nil {
-		return nil, WrapErr(err)
-	}
-	defer __replace()
 	obj.logStmt(__stmt, {{ arg .Args }})
 
 	{{ if .SupportsReturning }}
 	{{ init .Return }}
-	err = __prepared.QueryRow(values).Scan({{ addrof (flatten .Return) }})
+	err = obj.impl.QueryRow(__stmt, values...).Scan({{ addrof (flatten .Return) }})
 	if err != nil {
 		return nil, WrapErr(err)
 	}
 	return {{ arg .Return }}, nil
 	{{ else -}}
-	__res, err := __prepared.Exec(values)
+	__res, err := obj.impl.Exec(__stmt, values...)
 	if err != nil {
 		return nil, WrapErr(err)
 	}

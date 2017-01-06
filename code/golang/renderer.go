@@ -43,7 +43,6 @@ type Options struct {
 
 type Renderer struct {
 	header     *template.Template
-	lru        *template.Template
 	footer     *template.Template
 	misc       *template.Template
 	ins        *template.Template
@@ -71,11 +70,6 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	r.header, err = loader.Load("golang.header.tmpl", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	r.lru, err = loader.Load("golang.lru.tmpl", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -160,10 +154,6 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 	var buf bytes.Buffer
 
 	if err := r.renderHeader(&buf, root, dialects); err != nil {
-		return nil, err
-	}
-
-	if err := tmplutil.Render(r.lru, &buf, "", nil); err != nil {
 		return nil, err
 	}
 

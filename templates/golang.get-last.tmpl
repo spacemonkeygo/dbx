@@ -4,19 +4,13 @@ getLast{{ .Return.Type }}(pk int64) ({{ param .Return }}, err error)
 
 {{- define "body" -}}{
 	const __stmt=`{{ .SQL }}`
-	__prepared, __replace, err := obj.prepare(__stmt)
-	if err != nil {
-		err = WrapErr(err)
-		return
-	}
-	defer __replace()
 	obj.logStmt(__stmt, pk)
 
-    {{ init .Return }}
-    err = __prepared.QueryRow(pk).Scan({{ addrof (flatten .Return) }})
-    if err != nil {
-        return {{ zero .Return }}, WrapErr(err)
-    }
-    return {{ arg .Return }}, nil
+	{{ init .Return }}
+	err = obj.impl.QueryRow(__stmt, pk).Scan({{ addrof (flatten .Return) }})
+	if err != nil {
+		return {{ zero .Return }}, WrapErr(err)
+	}
+	return {{ arg .Return }}, nil
 }
 {{ end -}}
