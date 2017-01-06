@@ -3,12 +3,14 @@ Create{{ .Suffix }}({{ param .Args }}) ({{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{
-    {{ autoinit .AutoFields }}
+    {{- if .NeedsNow }}
+    __now := Now().UTC()
+    {{ end -}}
+    {{ initnew .Fields }}
 	const __stmt=`{{ .SQL }}`
 	__prepared, __replace, err := obj.prepare(__stmt)
 	if err != nil {
-		err = WrapErr(err)
-		return
+        return {{ zero .Return }}, WrapErr(err)
 	}
 	defer __replace()
 	obj.logStmt(__stmt, {{ arg .Fields }})

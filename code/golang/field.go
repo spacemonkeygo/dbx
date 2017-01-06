@@ -35,7 +35,7 @@ type Field struct {
 func FieldFromIR(field *ir.Field) *Field {
 	return &Field{
 		Name:       fieldName(field),
-		Type:       FieldType(field),
+		Type:       fieldType(field),
 		Column:     field.ColumnName(),
 		Nullable:   field.Nullable,
 		Insertable: true,
@@ -177,7 +177,7 @@ func FieldsFromIR(fields []*ir.Field) (out []*Field) {
 //	return fmt.Sprintf("`"+`db:"%s"`+"`", f.field.Name)
 //}
 
-func FieldType(field *ir.Field) string {
+func fieldType(field *ir.Field) string {
 	switch field.Type {
 	case ast.TextField:
 		if field.Nullable {

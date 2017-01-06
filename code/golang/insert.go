@@ -15,6 +15,8 @@
 package golang
 
 import (
+	"fmt"
+
 	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
@@ -28,6 +30,7 @@ type Insert struct {
 	AutoFields        *AutoInit
 	SQL               string
 	SupportsReturning bool
+	NeedsNow          bool
 }
 
 type AutoInit struct {
@@ -40,28 +43,44 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 	if ir_ins.Raw {
 		suffix = "Raw" + suffix
 	}
-	auto_vars := VarsFromFields(ir_ins.AutoFields())
-	var auto_fields *AutoInit
-	if len(auto_vars) > 0 {
-		auto_fields = &AutoInit{
-			Vars: auto_vars,
-		}
-	needs_now_check:
-		for _, v := range auto_vars {
-			switch v.Type {
-			case "time.Time", "*time.Time":
-				auto_fields.NeedsNow = true
-				break needs_now_check
-			}
-		}
-	}
-	return &Insert{
+
+	ins := &Insert{
 		Suffix:            suffix,
 		Return:            VarFromModel(ir_ins.Model),
 		SQL:               sql.RenderInsert(dialect, ir_ins),
-		Args:              VarsFromFields(ir_ins.ManualFields()),
-		Fields:            VarsFromFields(ir_ins.Fields()),
-		AutoFields:        auto_fields,
 		SupportsReturning: dialect.Features().Returning,
 	}
+
+	args := map[string]*Var{}
+
+	// All of the manual fields are arguments to the function. The Field struct
+	// type is used (pointer if nullable).
+	for _, field := range ir_ins.ManualFields() {
+		arg_type := fmt.Sprintf("%s%sField",
+			inflect.Camelize(field.Model.Name),
+			inflect.Camelize(field.Name))
+		if field.Nullable {
+			arg_type = "*" + arg_type
+		}
+		arg := &Var{
+			Name: field.Name,
+			Type: arg_type,
+		}
+		args[field.Name] = arg
+		ins.Args = append(ins.Args, arg)
+	}
+
+	// Now for each field
+	for _, field := range ir_ins.Fields() {
+		v := VarFromField(field)
+		v.Name = fmt.Sprintf("__%s_val", v.Name)
+		if arg := args[field.Name]; arg != nil {
+			v.InitVal = fmt.Sprintf("%s.value()", arg.Name)
+		} else if field.IsTime() {
+			ins.NeedsNow = true
+		}
+		ins.Fields = append(ins.Fields, v)
+	}
+
+	return ins
 }

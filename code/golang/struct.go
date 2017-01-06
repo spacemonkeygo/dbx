@@ -36,18 +36,6 @@ func StructsFromIR(models []*ir.Model) (out []*Struct) {
 	return out
 }
 
-//func (s *Struct) Init() string {
-//	return fmt.Sprintf("&%s{}", s.Name())
-//}
-//
-//func (s *Struct) Arg() string {
-//	return inflect.Underscore(s.model.Name)
-//}
-//
-//func (s *Struct) Param() string {
-//	return fmt.Sprintf("%s *%s", s.Arg(), s.Name())
-//}
-
 func (s *Struct) UpdatableFields() (fields []*Field) {
 	for _, field := range s.Fields {
 		if field.Updatable {

@@ -85,6 +85,7 @@ func New(loader tmplutil.Loader, options *Options) (
 		"arg":      argFn,
 		"zero":     zeroFn,
 		"init":     initFn,
+		"initnew":  initnewFn,
 		"autoinit": autoinitFn,
 		"addrof":   addrofFn,
 		"flatten":  flattenFn,

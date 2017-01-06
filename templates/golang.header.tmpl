@@ -309,7 +309,12 @@ type Update{{ $struct }} struct {
 type {{ $fstruct }} struct { v {{ .Type }} }
 func {{ $struct }}{{ .Name }}(v {{ .Type }}) {{ if .Nullable }}*{{ end }}{{ $fstruct }} { return {{ if .Nullable }}&{{ end }}{{ $fstruct }}{v: v} }
 func (u {{ $fstruct }}) columnName() string { return "{{ .Column }}" }
-func (u {{ $fstruct }}) value() interface{} { return u.v }
+func (u *{{ $fstruct }}) value() interface{} { 
+	if u == nil {
+		return nil
+	}
+	return u.v
+}
 {{- if not .Nullable }}
 func (u {{ $fstruct }}) Ref() *{{ $fstruct }} { return &u }
 {{- end }}

@@ -64,6 +64,15 @@ func (f *Field) IsInt() bool {
 	}
 }
 
+func (f *Field) IsTime() bool {
+	switch f.Type {
+	case ast.TimestampField, ast.TimestampUTCField:
+		return true
+	default:
+		return false
+	}
+}
+
 func (f *Field) ColumnRef() string {
 	return fmt.Sprintf("%s.%s", f.Model.TableName(), f.ColumnName())
 }

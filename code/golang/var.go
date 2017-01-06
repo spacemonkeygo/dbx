@@ -22,18 +22,48 @@ import (
 )
 
 func VarFromModel(model *ir.Model) *Var {
-	return &Var{
+	v := &Var{
 		Name:   model.Name,
 		Type:   structName(model),
 		Fields: VarsFromFields(model.Fields),
 	}
+	v.InitVal = fmt.Sprintf("&%s{}", v.Type)
+	v.ZeroVal = "nil"
+	return v
 }
 
 func VarFromField(field *ir.Field) *Var {
-	return &Var{
+	v := &Var{
 		Name: field.Name,
-		Type: "int64",
+		Type: fieldType(field),
 	}
+
+	// zero val
+	switch v.Type {
+	case "int", "int64", "uint", "uint64", "float", "float64":
+		v.ZeroVal = "0"
+	case "string":
+		v.ZeroVal = `""`
+	case "sql.NullString":
+		v.ZeroVal = `sql.NullString{}`
+	case "bool":
+		v.ZeroVal = "false"
+	case "time.Time":
+		v.ZeroVal = "time.Time{}"
+	case "*time.Time":
+		v.ZeroVal = "nil"
+	default:
+		panic(fmt.Sprintf("unhandled var type %q", v.Type))
+	}
+
+	// init val
+	switch v.Type {
+	case "time.Time":
+		v.InitVal = "__now"
+	case "*time.Time":
+		v.InitVal = "&__now"
+	}
+	return v
 }
 
 func VarsFromFields(fields []*ir.Field) (vars []*Var) {
@@ -44,9 +74,11 @@ func VarsFromFields(fields []*ir.Field) (vars []*Var) {
 }
 
 type Var struct {
-	Name   string
-	Type   string
-	Fields []*Var
+	Name    string
+	Type    string
+	ZeroVal string
+	InitVal string
+	Fields  []*Var
 }
 
 func (v *Var) Value() string {
@@ -55,6 +87,26 @@ func (v *Var) Value() string {
 
 func (v *Var) Arg() string {
 	return v.Name
+}
+
+func (v *Var) Init() string {
+	return fmt.Sprintf("%s = %s", v.Name, v.initVal())
+}
+
+func (v *Var) InitNew() string {
+	return fmt.Sprintf("%s := %s", v.Name, v.initVal())
+}
+
+func (v *Var) initVal() string {
+	val := v.InitVal
+	if val == "" {
+		val = v.ZeroVal
+	}
+	return val
+}
+
+func (v *Var) Zero() string {
+	return v.ZeroVal
 }
 
 func (v *Var) AddrOf() string {
@@ -68,50 +120,8 @@ func (v *Var) Param() string {
 	return fmt.Sprintf("%s %s", v.Name, v.Type)
 }
 
-func (v *Var) Init() string {
-	if v.IsStruct() {
-		return fmt.Sprintf("%s = &%s{}", v.Name, v.Type)
-	}
-	var val string
-	switch v.Type {
-	case "int", "int64", "uint", "uint64", "float", "float64":
-		val = "0"
-	case "string":
-		val = `""`
-	case "bool":
-		val = "false"
-	case "time.Time":
-		val = "time.Time{}"
-	case "*time.Time":
-		val = "nil"
-	default:
-		panic(fmt.Sprintf("unhandled var type %q", v.Type))
-	}
-	return fmt.Sprintf("%s = %s", v.Name, val)
-}
-
 func (v *Var) IsStruct() bool {
 	return len(v.Fields) > 0
-}
-
-func (v *Var) Zero() string {
-	if v.IsStruct() {
-		return "nil"
-	}
-	switch v.Type {
-	case "int", "int64", "uint", "uint64", "float", "float64":
-		return "0"
-	case "string":
-		return `""`
-	case "bool":
-		return "false"
-	case "time.Time":
-		return "now"
-	case "*time.Time":
-		return "&now"
-	default:
-		panic(fmt.Sprintf("unhandled var type %q", v.Type))
-	}
 }
 
 func (v *Var) Flatten() (flattened []*Var) {
