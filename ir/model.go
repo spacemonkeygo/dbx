@@ -45,7 +45,16 @@ func (m *Model) BasicPrimaryKey() *Field {
 
 func (m *Model) InsertableFields() (fields []*Field) {
 	for _, field := range m.Fields {
-		if field.Insertable() {
+		if field.Insertable() && !field.AutoInsert {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+func (m *Model) AutoInsertableFields() (fields []*Field) {
+	for _, field := range m.Fields {
+		if field.Insertable() && field.AutoInsert {
 			fields = append(fields, field)
 		}
 	}
@@ -54,7 +63,16 @@ func (m *Model) InsertableFields() (fields []*Field) {
 
 func (m *Model) UpdatableFields() (fields []*Field) {
 	for _, field := range m.Fields {
-		if field.Updatable {
+		if field.Updatable && !field.AutoUpdate {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+func (m *Model) AutoUpdatableFields() (fields []*Field) {
+	for _, field := range m.Fields {
+		if field.Updatable && field.AutoUpdate {
 			fields = append(fields, field)
 		}
 	}

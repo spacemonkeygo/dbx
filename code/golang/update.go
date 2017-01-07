@@ -53,7 +53,7 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 		}
 	}
 
-	for _, field := range ir_upd.AutoFields() {
+	for _, field := range ir_upd.AutoUpdatableFields() {
 		upd.NeedsNow = upd.NeedsNow || field.IsTime()
 		upd.AutoFields = append(upd.AutoFields, VarFromField(field))
 	}

@@ -56,6 +56,10 @@ func VarFromField(field *ir.Field) *Var {
 		v.ZeroVal = "0"
 	case "string":
 		v.ZeroVal = `""`
+	case "sql.NullBool":
+		v.ZeroVal = `sql.NullBool{}`
+	case "sql.NullInt64":
+		v.ZeroVal = `sql.NullInt64{}`
 	case "sql.NullString":
 		v.ZeroVal = `sql.NullString{}`
 	case "bool":
@@ -63,6 +67,8 @@ func VarFromField(field *ir.Field) *Var {
 	case "time.Time":
 		v.ZeroVal = "time.Time{}"
 	case "*time.Time":
+		v.ZeroVal = "nil"
+	case "[]byte":
 		v.ZeroVal = "nil"
 	default:
 		panic(fmt.Sprintf("unhandled var type %q", v.Type))

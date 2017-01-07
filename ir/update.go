@@ -26,17 +26,8 @@ type Update struct {
 	Where []*Where
 }
 
-func (upd *Update) Fields() []*Field {
-	return upd.Model.UpdatableFields()
-}
-
-func (upd *Update) AutoFields() (fields []*Field) {
-	for _, field := range upd.Fields() {
-		if field.AutoUpdate {
-			fields = append(fields, field)
-		}
-	}
-	return fields
+func (upd *Update) AutoUpdatableFields() (fields []*Field) {
+	return upd.Model.AutoUpdatableFields()
 }
 
 func (upd *Update) FuncSuffix() string {

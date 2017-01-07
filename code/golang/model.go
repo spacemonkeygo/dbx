@@ -58,6 +58,7 @@ func (s *ModelStruct) UpdateStructName() string {
 
 type ModelField struct {
 	Name       string
+	ModelName  string
 	Type       string
 	Column     string
 	Nullable   bool
@@ -70,6 +71,7 @@ type ModelField struct {
 func ModelFieldFromIR(field *ir.Field) *ModelField {
 	return &ModelField{
 		Name:       fieldName(field),
+		ModelName:  structName(field.Model),
 		Type:       fieldType(field),
 		Column:     field.ColumnName(),
 		Nullable:   field.Nullable,
@@ -132,4 +134,8 @@ func fieldType(field *ir.Field) string {
 	}
 	panic(fmt.Sprintf("unhandled field type %q (nullable=%t)",
 		field.Type, field.Nullable))
+}
+
+func (f *ModelField) UpdateStructName() string {
+	return fmt.Sprintf("%s_%sField", f.ModelName, f.Name)
 }

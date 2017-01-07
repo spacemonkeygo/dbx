@@ -54,10 +54,8 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 
 	// All of the manual fields are arguments to the function. The Field struct
 	// type is used (pointer if nullable).
-	for _, field := range ir_ins.ManualFields() {
-		arg_type := fmt.Sprintf("%s%sField",
-			inflect.Camelize(field.Model.Name),
-			inflect.Camelize(field.Name))
+	for _, field := range ir_ins.InsertableFields() {
+		arg_type := ModelFieldFromIR(field).UpdateStructName()
 		if field.Nullable {
 			arg_type = "*" + arg_type
 		}

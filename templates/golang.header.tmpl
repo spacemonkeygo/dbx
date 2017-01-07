@@ -175,17 +175,16 @@ type {{ $struct }} struct {
 
 type {{ .UpdateStructName }} struct {
 {{- range .UpdatableFields }}
-{{- $fstruct := printf "%s%sField" $struct .Name }}
-	{{ .Name }} *{{ $fstruct }}
+    {{ .Name }} *{{ .UpdateStructName }}
 {{- end }}
 }
 {{- end }}
 
 {{- range .Fields }}
-{{- $fstruct := printf "%s%sField" $struct .Name }}
+{{- $fstruct := .UpdateStructName }}
 
 type {{ $fstruct }} struct { v {{ .Type }} }
-func {{ $struct }}{{ .Name }}(v {{ .Type }}) {{ if .Nullable }}*{{ end }}{{ $fstruct }} { return {{ if .Nullable }}&{{ end }}{{ $fstruct }}{v: v} }
+func {{ $struct }}_{{ .Name }}(v {{ .Type }}) {{ if .Nullable }}*{{ end }}{{ $fstruct }} { return {{ if .Nullable }}&{{ end }}{{ $fstruct }}{v: v} }
 func (u {{ $fstruct }}) columnName() string { return "{{ .Column }}" }
 func (u *{{ $fstruct }}) value() interface{} { 
 	if u == nil {

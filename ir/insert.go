@@ -19,33 +19,20 @@ type Insert struct {
 	Raw   bool
 }
 
-func (ins *Insert) Fields() []*Field {
+func (ins *Insert) Fields() (fields []*Field) {
+	return ins.Model.Fields
+}
+
+func (ins *Insert) InsertableFields() (fields []*Field) {
 	if ins.Raw {
 		return ins.Model.Fields
 	}
 	return ins.Model.InsertableFields()
 }
 
-func (ins *Insert) ManualFields() (fields []*Field) {
-	if ins.Raw {
-		return ins.Fields()
-	}
-	for _, field := range ins.Fields() {
-		if !field.AutoInsert {
-			fields = append(fields, field)
-		}
-	}
-	return fields
-}
-
-func (ins *Insert) AutoFields() (fields []*Field) {
+func (ins *Insert) AutoInsertableFields() (fields []*Field) {
 	if ins.Raw {
 		return nil
 	}
-	for _, field := range ins.Fields() {
-		if field.AutoInsert {
-			fields = append(fields, field)
-		}
-	}
-	return fields
+	return ins.Model.AutoInsertableFields()
 }
