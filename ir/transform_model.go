@@ -30,7 +30,7 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 		}
 	}
 
-	if len(ast_model.PrimaryKey.Refs) == 0 {
+	if ast_model.PrimaryKey == nil || len(ast_model.PrimaryKey.Refs) == 0 {
 		return Error.New("%s: no primary key defined", ast_model.Pos)
 	}
 
