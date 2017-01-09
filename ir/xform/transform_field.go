@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
+
+import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
 func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 	field := field_entry.field
@@ -32,7 +34,7 @@ func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 		if err != nil {
 			return err
 		}
-		field.Relation = &Relation{
+		field.Relation = &ir.Relation{
 			Field: related,
 		}
 		field.Type = related.Type.AsLink()

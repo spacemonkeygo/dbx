@@ -17,5 +17,5 @@ package ir
 import "github.com/spacemonkeygo/errors"
 
 var (
-	Error = errors.NewClass("ast")
+	Error = errors.NewClass("ir")
 )

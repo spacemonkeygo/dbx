@@ -24,6 +24,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/code"
 	"gopkg.in/spacemonkeygo/dbx.v1/code/golang"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir/xform"
 	"gopkg.in/spacemonkeygo/dbx.v1/parser"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 	pubtemplates "gopkg.in/spacemonkeygo/dbx.v1/templates"
@@ -54,7 +55,7 @@ func main() {
 	app.Before = func() {
 		ast_root, err = parser.ParseFile(*in_arg)
 		die(err)
-		root, err = ir.Transform(ast_root)
+		root, err = xform.Transform(ast_root)
 		die(err)
 		root.SetDefaults()
 

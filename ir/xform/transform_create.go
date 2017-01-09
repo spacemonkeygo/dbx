@@ -12,19 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
 func transformCreate(lookup *lookup, ast_cre *ast.Create) (
-	cre *Create, err error) {
+	cre *ir.Create, err error) {
 
 	model, err := lookup.FindModel(ast_cre.Model)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Create{
+	return &ir.Create{
 		Model: model,
 		Raw:   ast_cre.Raw,
 	}, nil

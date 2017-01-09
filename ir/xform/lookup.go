@@ -12,12 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
 type lookup struct {
 	models map[string]*modelEntry
+}
+
+type modelEntry struct {
+	model  *ir.Model
+	ast    *ast.Model
+	fields map[string]*fieldEntry
+}
+
+type fieldEntry struct {
+	field *ir.Field
+	ast   *ast.Field
 }
 
 func newLookup() *lookup {
@@ -41,7 +55,7 @@ func (l *lookup) GetModel(name string) *modelEntry {
 	return l.models[name]
 }
 
-func (l *lookup) FindModel(ref *ast.ModelRef) (*Model, error) {
+func (l *lookup) FindModel(ref *ast.ModelRef) (*ir.Model, error) {
 	link := l.models[ref.Model]
 	if link != nil {
 		return link.model, nil
@@ -50,7 +64,7 @@ func (l *lookup) FindModel(ref *ast.ModelRef) (*Model, error) {
 		ref.Pos, ref.Model)
 }
 
-func (l *lookup) FindField(ref *ast.FieldRef) (*Field, error) {
+func (l *lookup) FindField(ref *ast.FieldRef) (*ir.Field, error) {
 	model_link := l.models[ref.Model]
 	if model_link == nil {
 		return nil, Error.New("%s: no model %q defined",
@@ -59,15 +73,9 @@ func (l *lookup) FindField(ref *ast.FieldRef) (*Field, error) {
 	return model_link.FindField(ref.Relative())
 }
 
-type modelEntry struct {
-	model  *Model
-	ast    *ast.Model
-	fields map[string]*fieldEntry
-}
-
 func newModelEntry(ast_model *ast.Model) *modelEntry {
 	return &modelEntry{
-		model: &Model{
+		model: &ir.Model{
 			Name: ast_model.Name,
 		},
 		ast:    ast_model,
@@ -76,7 +84,7 @@ func newModelEntry(ast_model *ast.Model) *modelEntry {
 }
 
 func (m *modelEntry) newFieldEntry(ast_field *ast.Field) *fieldEntry {
-	field := &Field{
+	field := &ir.Field{
 		Name:  ast_field.Name,
 		Type:  ast_field.Type,
 		Model: m.model,
@@ -102,16 +110,11 @@ func (m *modelEntry) GetField(name string) *fieldEntry {
 	return m.fields[name]
 }
 
-func (m *modelEntry) FindField(ref *ast.RelativeFieldRef) (*Field, error) {
+func (m *modelEntry) FindField(ref *ast.RelativeFieldRef) (*ir.Field, error) {
 	field_link := m.fields[ref.Field]
 	if field_link == nil {
 		return nil, Error.New("%s: no field %q defined on model %q",
 			ref.Pos, ref.Field, m.model.Name)
 	}
 	return field_link.field, nil
-}
-
-type fieldEntry struct {
-	field *Field
-	ast   *ast.Field
 }

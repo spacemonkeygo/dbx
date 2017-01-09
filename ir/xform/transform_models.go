@@ -12,25 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
-func transformModels(ast_models []*ast.Model) (models []*Model, lookup *lookup,
-	err error) {
-
-	lookup = newLookup()
+func transformModels(lookup *lookup, ast_models []*ast.Model) (
+	models []*ir.Model, err error) {
 
 	// step 1. create all the Model and Field instances and set their pointers
 	// to point at each other appropriately.
 	for _, ast_model := range ast_models {
 		link, err := lookup.AddModel(ast_model)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		for _, ast_field := range ast_model.Fields {
 			if err := link.AddField(ast_field); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
@@ -40,10 +41,10 @@ func transformModels(ast_models []*ast.Model) (models []*Model, lookup *lookup,
 	for _, ast_model := range ast_models {
 		model_entry := lookup.GetModel(ast_model.Name)
 		if err := transformModel(lookup, model_entry); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		models = append(models, model_entry.model)
 	}
 
-	return models, lookup, nil
+	return models, nil
 }

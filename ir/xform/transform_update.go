@@ -12,36 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
-func transformDelete(lookup *lookup, ast_del *ast.Delete) (
-	del *Delete, err error) {
+func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
+	upd *ir.Update, err error) {
 
-	model, err := lookup.FindModel(ast_del.Model)
+	model, err := lookup.FindModel(ast_upd.Model)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(model.PrimaryKey) > 1 && len(ast_del.Joins) > 0 {
+	if len(model.PrimaryKey) > 1 && len(ast_upd.Joins) > 0 {
 		return nil, Error.New(
-			"%s: delete with joins unsupported on multicolumn primary key",
-			ast_del.Pos)
+			"%s: update with joins unsupported on multicolumn primary key",
+			ast_upd.Pos)
 	}
 
-	del = &Delete{
+	upd = &ir.Update{
 		Model: model,
 	}
 
-	// Figure out set of models that are included in the delete.
+	// Figure out set of models that are included in the update.
 	// These come from explicit joins.
 	models := map[string]*ast.ModelRef{
-		model.Name: ast_del.Model,
+		model.Name: ast_upd.Model,
 	}
 
 	next := model.Name
-	for _, join := range ast_del.Joins {
+	for _, join := range ast_upd.Joins {
 		left, err := lookup.FindField(join.Left)
 		if err != nil {
 			return nil, err
@@ -56,7 +59,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 			return nil, err
 		}
 		next = join.Right.Model
-		del.Joins = append(del.Joins, &Join{
+		upd.Joins = append(upd.Joins, &ir.Join{
 			Type:  join.Type,
 			Left:  left,
 			Right: right,
@@ -70,7 +73,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 
 	// Finalize the where conditions and make sure referenced models are part
 	// of the select.
-	for _, ast_where := range ast_del.Where {
+	for _, ast_where := range ast_upd.Where {
 		left, err := lookup.FindField(ast_where.Left)
 		if err != nil {
 			return nil, err
@@ -81,7 +84,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 				ast_where.Pos, ast_where, ast_where.Left.Model)
 		}
 
-		var right *Field
+		var right *ir.Field
 		if ast_where.Right != nil {
 			right, err = lookup.FindField(ast_where.Right)
 			if err != nil {
@@ -94,12 +97,12 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 			}
 		}
 
-		del.Where = append(del.Where, &Where{
+		upd.Where = append(upd.Where, &ir.Where{
 			Op:    ast_where.Op,
 			Left:  left,
 			Right: right,
 		})
 	}
 
-	return del, nil
+	return upd, nil
 }

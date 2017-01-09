@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
 func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 	model := model_entry.model
@@ -76,7 +79,7 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 		if err != nil {
 			return err
 		}
-		model.Indexes = append(model.Indexes, &Index{
+		model.Indexes = append(model.Indexes, &ir.Index{
 			Name:   ast_index.Name,
 			Model:  fields[0].Model,
 			Fields: fields,

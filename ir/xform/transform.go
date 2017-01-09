@@ -12,17 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
-func Transform(ast_root *ast.Root) (root *Root, err error) {
-	models, lookup, err := transformModels(ast_root.Models)
+func Transform(ast_root *ast.Root) (root *ir.Root, err error) {
+	lookup := newLookup()
+
+	models, err := transformModels(lookup, ast_root.Models)
 	if err != nil {
 		return nil, err
 	}
 
-	root = &Root{
+	root = &ir.Root{
 		Models: models,
 	}
 
@@ -59,30 +64,4 @@ func Transform(ast_root *ast.Root) (root *Root, err error) {
 	}
 
 	return root, nil
-}
-
-func resolveFieldRefs(lookup *lookup, ast_refs []*ast.FieldRef) (
-	fields []*Field, err error) {
-
-	for _, ast_ref := range ast_refs {
-		field, err := lookup.FindField(ast_ref)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, field)
-	}
-	return fields, nil
-}
-
-func resolveRelativeFieldRefs(model_entry *modelEntry,
-	ast_refs []*ast.RelativeFieldRef) (fields []*Field, err error) {
-
-	for _, ast_ref := range ast_refs {
-		field, err := model_entry.FindField(ast_ref)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, field)
-	}
-	return fields, nil
 }

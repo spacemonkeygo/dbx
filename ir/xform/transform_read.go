@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
 func transformRead(lookup *lookup, ast_read *ast.Read) (
-	reads []*Read, err error) {
+	reads []*ir.Read, err error) {
 
-	tmpl := new(Read)
+	tmpl := new(ir.Read)
 
 	if ast_read.Select == nil || len(ast_read.Select.Refs) == 0 {
 		return nil, Error.New("%s: no fields defined to select", ast_read.Pos)
@@ -87,7 +90,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 				tmpl.From = left.Model
 				models[join.Left.Model] = join.Left
 			}
-			tmpl.Joins = append(tmpl.Joins, &Join{
+			tmpl.Joins = append(tmpl.Joins, &ir.Join{
 				Type:  join.Type,
 				Left:  left,
 				Right: right,
@@ -133,7 +136,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 				ast_where.Pos, ast_where, ast_where.Left.Model)
 		}
 
-		var right *Field
+		var right *ir.Field
 		if ast_where.Right != nil {
 			right, err = lookup.FindField(ast_where.Right)
 			if err != nil {
@@ -146,7 +149,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			}
 		}
 
-		tmpl.Where = append(tmpl.Where, &Where{
+		tmpl.Where = append(tmpl.Where, &ir.Where{
 			Op:    ast_where.Op,
 			Left:  left,
 			Right: right,
@@ -167,7 +170,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			}
 		}
 
-		tmpl.OrderBy = &OrderBy{
+		tmpl.OrderBy = &ir.OrderBy{
 			Fields:     fields,
 			Descending: ast_read.OrderBy.Descending,
 		}
@@ -183,7 +186,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 	}
 
-	addView := func(v View) {
+	addView := func(v ir.View) {
 		read_copy := *tmpl
 		read_copy.View = v
 		reads = append(reads, &read_copy)
@@ -191,34 +194,34 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 
 	if view.All {
 		// template is already sufficient for "all"
-		addView(All)
+		addView(ir.All)
 	}
 	if view.Count {
-		addView(Count)
+		addView(ir.Count)
 	}
 	if view.Has {
-		addView(Has)
+		addView(ir.Has)
 	}
 	if view.Limit {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit unique select",
 				view.Pos)
 		}
-		addView(Limit)
+		addView(ir.Limit)
 	}
 	if view.LimitOffset {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit/offset unique select",
 				view.Pos)
 		}
-		addView(LimitOffset)
+		addView(ir.LimitOffset)
 	}
 	if view.Offset {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot offset unique select",
 				view.Pos)
 		}
-		addView(Offset)
+		addView(ir.Offset)
 	}
 	if view.Paged {
 		if tmpl.OrderBy != nil {
@@ -235,7 +238,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			return nil, Error.New("%s: cannot page unique select",
 				view.Pos)
 		}
-		addView(Paged)
+		addView(ir.Paged)
 	}
 
 	return reads, nil
