@@ -52,8 +52,21 @@ func (s *ModelStruct) UpdatableFields() (fields []*ModelField) {
 	return fields
 }
 
+func (s *ModelStruct) OptionalInsertFields() (fields []*ModelField) {
+	for _, field := range s.Fields {
+		if field.Insertable && !field.AutoInsert && field.Nullable {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
 func (s *ModelStruct) UpdateStructName() string {
 	return "Update" + s.Name
+}
+
+func (s *ModelStruct) InsertStructName() string {
+	return "Insert" + s.Name
 }
 
 type ModelField struct {

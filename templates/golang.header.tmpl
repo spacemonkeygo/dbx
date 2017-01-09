@@ -171,11 +171,20 @@ type {{ $struct }} struct {
 {{- end }}
 }
 
+{{- if .OptionalInsertFields }}
+
+type {{ .InsertStructName }} struct {
+{{- range .OptionalInsertFields }}
+	{{ .Name }} *{{ .UpdateStructName }}
+{{- end }}
+}
+{{- end }}
+
 {{- if .UpdatableFields }}
 
 type {{ .UpdateStructName }} struct {
 {{- range .UpdatableFields }}
-    {{ .Name }} *{{ .UpdateStructName }}
+	{{ .Name }} *{{ .UpdateStructName }}
 {{- end }}
 }
 {{- end }}

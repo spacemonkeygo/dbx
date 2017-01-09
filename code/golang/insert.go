@@ -49,9 +49,11 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 
 	// All of the manual fields are arguments to the function. The Field struct
 	// type is used (pointer if nullable).
+	has_nullable := false
 	for _, field := range ir_ins.InsertableFields() {
 		arg_type := ModelFieldFromIR(field).UpdateStructName()
 		if field.Nullable {
+			has_nullable = true
 			arg_type = "*" + arg_type
 		}
 		arg := &Var{
@@ -59,15 +61,29 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 			Type: arg_type,
 		}
 		args[field.Name] = arg
-		ins.Args = append(ins.Args, arg)
+		if !field.Nullable {
+			ins.Args = append(ins.Args, arg)
+		}
+	}
+
+	if has_nullable {
+		ins.Args = append(ins.Args, &Var{
+			Name: "optional",
+			Type: ModelStructFromIR(ir_ins.Model).InsertStructName(),
+		})
 	}
 
 	// Now for each field
 	for _, field := range ir_ins.Fields() {
 		v := VarFromField(field)
 		v.Name = fmt.Sprintf("__%s_val", v.Name)
+		f := ModelFieldFromIR(field)
 		if arg := args[field.Name]; arg != nil {
-			v.InitVal = fmt.Sprintf("%s.value()", arg.Name)
+			if field.Nullable {
+				v.InitVal = fmt.Sprintf("optional.%s.value()", f.Name)
+			} else {
+				v.InitVal = fmt.Sprintf("%s.value()", arg.Name)
+			}
 		} else if field.IsTime() {
 			ins.NeedsNow = true
 		}
