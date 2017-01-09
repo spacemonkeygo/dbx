@@ -12,31 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package golang
+package ir
 
-import (
-	"bitbucket.org/pkg/inflect"
-	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-)
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
-type Count struct {
-	Suffix string
-	Args   []*Var
-	SQL    string
+type Selectable interface {
+	SelectRefs() []string
+	selectable()
 }
 
-func CountFromIR(ir_count *ir.Count, dialect sql.Dialect) *Count {
-	count := &Count{
-		Suffix: inflect.Camelize(ir_count.FuncSuffix),
-		SQL:    sql.RenderCount(dialect, ir_count),
-	}
+type Read struct {
+	FuncSuffix string
+	Fields     []Selectable
+	From       *Model
+	Joins      []*Join
+	Where      []*Where
+	OrderBy    *OrderBy
+	View       View
+}
 
-	for _, where := range ir_count.Where {
-		if where.Right == nil {
-			count.Args = append(count.Args, VarFromField(where.Left))
-		}
-	}
+func (r *Read) One() bool {
+	return WhereSetUnique(r.Where)
+}
 
-	return count
+type View int
+
+const (
+	All View = iota
+	Limit
+	Offset
+	LimitOffset
+	Paged
+	Count
+	Has
+)
+
+type Join struct {
+	Type  ast.JoinType
+	Left  *Field
+	Right *Field
+}
+
+type OrderBy struct {
+	Fields     []*Field
+	Descending bool
 }

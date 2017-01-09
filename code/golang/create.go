@@ -22,7 +22,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
-type Insert struct {
+type Create struct {
 	Suffix            string
 	Return            *Var
 	Args              []*Var
@@ -32,16 +32,16 @@ type Insert struct {
 	NeedsNow          bool
 }
 
-func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
-	suffix := inflect.Camelize(ir_ins.Model.Name)
-	if ir_ins.Raw {
+func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
+	suffix := inflect.Camelize(ir_cre.Model.Name)
+	if ir_cre.Raw {
 		suffix = "Raw" + suffix
 	}
 
-	ins := &Insert{
+	ins := &Create{
 		Suffix:            suffix,
-		Return:            VarFromModel(ir_ins.Model),
-		SQL:               sql.RenderInsert(dialect, ir_ins),
+		Return:            VarFromModel(ir_cre.Model),
+		SQL:               sql.RenderInsert(dialect, ir_cre),
 		SupportsReturning: dialect.Features().Returning,
 	}
 
@@ -50,7 +50,7 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 	// All of the manual fields are arguments to the function. The Field struct
 	// type is used (pointer if nullable).
 	has_nullable := false
-	for _, field := range ir_ins.InsertableFields() {
+	for _, field := range ir_cre.InsertableFields() {
 		arg_type := ModelFieldFromIR(field).UpdateStructName()
 		if field.Nullable {
 			has_nullable = true
@@ -69,13 +69,13 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 	if has_nullable {
 		ins.Args = append(ins.Args, &Var{
 			Name: "optional",
-			Type: ModelStructFromIR(ir_ins.Model).InsertStructName(),
+			Type: ModelStructFromIR(ir_cre.Model).CreateStructName(),
 		})
 	}
 
 	// Now for each field
-	for _, field := range ir_ins.Fields() {
-		if field == ir_ins.Model.BasicPrimaryKey() && !ir_ins.Raw {
+	for _, field := range ir_cre.Fields() {
+		if field == ir_cre.Model.BasicPrimaryKey() && !ir_cre.Raw {
 			continue
 		}
 		v := VarFromField(field)

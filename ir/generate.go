@@ -28,127 +28,108 @@ type GenerateOptions struct {
 	SelectPaged        bool
 }
 
-func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
-	for _, model := range root.Models {
-		root.Inserts = append(root.Inserts,
-			generateBasicInserts(model, options)...)
-		// root.Deletes = append(root.Deletes,
-		// 	generateBasicDeletes(model, options)...)
-		// root.Updates = append(root.Updates,
-		// 	generateBasicUpdates(model, options)...)
-	}
+// func generateBasicInserts(model *Model, options GenerateOptions) (
+// 	inserts []*Insert) {
 
-	for _, sel := range root.Selects {
-		// add a count variant for each select that has no special view
-		if options.SelectCount && sel.View == All {
-			root.Counts = append(root.Counts, CountFromSelect(sel))
-		}
-	}
-	return nil
-}
+// 	if options.Insert {
+// 		inserts = append(inserts, &Insert{
+// 			Model: model,
+// 			Raw:   false,
+// 		})
+// 	}
+// 	if options.RawInsert {
+// 		inserts = append(inserts, &Insert{
+// 			Model: model,
+// 			Raw:   true,
+// 		})
+// 	}
+// 	return inserts
+// }
 
-func generateBasicInserts(model *Model, options GenerateOptions) (
-	inserts []*Insert) {
+// func generateBasicSelects(model *Model, options GenerateOptions) (
+// 	selects []*Select) {
 
-	if options.Insert {
-		inserts = append(inserts, &Insert{
-			Model: model,
-			Raw:   false,
-		})
-	}
-	if options.RawInsert {
-		inserts = append(inserts, &Insert{
-			Model: model,
-			Raw:   true,
-		})
-	}
-	return inserts
-}
+// 	// Select by unique tuples
+// 	if options.SelectAll {
+// 		selects = append(selects, &Select{
+// 			Fields: []Selectable{model},
+// 			From:   model,
+// 		})
+// 	}
 
-func generateBasicSelects(model *Model, options GenerateOptions) (
-	selects []*Select) {
+// 	// Select by primary key
+// 	if options.UpdateByPrimaryKey && model.PrimaryKey != nil {
+// 		selects = append(selects, &Select{
+// 			Fields: []Selectable{model},
+// 			From:   model,
+// 			Where:  WhereFieldsEquals(model.PrimaryKey...),
+// 		})
+// 	}
 
-	// Select by unique tuples
-	if options.SelectAll {
-		selects = append(selects, &Select{
-			Fields: []Selectable{model},
-			From:   model,
-		})
-	}
+// 	// Select by unique tuples
+// 	if options.UpdateByUnique {
+// 		for _, unique := range model.Unique {
+// 			selects = append(selects, &Select{
+// 				Fields: []Selectable{model},
+// 				From:   model,
+// 				Where:  WhereFieldsEquals(unique...),
+// 			})
+// 		}
+// 	}
+// 	return selects
+// }
 
-	// Select by primary key
-	if options.UpdateByPrimaryKey && model.PrimaryKey != nil {
-		selects = append(selects, &Select{
-			Fields: []Selectable{model},
-			From:   model,
-			Where:  WhereFieldsEquals(model.PrimaryKey...),
-		})
-	}
+// func generateBasicDeletes(model *Model, options GenerateOptions) (
+// 	deletes []*Delete) {
 
-	// Select by unique tuples
-	if options.UpdateByUnique {
-		for _, unique := range model.Unique {
-			selects = append(selects, &Select{
-				Fields: []Selectable{model},
-				From:   model,
-				Where:  WhereFieldsEquals(unique...),
-			})
-		}
-	}
-	return selects
-}
+// 	// Always generate delete alls
+// 	deletes = append(deletes, &Delete{
+// 		Model: model,
+// 	})
 
-func generateBasicDeletes(model *Model, options GenerateOptions) (
-	deletes []*Delete) {
+// 	// Delete by primary key
+// 	if options.DeleteByPrimaryKey && model.PrimaryKey != nil {
+// 		deletes = append(deletes, &Delete{
+// 			Model: model,
+// 			Where: WhereFieldsEquals(model.PrimaryKey...),
+// 		})
+// 	}
 
-	// Always generate delete alls
-	deletes = append(deletes, &Delete{
-		Model: model,
-	})
+// 	// Delete by unique tuples
+// 	if options.DeleteByUnique {
+// 		for _, unique := range model.Unique {
+// 			deletes = append(deletes, &Delete{
+// 				Model: model,
+// 				Where: WhereFieldsEquals(unique...),
+// 			})
+// 		}
+// 	}
+// 	return deletes
+// }
 
-	// Delete by primary key
-	if options.DeleteByPrimaryKey && model.PrimaryKey != nil {
-		deletes = append(deletes, &Delete{
-			Model: model,
-			Where: WhereFieldsEquals(model.PrimaryKey...),
-		})
-	}
+// func generateBasicUpdates(model *Model, options GenerateOptions) (
+// 	updates []*Update) {
 
-	// Delete by unique tuples
-	if options.DeleteByUnique {
-		for _, unique := range model.Unique {
-			deletes = append(deletes, &Delete{
-				Model: model,
-				Where: WhereFieldsEquals(unique...),
-			})
-		}
-	}
-	return deletes
-}
+// 	if len(model.UpdatableFields()) == 0 {
+// 		return nil
+// 	}
 
-func generateBasicUpdates(model *Model, options GenerateOptions) (
-	updates []*Update) {
+// 	// Update by primary key
+// 	if options.UpdateByPrimaryKey && model.PrimaryKey != nil {
+// 		updates = append(updates, &Update{
+// 			Model: model,
+// 			Where: WhereFieldsEquals(model.PrimaryKey...),
+// 		})
+// 	}
 
-	if len(model.UpdatableFields()) == 0 {
-		return nil
-	}
-
-	// Update by primary key
-	if options.UpdateByPrimaryKey && model.PrimaryKey != nil {
-		updates = append(updates, &Update{
-			Model: model,
-			Where: WhereFieldsEquals(model.PrimaryKey...),
-		})
-	}
-
-	// Update by unique tuples
-	if options.UpdateByUnique {
-		for _, unique := range model.Unique {
-			updates = append(updates, &Update{
-				Model: model,
-				Where: WhereFieldsEquals(unique...),
-			})
-		}
-	}
-	return updates
-}
+// 	// Update by unique tuples
+// 	if options.UpdateByUnique {
+// 		for _, unique := range model.Unique {
+// 			updates = append(updates, &Update{
+// 				Model: model,
+// 				Where: WhereFieldsEquals(unique...),
+// 			})
+// 		}
+// 	}
+// 	return updates
+// }

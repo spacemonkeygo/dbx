@@ -56,20 +56,6 @@ func main() {
 		die(err)
 		root, err = ir.Transform(ast_root)
 		die(err)
-		err = ir.GenerateBasicQueries(root, ir.GenerateOptions{
-			Insert:             true,
-			RawInsert:          true,
-			SelectAll:          true,
-			SelectByPrimaryKey: true,
-			SelectByUnique:     true,
-			DeleteByPrimaryKey: true,
-			DeleteByUnique:     true,
-			UpdateByPrimaryKey: true,
-			UpdateByUnique:     true,
-			SelectCount:        true,
-			SelectPaged:        true,
-		})
-		die(err)
 
 		if *template_dir_arg != "" {
 			loader = tmplutil.DirLoader(*template_dir_arg)

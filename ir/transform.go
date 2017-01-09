@@ -26,6 +26,22 @@ func Transform(ast_root *ast.Root) (root *Root, err error) {
 		Models: models,
 	}
 
+	for _, ast_cre := range ast_root.Creates {
+		cre, err := transformCreate(lookup, ast_cre)
+		if err != nil {
+			return nil, err
+		}
+		root.Creates = append(root.Creates, cre)
+	}
+
+	for _, ast_read := range ast_root.Reads {
+		reads, err := transformRead(lookup, ast_read)
+		if err != nil {
+			return nil, err
+		}
+		root.Reads = append(root.Reads, reads...)
+	}
+
 	for _, ast_update := range ast_root.Updates {
 		upd, err := transformUpdate(lookup, ast_update)
 		if err != nil {
@@ -40,14 +56,6 @@ func Transform(ast_root *ast.Root) (root *Root, err error) {
 			return nil, err
 		}
 		root.Deletes = append(root.Deletes, del)
-	}
-
-	for _, ast_sel := range ast_root.Selects {
-		selects, err := transformSelect(lookup, ast_sel)
-		if err != nil {
-			return nil, err
-		}
-		root.Selects = append(root.Selects, selects...)
 	}
 
 	return root, nil

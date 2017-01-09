@@ -20,22 +20,22 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 )
 
-func transformSelect(lookup *lookup, ast_sel *ast.Select) (
-	selects []*Select, err error) {
+func transformRead(lookup *lookup, ast_read *ast.Read) (
+	reads []*Read, err error) {
 
-	sel_tmpl := &Select{
+	tmpl := &Read{
 		FuncSuffix: "",
 	}
 
 	var func_suffix []string
-	if ast_sel.Fields == nil || len(ast_sel.Fields.Refs) == 0 {
-		return nil, Error.New("%s: no fields defined to select", ast_sel.Pos)
+	if ast_read.Fields == nil || len(ast_read.Fields.Refs) == 0 {
+		return nil, Error.New("%s: no fields defined to select", ast_read.Pos)
 	}
 
 	// Figure out which models are needed for the fields and that the field
 	// references aren't repetetive.
 	selected := map[string]map[string]*ast.FieldRef{}
-	for _, ast_fieldref := range ast_sel.Fields.Refs {
+	for _, ast_fieldref := range ast_read.Fields.Refs {
 		fields := selected[ast_fieldref.Model]
 		if fields == nil {
 			fields = map[string]*ast.FieldRef{}
@@ -58,14 +58,14 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 			if err != nil {
 				return nil, err
 			}
-			sel_tmpl.Fields = append(sel_tmpl.Fields, model)
+			tmpl.Fields = append(tmpl.Fields, model)
 			func_suffix = append(func_suffix, ast_fieldref.Model)
 		} else {
 			field, err := lookup.FindField(ast_fieldref)
 			if err != nil {
 				return nil, err
 			}
-			sel_tmpl.Fields = append(sel_tmpl.Fields, field)
+			tmpl.Fields = append(tmpl.Fields, field)
 			func_suffix = append(func_suffix,
 				ast_fieldref.Model, ast_fieldref.Field)
 		}
@@ -76,9 +76,9 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 	// in the fields.
 	models := map[string]*ast.FieldRef{}
 	switch {
-	case len(ast_sel.Joins) > 0:
-		next := ast_sel.Joins[0].Left.Model
-		for _, join := range ast_sel.Joins {
+	case len(ast_read.Joins) > 0:
+		next := ast_read.Joins[0].Left.Model
+		for _, join := range ast_read.Joins {
 			left, err := lookup.FindField(join.Left)
 			if err != nil {
 				return nil, err
@@ -93,11 +93,11 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 				return nil, err
 			}
 			next = join.Right.Model
-			if sel_tmpl.From == nil {
-				sel_tmpl.From = left.Model
+			if tmpl.From == nil {
+				tmpl.From = left.Model
 				models[join.Left.Model] = join.Left
 			}
-			sel_tmpl.Joins = append(sel_tmpl.Joins, &Join{
+			tmpl.Joins = append(tmpl.Joins, &Join{
 				Type:  join.Type,
 				Left:  left,
 				Right: right,
@@ -109,20 +109,20 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 			models[join.Right.Model] = join.Right
 		}
 	case len(selected) == 1:
-		from, err := lookup.FindModel(ast_sel.Fields.Refs[0].ModelRef())
+		from, err := lookup.FindModel(ast_read.Fields.Refs[0].ModelRef())
 		if err != nil {
 			return nil, err
 		}
-		sel_tmpl.From = from
-		models[from.Name] = ast_sel.Fields.Refs[0]
+		tmpl.From = from
+		models[from.Name] = ast_read.Fields.Refs[0]
 	default:
 		return nil, Error.New(
 			"%s: cannot select from multiple models without a join",
-			ast_sel.Fields.Pos)
+			ast_read.Fields.Pos)
 	}
 
 	// Make sure all of the fields are accounted for in the set of models
-	for _, ast_fieldref := range ast_sel.Fields.Refs {
+	for _, ast_fieldref := range ast_read.Fields.Refs {
 		if models[ast_fieldref.Model] == nil {
 			return nil, Error.New(
 				"%s: cannot select field/model %q; model %q is not joined",
@@ -132,10 +132,10 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 
 	// Finalize the where conditions and make sure referenced models are part
 	// of the select.
-	if len(ast_sel.Where) > 0 {
+	if len(ast_read.Where) > 0 {
 		func_suffix = append(func_suffix, "by")
 	}
-	for _, ast_where := range ast_sel.Where {
+	for _, ast_where := range ast_read.Where {
 		left, err := lookup.FindField(ast_where.Left)
 		if err != nil {
 			return nil, err
@@ -162,7 +162,7 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 				ast_where.Left.Model, ast_where.Left.Field)
 		}
 
-		sel_tmpl.Where = append(sel_tmpl.Where, &Where{
+		tmpl.Where = append(tmpl.Where, &Where{
 			Op:    ast_where.Op,
 			Left:  left,
 			Right: right,
@@ -170,12 +170,12 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 	}
 
 	// Finalize OrderBy and make sure referenced fields are part of the select
-	if ast_sel.OrderBy != nil {
-		fields, err := resolveFieldRefs(lookup, ast_sel.OrderBy.Fields.Refs)
+	if ast_read.OrderBy != nil {
+		fields, err := resolveFieldRefs(lookup, ast_read.OrderBy.Fields.Refs)
 		if err != nil {
 			return nil, err
 		}
-		for _, order_by_field := range ast_sel.OrderBy.Fields.Refs {
+		for _, order_by_field := range ast_read.OrderBy.Fields.Refs {
 			if models[order_by_field.Model] == nil {
 				return nil, Error.New(
 					"%s: invalid orderby field %q; model %q is not joined",
@@ -183,73 +183,81 @@ func transformSelect(lookup *lookup, ast_sel *ast.Select) (
 			}
 		}
 
-		sel_tmpl.OrderBy = &OrderBy{
+		tmpl.OrderBy = &OrderBy{
 			Fields:     fields,
-			Descending: ast_sel.OrderBy.Descending,
+			Descending: ast_read.OrderBy.Descending,
 		}
 	}
 
-	if sel_tmpl.FuncSuffix == "" {
-		sel_tmpl.FuncSuffix = strings.Join(func_suffix, "_")
+	if tmpl.FuncSuffix == "" {
+		tmpl.FuncSuffix = strings.Join(func_suffix, "_")
 	}
 
 	// Now emit one select per view type (or one for all if unspecified)
-	view := ast_sel.View
+	view := ast_read.View
 	if view == nil {
 		view = &ast.View{
-			All: true,
+			All:   true,
+			Has:   true,
+			Count: true,
 		}
 	}
 
-	appendsel := func(v View, suffix string) {
-		sel_copy := *sel_tmpl
-		sel_copy.View = v
-		sel_copy.FuncSuffix += suffix
-		selects = append(selects, &sel_copy)
+	addView := func(v View, suffix string) {
+		read_copy := *tmpl
+		read_copy.View = v
+		read_copy.FuncSuffix += suffix
+		reads = append(reads, &read_copy)
 	}
 
 	if view.All {
 		// template is already sufficient for "all"
-		appendsel(All, "")
+		addView(All, "")
+	}
+	if view.Count {
+		addView(Count, "")
+	}
+	if view.Has {
+		addView(Has, "")
 	}
 	if view.Limit {
-		if sel_tmpl.One() {
+		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit unique select",
 				view.Pos)
 		}
-		appendsel(Limit, "_limit")
+		addView(Limit, "_limit")
 	}
 	if view.LimitOffset {
-		if sel_tmpl.One() {
+		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit/offset unique select",
 				view.Pos)
 		}
-		appendsel(LimitOffset, "_limit_offset")
+		addView(LimitOffset, "_limit_offset")
 	}
 	if view.Offset {
-		if sel_tmpl.One() {
+		if tmpl.One() {
 			return nil, Error.New("%s: cannot offset unique select",
 				view.Pos)
 		}
-		appendsel(Offset, "_offset")
+		addView(Offset, "_offset")
 	}
 	if view.Paged {
-		if sel_tmpl.OrderBy != nil {
+		if tmpl.OrderBy != nil {
 			return nil, Error.New(
 				"%s: cannot page on table %s with order by",
-				view.Pos, sel_tmpl.From)
+				view.Pos, tmpl.From)
 		}
-		if sel_tmpl.From.BasicPrimaryKey() == nil {
+		if tmpl.From.BasicPrimaryKey() == nil {
 			return nil, Error.New(
 				"%s: cannot page on table %s with composite primary key",
-				view.Pos, sel_tmpl.From)
+				view.Pos, tmpl.From)
 		}
-		if sel_tmpl.One() {
+		if tmpl.One() {
 			return nil, Error.New("%s: cannot page unique select",
 				view.Pos)
 		}
-		appendsel(Paged, "_paged")
+		addView(Paged, "_paged")
 	}
 
-	return selects, nil
+	return reads, nil
 }

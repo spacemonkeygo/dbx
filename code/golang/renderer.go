@@ -45,12 +45,12 @@ type Renderer struct {
 	header     *template.Template
 	footer     *template.Template
 	misc       *template.Template
-	ins        *template.Template
-	sel        *template.Template
-	sel_all    *template.Template
-	sel_paged  *template.Template
-	has        *template.Template
-	count      *template.Template
+	cre        *template.Template
+	get        *template.Template
+	get_all    *template.Template
+	get_paged  *template.Template
+	get_has    *template.Template
+	get_count  *template.Template
 	upd        *template.Template
 	del        *template.Template
 	del_all    *template.Template
@@ -95,32 +95,32 @@ func New(loader tmplutil.Loader, options *Options) (
 		"flatten": flattenFn,
 	}
 
-	r.ins, err = loader.Load("golang.insert.tmpl", funcs)
+	r.cre, err = loader.Load("golang.create.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
 
-	r.sel, err = loader.Load("golang.select.tmpl", funcs)
+	r.get, err = loader.Load("golang.get.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
 
-	r.sel_all, err = loader.Load("golang.select-all.tmpl", funcs)
+	r.get_all, err = loader.Load("golang.get-all.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
 
-	r.sel_paged, err = loader.Load("golang.select-paged.tmpl", funcs)
+	r.get_paged, err = loader.Load("golang.get-paged.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
 
-	r.has, err = loader.Load("golang.has.tmpl", funcs)
+	r.get_has, err = loader.Load("golang.get-has.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
 
-	r.count, err = loader.Load("golang.count.tmpl", funcs)
+	r.get_count, err = loader.Load("golang.get-count.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
@@ -156,12 +156,15 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 		return nil, err
 	}
 
-	// Render any result structs for multi-field selects
-	for _, sel := range root.Selects {
-		if len(sel.Fields) < 2 {
+	// Render any result structs for multi-field reads
+	for _, read := range root.Reads {
+		if len(read.Fields) < 2 {
 			continue
 		}
-		s := ResultStructFromSelect(sel)
+		if read.View == ir.Count || read.View == ir.Has {
+			continue
+		}
+		s := ResultStructFromRead(read)
 		if err := r.renderStruct(&buf, s); err != nil {
 			return nil, err
 		}
@@ -169,19 +172,14 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 
 	for _, dialect := range dialects {
 		var gets []*ir.Model
-		for _, ins := range root.Inserts {
-			gets = append(gets, ins.Model)
-			if err := r.renderInsert(&buf, ins, dialect); err != nil {
+		for _, cre := range root.Creates {
+			gets = append(gets, cre.Model)
+			if err := r.renderCreate(&buf, cre, dialect); err != nil {
 				return nil, err
 			}
 		}
-		for _, sel := range root.Selects {
-			if err := r.renderSelect(&buf, sel, dialect); err != nil {
-				return nil, err
-			}
-		}
-		for _, count := range root.Counts {
-			if err := r.renderCount(&buf, count, dialect); err != nil {
+		for _, read := range root.Reads {
+			if err := r.renderRead(&buf, read, dialect); err != nil {
 				return nil, err
 			}
 		}
@@ -284,50 +282,42 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	return tmplutil.Render(r.header, w, "", params)
 }
 
-func (r *Renderer) renderInsert(w io.Writer, ir_ins *ir.Insert,
+func (r *Renderer) renderCreate(w io.Writer, ir_cre *ir.Create,
 	dialect sql.Dialect) (err error) {
 
-	ins := InsertFromIR(ir_ins, dialect)
-	return r.renderFunc(r.ins, w, ins, dialect)
+	cre := CreateFromIR(ir_cre, dialect)
+	return r.renderFunc(r.cre, w, cre, dialect)
 }
 
-func (r *Renderer) renderSelect(w io.Writer, ir_sel *ir.Select,
+func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,
 	dialect sql.Dialect) error {
 
-	sel := SelectFromIR(ir_sel, dialect)
-	switch ir_sel.View {
+	get := GetFromIR(ir_read, dialect)
+	switch ir_read.View {
 	case ir.All, ir.Offset, ir.Limit, ir.LimitOffset:
-		if ir_sel.One() {
-			if err := r.renderFunc(r.sel, w, sel, dialect); err != nil {
+		if ir_read.One() {
+			if err := r.renderFunc(r.get, w, get, dialect); err != nil {
 				return err
 			}
 		} else {
-			if err := r.renderFunc(r.sel_all, w, sel, dialect); err != nil {
+			if err := r.renderFunc(r.get_all, w, get, dialect); err != nil {
 				return err
 			}
 		}
 	case ir.Paged:
-		if err := r.renderFunc(r.sel_paged, w, sel, dialect); err != nil {
+		if err := r.renderFunc(r.get_paged, w, get, dialect); err != nil {
+			return err
+		}
+	case ir.Count:
+		if err := r.renderFunc(r.get_count, w, get, dialect); err != nil {
+			return err
+		}
+	case ir.Has:
+		if err := r.renderFunc(r.get_has, w, get, dialect); err != nil {
 			return err
 		}
 	default:
-		return Error.New("unhandled select view %s", ir_sel.View)
-	}
-
-	return nil
-}
-
-func (r *Renderer) renderCount(w io.Writer, ir_count *ir.Count,
-	dialect sql.Dialect) error {
-
-	count := CountFromIR(ir_count, dialect)
-	if err := r.renderFunc(r.count, w, count, dialect); err != nil {
-		return err
-	}
-
-	count.SQL = sql.RenderHas(dialect, ir_count)
-	if err := r.renderFunc(r.has, w, count, dialect); err != nil {
-		return err
+		return Error.New("unhandled read view %s", ir_read.View)
 	}
 
 	return nil

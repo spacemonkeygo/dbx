@@ -19,9 +19,6 @@ import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 	upd *Update, err error) {
 
-	if ast_upd.Model == nil {
-		return nil, Error.New("%s: update must define a model", ast_upd.Pos)
-	}
 	model, err := lookup.FindModel(ast_upd.Model)
 	if err != nil {
 		return nil, err

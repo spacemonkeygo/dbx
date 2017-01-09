@@ -21,7 +21,8 @@ import (
 
 type Root struct {
 	Models  []*Model
-	Selects []*Select
+	Creates []*Create
+	Reads   []*Read
 	Updates []*Update
 	Deletes []*Delete
 }
@@ -183,7 +184,7 @@ type Index struct {
 	Unique bool
 }
 
-type Select struct {
+type Read struct {
 	Pos     scanner.Position
 	Fields  *FieldRefs
 	Joins   []*Join
@@ -206,6 +207,12 @@ type Update struct {
 	Where []*Where
 }
 
+type Create struct {
+	Pos   scanner.Position
+	Model *ModelRef
+	Raw   bool
+}
+
 type View struct {
 	Pos         scanner.Position
 	All         bool
@@ -213,6 +220,8 @@ type View struct {
 	Offset      bool
 	LimitOffset bool
 	Paged       bool
+	Count       bool
+	Has         bool
 }
 
 type FieldRefs struct {

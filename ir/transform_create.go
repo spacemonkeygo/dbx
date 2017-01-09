@@ -14,22 +14,18 @@
 
 package ir
 
-type Count struct {
-	FuncSuffix string
-	From       *Model
-	Joins      []*Join
-	Where      []*Where
-}
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
-func (c *Count) One() bool {
-	return WhereSetUnique(c.Where)
-}
+func transformCreate(lookup *lookup, ast_cre *ast.Create) (
+	cre *Create, err error) {
 
-func CountFromSelect(sel *Select) *Count {
-	return &Count{
-		FuncSuffix: sel.FuncSuffix,
-		From:       sel.From,
-		Joins:      sel.Joins,
-		Where:      sel.Where,
+	model, err := lookup.FindModel(ast_cre.Model)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Create{
+		Model: model,
+		Raw:   ast_cre.Raw,
+	}, nil
 }

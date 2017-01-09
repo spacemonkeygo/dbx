@@ -16,9 +16,8 @@ package ir
 
 type Root struct {
 	Models  []*Model
-	Inserts []*Insert
+	Creates []*Create
+	Reads   []*Read
 	Updates []*Update
-	Selects []*Select
-	Counts  []*Count
 	Deletes []*Delete
 }

@@ -63,12 +63,18 @@ func parseRoot(scanner *Scanner) (root *ast.Root, err error) {
 				return nil, err
 			}
 			root.Models = append(root.Models, model)
-		case "select":
-			sel, err := parseSelect(scanner)
+		case "create":
+			cre, err := parseCreate(scanner)
 			if err != nil {
 				return nil, err
 			}
-			root.Selects = append(root.Selects, sel)
+			root.Creates = append(root.Creates, cre)
+		case "read":
+			read, err := parseRead(scanner)
+			if err != nil {
+				return nil, err
+			}
+			root.Reads = append(root.Reads, read)
 		case "update":
 			upd, err := parseUpdate(scanner)
 			if err != nil {
@@ -82,7 +88,7 @@ func parseRoot(scanner *Scanner) (root *ast.Root, err error) {
 			}
 			root.Deletes = append(root.Deletes, del)
 		default:
-			return nil, expectedKeyword(pos, text, "model", "select", "update",
+			return nil, expectedKeyword(pos, text, "model", "read", "update",
 				"delete")
 		}
 	}
@@ -423,9 +429,51 @@ func parseIndex(scanner *Scanner) (index *ast.Index, err error) {
 	return index, nil
 }
 
+func parseCreate(scanner *Scanner) (cre *ast.Create, err error) {
+	cre = new(ast.Create)
+	cre.Pos = scanner.Pos()
+
+	cre.Model, err = parseModelRef(scanner)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _, err = scanner.ScanExact(OpenParen)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		token, pos, text, err := scanner.ScanOneOf(CloseParen, Ident)
+		if err != nil {
+			return nil, err
+		}
+		if token == CloseParen {
+			break
+		}
+
+		switch strings.ToLower(text) {
+		case "raw":
+			if cre.Raw {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			cre.Raw = true
+		default:
+			return nil, expectedKeyword(pos, text, "raw")
+		}
+	}
+
+	return cre, nil
+}
+
 func parseUpdate(scanner *Scanner) (upd *ast.Update, err error) {
 	upd = new(ast.Update)
 	upd.Pos = scanner.Pos()
+
+	upd.Model, err = parseModelRef(scanner)
+	if err != nil {
+		return nil, err
+	}
 
 	_, _, err = scanner.ScanExact(OpenParen)
 	if err != nil {
@@ -454,16 +502,6 @@ func parseUpdate(scanner *Scanner) (upd *ast.Update, err error) {
 				return nil, err
 			}
 			upd.Joins = append(upd.Joins, join)
-		case "model":
-			if upd.Model != nil {
-				return nil, Error.New(
-					"%s: model already defined on update at %s",
-					pos, upd.Model.Pos)
-			}
-			upd.Model, err = parseModelRef(scanner)
-			if err != nil {
-				return nil, err
-			}
 		default:
 			return nil, expectedKeyword(pos, text, "where", "join")
 		}
@@ -475,6 +513,11 @@ func parseUpdate(scanner *Scanner) (upd *ast.Update, err error) {
 func parseDelete(scanner *Scanner) (del *ast.Delete, err error) {
 	del = new(ast.Delete)
 	del.Pos = scanner.Pos()
+
+	del.Model, err = parseModelRef(scanner)
+	if err != nil {
+		return nil, err
+	}
 
 	_, _, err = scanner.ScanExact(OpenParen)
 	if err != nil {
@@ -503,17 +546,6 @@ func parseDelete(scanner *Scanner) (del *ast.Delete, err error) {
 				return nil, err
 			}
 			del.Joins = append(del.Joins, join)
-		case "model":
-			if del.Model != nil {
-				return nil, Error.New(
-					"%s: model already defined on delete at %s",
-					pos, del.Model.Pos)
-			}
-			del.Model, err = parseModelRef(scanner)
-			if err != nil {
-				return nil, err
-			}
-
 		default:
 			return nil, expectedKeyword(pos, text, "where", "join")
 		}
@@ -522,9 +554,9 @@ func parseDelete(scanner *Scanner) (del *ast.Delete, err error) {
 	return del, nil
 }
 
-func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
-	sel = new(ast.Select)
-	sel.Pos = scanner.Pos()
+func parseRead(scanner *Scanner) (read *ast.Read, err error) {
+	read = new(ast.Read)
+	read.Pos = scanner.Pos()
 
 	if _, _, err := scanner.ScanExact(OpenParen); err != nil {
 		return nil, err
@@ -537,16 +569,16 @@ func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
 		}
 
 		if token == CloseParen {
-			return sel, nil
+			return read, nil
 		}
 
 		switch text {
 		case "fields":
-			if sel.Fields != nil {
+			if read.Fields != nil {
 				return nil, Error.New("%s: fields can only be specified once",
 					pos)
 			}
-			sel.Fields, err = parseFieldRefs(scanner, modelCentricRef)
+			read.Fields, err = parseFieldRefs(scanner, modelCentricRef)
 			if err != nil {
 				return nil, err
 			}
@@ -555,28 +587,28 @@ func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
 			if err != nil {
 				return nil, err
 			}
-			sel.Where = append(sel.Where, where)
+			read.Where = append(read.Where, where)
 		case "join":
 			join, err := parseJoin(scanner)
 			if err != nil {
 				return nil, err
 			}
-			sel.Joins = append(sel.Joins, join)
+			read.Joins = append(read.Joins, join)
 		case "view":
-			if sel.View != nil {
+			if read.View != nil {
 				return nil, Error.New("%s: views can only be specified once",
 					pos)
 			}
-			sel.View, err = parseView(scanner)
+			read.View, err = parseView(scanner)
 			if err != nil {
 				return nil, err
 			}
 		case "orderby":
-			if sel.OrderBy != nil {
+			if read.OrderBy != nil {
 				return nil, Error.New("%s: orderby can only be specified once",
 					pos)
 			}
-			sel.OrderBy, err = parseOrderBy(scanner)
+			read.OrderBy, err = parseOrderBy(scanner)
 			if err != nil {
 				return nil, err
 			}
@@ -623,6 +655,16 @@ func parseView(scanner *Scanner) (view *ast.View, err error) {
 				return nil, Error.New("%s: %q already specified", pos, text)
 			}
 			view.Paged = true
+		case "count":
+			if view.Count {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			view.Count = true
+		case "has":
+			if view.Has {
+				return nil, Error.New("%s: %q already specified", pos, text)
+			}
+			view.Has = true
 		default:
 			return nil, expectedKeyword(pos, text, "all", "limit",
 				"limitoffset", "offset", "paged")

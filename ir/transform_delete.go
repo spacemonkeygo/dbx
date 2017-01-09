@@ -19,9 +19,6 @@ import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 	del *Delete, err error) {
 
-	if ast_del.Model == nil {
-		return nil, Error.New("%s: delete must define a model", ast_del.Pos)
-	}
 	model, err := lookup.FindModel(ast_del.Model)
 	if err != nil {
 		return nil, err

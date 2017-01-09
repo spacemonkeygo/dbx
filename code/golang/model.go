@@ -65,8 +65,8 @@ func (s *ModelStruct) UpdateStructName() string {
 	return "Update" + s.Name
 }
 
-func (s *ModelStruct) InsertStructName() string {
-	return "Insert" + s.Name
+func (s *ModelStruct) CreateStructName() string {
+	return "Create" + s.Name
 }
 
 type ModelField struct {

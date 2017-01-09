@@ -14,44 +14,25 @@
 
 package ir
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
-
-type Selectable interface {
-	SelectRefs() []string
-	selectable()
+type Create struct {
+	Model *Model
+	Raw   bool
 }
 
-type Select struct {
-	FuncSuffix string
-	Fields     []Selectable
-	From       *Model
-	Joins      []*Join
-	Where      []*Where
-	OrderBy    *OrderBy
-	View       View
+func (cre *Create) Fields() (fields []*Field) {
+	return cre.Model.Fields
 }
 
-func (s *Select) One() bool {
-	return WhereSetUnique(s.Where)
+func (cre *Create) InsertableFields() (fields []*Field) {
+	if cre.Raw {
+		return cre.Model.Fields
+	}
+	return cre.Model.InsertableFields()
 }
 
-type View int
-
-const (
-	All View = iota
-	Limit
-	Offset
-	LimitOffset
-	Paged
-)
-
-type Join struct {
-	Type  ast.JoinType
-	Left  *Field
-	Right *Field
-}
-
-type OrderBy struct {
-	Fields     []*Field
-	Descending bool
+func (cre *Create) AutoInsertableFields() (fields []*Field) {
+	if cre.Raw {
+		return nil
+	}
+	return cre.Model.AutoInsertableFields()
 }

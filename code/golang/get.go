@@ -22,7 +22,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
-type Select struct {
+type Get struct {
 	Suffix  string
 	Row     *Var
 	Args    []*Var
@@ -30,73 +30,73 @@ type Select struct {
 	PagedOn string
 }
 
-func SelectFromIR(ir_sel *ir.Select, dialect sql.Dialect) *Select {
-	sel := &Select{
-		Suffix: inflect.Camelize(ir_sel.FuncSuffix),
-		SQL:    sql.RenderSelect(dialect, ir_sel),
+func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
+	get := &Get{
+		Suffix: inflect.Camelize(ir_read.FuncSuffix),
+		SQL:    sql.RenderSelect(dialect, ir_read),
 	}
 
-	for _, where := range ir_sel.Where {
+	for _, where := range ir_read.Where {
 		if where.Right == nil {
-			sel.Args = append(sel.Args, VarFromField(where.Left))
+			get.Args = append(get.Args, VarFromField(where.Left))
 		}
 	}
 
-	vars := VarsFromSelectables(ir_sel.Fields)
+	vars := VarsFromSelectables(ir_read.Fields)
 	if len(vars) == 1 {
-		sel.Row = vars[0]
+		get.Row = vars[0]
 	} else {
-		sel.Row = StructVar("row", resultStructName(ir_sel.FuncSuffix), vars)
+		get.Row = StructVar("row", resultStructName(ir_read.FuncSuffix), vars)
 	}
 
-	switch ir_sel.View {
-	case ir.All:
+	switch ir_read.View {
+	case ir.All, ir.Count, ir.Has:
 	case ir.Limit:
-		sel.Args = append(sel.Args, &Var{
+		get.Args = append(get.Args, &Var{
 			Name: "limit",
 			Type: "int",
 		})
 	case ir.Offset:
-		sel.Args = append(sel.Args, &Var{
+		get.Args = append(get.Args, &Var{
 			Name: "offset",
 			Type: "int64",
 		})
 	case ir.LimitOffset:
-		sel.Args = append(sel.Args, &Var{
+		get.Args = append(get.Args, &Var{
 			Name: "limit",
 			Type: "int",
 		})
-		sel.Args = append(sel.Args, &Var{
+		get.Args = append(get.Args, &Var{
 			Name: "offset",
 			Type: "int64",
 		})
 	case ir.Paged:
-		sel.Args = append(sel.Args, &Var{
+		get.Args = append(get.Args, &Var{
 			Name: "ctoken",
 			Type: "string",
 		})
-		sel.Args = append(sel.Args, &Var{
+		get.Args = append(get.Args, &Var{
 			Name: "limit",
 			Type: "int",
 		})
-		paged_on := ModelFieldFromIR(ir_sel.From.BasicPrimaryKey()).Name
-		if len(ir_sel.Fields) >= 2 {
-			field := FieldFromSelectable(ir_sel.From)
-			sel.PagedOn = field.Name + "." + paged_on
+		paged_on := ModelFieldFromIR(ir_read.From.BasicPrimaryKey()).Name
+		if len(ir_read.Fields) >= 2 {
+			field := FieldFromSelectable(ir_read.From)
+			get.PagedOn = field.Name + "." + paged_on
 		} else {
-			sel.PagedOn = paged_on
+			get.PagedOn = paged_on
 		}
 	default:
-		panic(fmt.Sprintf("unhandled view type %s", ir_sel.View))
+		panic(fmt.Sprintf("unhandled view type %s", ir_read.View))
 	}
 
-	return sel
+	return get
 }
 
-func ResultStructFromSelect(ir_sel *ir.Select) *Struct {
+func ResultStructFromRead(ir_read *ir.Read) *Struct {
 	return &Struct{
-		Name:   resultStructName(ir_sel.FuncSuffix),
-		Fields: FieldsFromSelectables(ir_sel.Fields),
+		Name:   resultStructName(ir_read.FuncSuffix),
+		Fields: FieldsFromSelectables(ir_read.Fields),
 	}
 }
 

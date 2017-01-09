@@ -30,8 +30,8 @@ const insertTmpl = `INSERT INTO {{ .Table -}}
 	{{- end -}}
 	{{ if .Returning }} RETURNING *{{ end }}`
 
-func RenderInsert(dialect Dialect, ins *ir.Insert) string {
-	return render(dialect, insertTmpl, InsertFromIR(ins, dialect))
+func RenderInsert(dialect Dialect, cre *ir.Create) string {
+	return render(dialect, insertTmpl, InsertFromIR(cre, dialect))
 }
 
 type Insert struct {
@@ -40,13 +40,13 @@ type Insert struct {
 	Returning bool
 }
 
-func InsertFromIR(ir_ins *ir.Insert, dialect Dialect) *Insert {
+func InsertFromIR(ir_cre *ir.Create, dialect Dialect) *Insert {
 	ins := &Insert{
-		Table:     ir_ins.Model.TableName(),
+		Table:     ir_cre.Model.TableName(),
 		Returning: dialect.Features().Returning,
 	}
-	for _, field := range ir_ins.Fields() {
-		if field == ir_ins.Model.BasicPrimaryKey() && !ir_ins.Raw {
+	for _, field := range ir_cre.Fields() {
+		if field == ir_cre.Model.BasicPrimaryKey() && !ir_cre.Raw {
 			continue
 		}
 		ins.Columns = append(ins.Columns, field.ColumnName())
