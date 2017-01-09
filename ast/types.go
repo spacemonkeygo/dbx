@@ -186,7 +186,7 @@ type Index struct {
 
 type Read struct {
 	Pos     scanner.Position
-	Fields  *FieldRefs
+	Select  *FieldRefs
 	Joins   []*Join
 	Where   []*Where
 	OrderBy *OrderBy

@@ -22,13 +22,13 @@ type Selectable interface {
 }
 
 type Read struct {
-	FuncSuffix string
-	Fields     []Selectable
-	From       *Model
-	Joins      []*Join
-	Where      []*Where
-	OrderBy    *OrderBy
-	View       View
+	FuncSuffix  string
+	Selectables []Selectable
+	From        *Model
+	Joins       []*Join
+	Where       []*Where
+	OrderBy     *OrderBy
+	View        View
 }
 
 func (r *Read) One() bool {

@@ -28,14 +28,14 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	}
 
 	var func_suffix []string
-	if ast_read.Fields == nil || len(ast_read.Fields.Refs) == 0 {
+	if ast_read.Select == nil || len(ast_read.Select.Refs) == 0 {
 		return nil, Error.New("%s: no fields defined to select", ast_read.Pos)
 	}
 
 	// Figure out which models are needed for the fields and that the field
 	// references aren't repetetive.
 	selected := map[string]map[string]*ast.FieldRef{}
-	for _, ast_fieldref := range ast_read.Fields.Refs {
+	for _, ast_fieldref := range ast_read.Select.Refs {
 		fields := selected[ast_fieldref.Model]
 		if fields == nil {
 			fields = map[string]*ast.FieldRef{}
@@ -58,20 +58,20 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			if err != nil {
 				return nil, err
 			}
-			tmpl.Fields = append(tmpl.Fields, model)
+			tmpl.Selectables = append(tmpl.Selectables, model)
 			func_suffix = append(func_suffix, ast_fieldref.Model)
 		} else {
 			field, err := lookup.FindField(ast_fieldref)
 			if err != nil {
 				return nil, err
 			}
-			tmpl.Fields = append(tmpl.Fields, field)
+			tmpl.Selectables = append(tmpl.Selectables, field)
 			func_suffix = append(func_suffix,
 				ast_fieldref.Model, ast_fieldref.Field)
 		}
 	}
 
-	// Figure out set of models that are included in the select. These come from
+	// Figure out set of models that are included in the read. These come from
 	// explicit joins, or implicitly if there is only a single model referenced
 	// in the fields.
 	models := map[string]*ast.FieldRef{}
@@ -109,20 +109,20 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			models[join.Right.Model] = join.Right
 		}
 	case len(selected) == 1:
-		from, err := lookup.FindModel(ast_read.Fields.Refs[0].ModelRef())
+		from, err := lookup.FindModel(ast_read.Select.Refs[0].ModelRef())
 		if err != nil {
 			return nil, err
 		}
 		tmpl.From = from
-		models[from.Name] = ast_read.Fields.Refs[0]
+		models[from.Name] = ast_read.Select.Refs[0]
 	default:
 		return nil, Error.New(
 			"%s: cannot select from multiple models without a join",
-			ast_read.Fields.Pos)
+			ast_read.Select.Pos)
 	}
 
 	// Make sure all of the fields are accounted for in the set of models
-	for _, ast_fieldref := range ast_read.Fields.Refs {
+	for _, ast_fieldref := range ast_read.Select.Refs {
 		if models[ast_fieldref.Model] == nil {
 			return nil, Error.New(
 				"%s: cannot select field/model %q; model %q is not joined",

@@ -34,7 +34,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		Model: model,
 	}
 
-	// Figure out set of models that are included in the select.
+	// Figure out set of models that are included in the delete.
 	// These come from explicit joins.
 	models := map[string]*ast.ModelRef{
 		model.Name: ast_del.Model,

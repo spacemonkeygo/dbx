@@ -158,7 +158,7 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 
 	// Render any result structs for multi-field reads
 	for _, read := range root.Reads {
-		if len(read.Fields) < 2 {
+		if len(read.Selectables) < 2 {
 			continue
 		}
 		if read.View == ir.Count || read.View == ir.Has {

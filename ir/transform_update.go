@@ -34,7 +34,7 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 		Model: model,
 	}
 
-	// Figure out set of models that are included in the select.
+	// Figure out set of models that are included in the update.
 	// These come from explicit joins.
 	models := map[string]*ast.ModelRef{
 		model.Name: ast_upd.Model,

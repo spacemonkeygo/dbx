@@ -42,7 +42,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 		}
 	}
 
-	vars := VarsFromSelectables(ir_read.Fields)
+	vars := VarsFromSelectables(ir_read.Selectables)
 	if len(vars) == 1 {
 		get.Row = vars[0]
 	} else {
@@ -80,7 +80,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 			Type: "int",
 		})
 		paged_on := ModelFieldFromIR(ir_read.From.BasicPrimaryKey()).Name
-		if len(ir_read.Fields) >= 2 {
+		if len(ir_read.Selectables) >= 2 {
 			field := FieldFromSelectable(ir_read.From)
 			get.PagedOn = field.Name + "." + paged_on
 		} else {
@@ -96,7 +96,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 func ResultStructFromRead(ir_read *ir.Read) *Struct {
 	return &Struct{
 		Name:   resultStructName(ir_read.FuncSuffix),
-		Fields: FieldsFromSelectables(ir_read.Fields),
+		Fields: FieldsFromSelectables(ir_read.Selectables),
 	}
 }
 

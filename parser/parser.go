@@ -573,12 +573,12 @@ func parseRead(scanner *Scanner) (read *ast.Read, err error) {
 		}
 
 		switch text {
-		case "fields":
-			if read.Fields != nil {
-				return nil, Error.New("%s: fields can only be specified once",
+		case "select":
+			if read.Select != nil {
+				return nil, Error.New("%s: select can only be specified once",
 					pos)
 			}
-			read.Fields, err = parseFieldRefs(scanner, modelCentricRef)
+			read.Select, err = parseFieldRefs(scanner, modelCentricRef)
 			if err != nil {
 				return nil, err
 			}
@@ -614,7 +614,7 @@ func parseRead(scanner *Scanner) (read *ast.Read, err error) {
 			}
 		default:
 			return nil, expectedKeyword(pos, text,
-				"fields", "where", "join", "view", "orderby")
+				"select", "where", "join", "view", "orderby")
 		}
 	}
 }

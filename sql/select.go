@@ -76,8 +76,8 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 		Joins: JoinsFromIR(ir_read.Joins),
 	}
 
-	for _, ir_field := range ir_read.Fields {
-		sel.Fields = append(sel.Fields, ir_field.SelectRefs()...)
+	for _, ir_selectable := range ir_read.Selectables {
+		sel.Fields = append(sel.Fields, ir_selectable.SelectRefs()...)
 	}
 
 	if ir_read.OrderBy != nil {
