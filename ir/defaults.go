@@ -149,9 +149,12 @@ func DefaultDeleteSuffix(del *Delete) string {
 
 func whereSuffix(wheres []*Where, full bool) (parts []string) {
 	parts = append(parts, "by")
-	for _, where := range wheres {
+	for i, where := range wheres {
 		if where.Right != nil {
 			continue
+		}
+		if i > 0 {
+			parts = append(parts, "and")
 		}
 		if full {
 			parts = append(parts, where.Left.Model.Name)
