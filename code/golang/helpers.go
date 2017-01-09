@@ -73,21 +73,6 @@ func initnewFn(intf interface{}) (string, error) {
 	return strings.Join(vs, "\n"), nil
 }
 
-func autoinitFn(autoinit *AutoInit) (string, error) {
-	if autoinit == nil {
-		return "", nil
-	}
-	vs, err := forVars(autoinit.Vars, (*Var).Init)
-	if err != nil {
-		return "", err
-	}
-	if autoinit.NeedsNow {
-		vs = append([]string{"__now := Now()"}, vs...)
-	}
-
-	return strings.Join(vs, "\n"), nil
-}
-
 func zeroFn(intf interface{}) (string, error) {
 	vs, err := forVars(intf, (*Var).Zero)
 	if err != nil {

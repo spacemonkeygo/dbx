@@ -32,11 +32,6 @@ type Insert struct {
 	NeedsNow          bool
 }
 
-type AutoInit struct {
-	NeedsNow bool
-	Vars     []*Var
-}
-
 func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 	suffix := inflect.Camelize(ir_ins.Model.Name)
 	if ir_ins.Raw {
