@@ -85,15 +85,14 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	funcs := template.FuncMap{
-		"sliceof":  sliceofFn,
-		"param":    paramFn,
-		"arg":      argFn,
-		"zero":     zeroFn,
-		"init":     initFn,
-		"initnew":  initnewFn,
-		"autoinit": autoinitFn,
-		"addrof":   addrofFn,
-		"flatten":  flattenFn,
+		"sliceof": sliceofFn,
+		"param":   paramFn,
+		"arg":     argFn,
+		"zero":    zeroFn,
+		"init":    initFn,
+		"initnew": initnewFn,
+		"addrof":  addrofFn,
+		"flatten": flattenFn,
 	}
 
 	r.ins, err = loader.Load("golang.insert.tmpl", funcs)
