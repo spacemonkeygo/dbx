@@ -33,13 +33,8 @@ type Create struct {
 }
 
 func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
-	suffix := inflect.Camelize(ir_cre.Model.Name)
-	if ir_cre.Raw {
-		suffix = "Raw" + suffix
-	}
-
 	ins := &Create{
-		Suffix:            suffix,
+		Suffix:            inflect.Camelize(ir_cre.Suffix),
 		Return:            VarFromModel(ir_cre.Model),
 		SQL:               sql.RenderInsert(dialect, ir_cre),
 		SupportsReturning: dialect.Features().Returning,

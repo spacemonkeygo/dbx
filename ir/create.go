@@ -15,8 +15,9 @@
 package ir
 
 type Create struct {
-	Model *Model
-	Raw   bool
+	Suffix string
+	Model  *Model
+	Raw    bool
 }
 
 func (cre *Create) Fields() (fields []*Field) {

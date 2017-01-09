@@ -14,11 +14,7 @@
 
 package ir
 
-import (
-	"fmt"
-
-	"bitbucket.org/pkg/inflect"
-)
+import "fmt"
 
 type Model struct {
 	Name       string
@@ -27,13 +23,6 @@ type Model struct {
 	PrimaryKey []*Field
 	Unique     [][]*Field
 	Indexes    []*Index
-}
-
-func (m *Model) TableName() string {
-	if m.Table != "" {
-		return m.Table
-	}
-	return inflect.Pluralize(m.Name)
 }
 
 func (m *Model) BasicPrimaryKey() *Field {

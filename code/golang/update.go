@@ -37,7 +37,7 @@ type Update struct {
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 	sql_prefix, sql_suffix := sql.RenderUpdate(dialect, ir_upd)
 	upd := &Update{
-		Suffix:              inflect.Camelize(ir_upd.FuncSuffix()),
+		Suffix:              inflect.Camelize(ir_upd.Suffix),
 		Struct:              ModelStructFromIR(ir_upd.Model),
 		SQLPrefix:           sql_prefix,
 		SQLSuffix:           sql_suffix,

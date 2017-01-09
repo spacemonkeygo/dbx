@@ -14,11 +14,7 @@
 
 package ir
 
-import (
-	"strings"
-
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
-)
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
 func transformRead(lookup *lookup, ast_read *ast.Read) (
 	reads []*Read, err error) {
@@ -27,7 +23,6 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		FuncSuffix: "",
 	}
 
-	var func_suffix []string
 	if ast_read.Select == nil || len(ast_read.Select.Refs) == 0 {
 		return nil, Error.New("%s: no fields defined to select", ast_read.Pos)
 	}
@@ -59,15 +54,12 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 				return nil, err
 			}
 			tmpl.Selectables = append(tmpl.Selectables, model)
-			func_suffix = append(func_suffix, ast_fieldref.Model)
 		} else {
 			field, err := lookup.FindField(ast_fieldref)
 			if err != nil {
 				return nil, err
 			}
 			tmpl.Selectables = append(tmpl.Selectables, field)
-			func_suffix = append(func_suffix,
-				ast_fieldref.Model, ast_fieldref.Field)
 		}
 	}
 
@@ -132,9 +124,6 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 
 	// Finalize the where conditions and make sure referenced models are part
 	// of the select.
-	if len(ast_read.Where) > 0 {
-		func_suffix = append(func_suffix, "by")
-	}
 	for _, ast_where := range ast_read.Where {
 		left, err := lookup.FindField(ast_where.Left)
 		if err != nil {
@@ -157,9 +146,6 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 					"%s: invalid where condition %q; model %q is not joined",
 					ast_where.Pos, ast_where, ast_where.Right.Model)
 			}
-		} else {
-			func_suffix = append(func_suffix,
-				ast_where.Left.Model, ast_where.Left.Field)
 		}
 
 		tmpl.Where = append(tmpl.Where, &Where{
@@ -189,10 +175,6 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 	}
 
-	if tmpl.FuncSuffix == "" {
-		tmpl.FuncSuffix = strings.Join(func_suffix, "_")
-	}
-
 	// Now emit one select per view type (or one for all if unspecified)
 	view := ast_read.View
 	if view == nil {
@@ -203,43 +185,42 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 	}
 
-	addView := func(v View, suffix string) {
+	addView := func(v View) {
 		read_copy := *tmpl
 		read_copy.View = v
-		read_copy.FuncSuffix += suffix
 		reads = append(reads, &read_copy)
 	}
 
 	if view.All {
 		// template is already sufficient for "all"
-		addView(All, "")
+		addView(All)
 	}
 	if view.Count {
-		addView(Count, "")
+		addView(Count)
 	}
 	if view.Has {
-		addView(Has, "")
+		addView(Has)
 	}
 	if view.Limit {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit unique select",
 				view.Pos)
 		}
-		addView(Limit, "_limit")
+		addView(Limit)
 	}
 	if view.LimitOffset {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit/offset unique select",
 				view.Pos)
 		}
-		addView(LimitOffset, "_limit_offset")
+		addView(LimitOffset)
 	}
 	if view.Offset {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot offset unique select",
 				view.Pos)
 		}
-		addView(Offset, "_offset")
+		addView(Offset)
 	}
 	if view.Paged {
 		if tmpl.OrderBy != nil {
@@ -256,7 +237,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			return nil, Error.New("%s: cannot page unique select",
 				view.Pos)
 		}
-		addView(Paged, "_paged")
+		addView(Paged)
 	}
 
 	return reads, nil

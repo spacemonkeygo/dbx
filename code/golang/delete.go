@@ -29,7 +29,7 @@ type Delete struct {
 
 func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
 	del := &Delete{
-		Suffix: inflect.Camelize(ir_del.FuncSuffix()),
+		Suffix: inflect.Camelize(ir_del.Suffix),
 		SQL:    sql.RenderDelete(dialect, ir_del),
 	}
 

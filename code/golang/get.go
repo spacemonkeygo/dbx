@@ -32,7 +32,7 @@ type Get struct {
 
 func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	get := &Get{
-		Suffix: inflect.Camelize(ir_read.FuncSuffix),
+		Suffix: inflect.Camelize(ir_read.Suffix),
 		SQL:    sql.RenderSelect(dialect, ir_read),
 	}
 
@@ -46,7 +46,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	if len(vars) == 1 {
 		get.Row = vars[0]
 	} else {
-		get.Row = StructVar("row", resultStructName(ir_read.FuncSuffix), vars)
+		get.Row = StructVar("row", resultStructName(ir_read.Suffix), vars)
 	}
 
 	switch ir_read.View {
@@ -95,7 +95,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 
 func ResultStructFromRead(ir_read *ir.Read) *Struct {
 	return &Struct{
-		Name:   resultStructName(ir_read.FuncSuffix),
+		Name:   resultStructName(ir_read.Suffix),
 		Fields: FieldsFromSelectables(ir_read.Selectables),
 	}
 }

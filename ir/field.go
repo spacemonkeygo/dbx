@@ -37,17 +37,6 @@ type Field struct {
 	Length     int
 }
 
-func (f *Field) TableName() string {
-	return f.Model.TableName()
-}
-
-func (f *Field) ColumnName() string {
-	if f.Column != "" {
-		return f.Column
-	}
-	return f.Name
-}
-
 func (f *Field) Insertable() bool {
 	if f.Relation != nil {
 		return true
@@ -74,7 +63,11 @@ func (f *Field) IsTime() bool {
 }
 
 func (f *Field) ColumnRef() string {
-	return fmt.Sprintf("%s.%s", f.Model.TableName(), f.ColumnName())
+	return fmt.Sprintf("%s.%s", f.Model.Table, f.Column)
+}
+
+func (f *Field) UnderRef() string {
+	return fmt.Sprintf("%s_%s", f.Model.Table, f.Column)
 }
 
 func (f *Field) SelectRefs() (refs []string) {

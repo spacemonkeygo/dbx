@@ -22,7 +22,7 @@ type Selectable interface {
 }
 
 type Read struct {
-	FuncSuffix  string
+	Suffix      string
 	Selectables []Selectable
 	From        *Model
 	Joins       []*Join
