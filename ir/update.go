@@ -23,6 +23,7 @@ import (
 
 type Update struct {
 	Model *Model
+	Joins []*Join
 	Where []*Where
 }
 

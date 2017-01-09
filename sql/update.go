@@ -38,9 +38,30 @@ type Update struct {
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect Dialect) *Update {
+	if len(ir_upd.Joins) == 0 {
+		return &Update{
+			Table:     ir_upd.Model.TableName(),
+			Where:     WheresFromIR(ir_upd.Where),
+			Returning: dialect.Features().Returning,
+		}
+	}
+
+	column_name := ir_upd.Model.PrimaryKey[0].ColumnName()
+
+	sel := render(dialect, selectTmpl, Select{
+		From:   ir_upd.Model.TableName(),
+		Fields: []string{column_name},
+		Joins:  JoinsFromIR(ir_upd.Joins),
+		Where:  WheresFromIR(ir_upd.Where),
+	}, noTerminate)
+
 	return &Update{
 		Table:     ir_upd.Model.TableName(),
-		Where:     WheresFromIR(ir_upd.Where),
 		Returning: dialect.Features().Returning,
+		Where: []Where{{
+			Left:  column_name,
+			Op:    "IN",
+			Right: "(" + sel + ")",
+		}},
 	}
 }

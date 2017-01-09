@@ -16,32 +16,32 @@ package ir
 
 import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
-type linker struct {
-	models map[string]*modelLink
+type lookup struct {
+	models map[string]*modelEntry
 }
 
-func newLinker() *linker {
-	return &linker{
-		models: make(map[string]*modelLink),
+func newLookup() *lookup {
+	return &lookup{
+		models: make(map[string]*modelEntry),
 	}
 }
 
-func (l *linker) AddModel(ast_model *ast.Model) (link *modelLink, err error) {
+func (l *lookup) AddModel(ast_model *ast.Model) (link *modelEntry, err error) {
 	if existing, ok := l.models[ast_model.Name]; ok {
 		return nil, Error.New("%s: model %q already defined at %s",
 			ast_model.Pos, ast_model.Name, existing.ast.Pos)
 	}
 
-	link = newModelLink(ast_model)
+	link = newModelEntry(ast_model)
 	l.models[ast_model.Name] = link
 	return link, nil
 }
 
-func (l *linker) GetModel(name string) *modelLink {
+func (l *lookup) GetModel(name string) *modelEntry {
 	return l.models[name]
 }
 
-func (l *linker) FindModel(ref *ast.FieldRef) (*Model, error) {
+func (l *lookup) FindModel(ref *ast.ModelRef) (*Model, error) {
 	link := l.models[ref.Model]
 	if link != nil {
 		return link.model, nil
@@ -50,7 +50,7 @@ func (l *linker) FindModel(ref *ast.FieldRef) (*Model, error) {
 		ref.Pos, ref.Model)
 }
 
-func (l *linker) FindField(ref *ast.FieldRef) (*Field, error) {
+func (l *lookup) FindField(ref *ast.FieldRef) (*Field, error) {
 	model_link := l.models[ref.Model]
 	if model_link == nil {
 		return nil, Error.New("%s: no model %q defined",
@@ -59,23 +59,23 @@ func (l *linker) FindField(ref *ast.FieldRef) (*Field, error) {
 	return model_link.FindField(ref.Relative())
 }
 
-type modelLink struct {
+type modelEntry struct {
 	model  *Model
 	ast    *ast.Model
-	fields map[string]*fieldLink
+	fields map[string]*fieldEntry
 }
 
-func newModelLink(ast_model *ast.Model) *modelLink {
-	return &modelLink{
+func newModelEntry(ast_model *ast.Model) *modelEntry {
+	return &modelEntry{
 		model: &Model{
 			Name: ast_model.Name,
 		},
 		ast:    ast_model,
-		fields: make(map[string]*fieldLink),
+		fields: make(map[string]*fieldEntry),
 	}
 }
 
-func (m *modelLink) newFieldLink(ast_field *ast.Field) *fieldLink {
+func (m *modelEntry) newFieldEntry(ast_field *ast.Field) *fieldEntry {
 	field := &Field{
 		Name:  ast_field.Name,
 		Type:  ast_field.Type,
@@ -83,26 +83,26 @@ func (m *modelLink) newFieldLink(ast_field *ast.Field) *fieldLink {
 	}
 	m.model.Fields = append(m.model.Fields, field)
 
-	return &fieldLink{
+	return &fieldEntry{
 		field: field,
 		ast:   ast_field,
 	}
 }
 
-func (m *modelLink) AddField(ast_field *ast.Field) (err error) {
+func (m *modelEntry) AddField(ast_field *ast.Field) (err error) {
 	if existing, ok := m.fields[ast_field.Name]; ok {
 		return Error.New("%s: field %q already defined at %s",
 			ast_field.Pos, ast_field.Name, existing.ast.Pos)
 	}
-	m.fields[ast_field.Name] = m.newFieldLink(ast_field)
+	m.fields[ast_field.Name] = m.newFieldEntry(ast_field)
 	return nil
 }
 
-func (m *modelLink) GetField(name string) *fieldLink {
+func (m *modelEntry) GetField(name string) *fieldEntry {
 	return m.fields[name]
 }
 
-func (m *modelLink) FindField(ref *ast.RelativeFieldRef) (*Field, error) {
+func (m *modelEntry) FindField(ref *ast.RelativeFieldRef) (*Field, error) {
 	field_link := m.fields[ref.Field]
 	if field_link == nil {
 		return nil, Error.New("%s: no field %q defined on model %q",
@@ -111,7 +111,7 @@ func (m *modelLink) FindField(ref *ast.RelativeFieldRef) (*Field, error) {
 	return field_link.field, nil
 }
 
-type fieldLink struct {
+type fieldEntry struct {
 	field *Field
 	ast   *ast.Field
 }

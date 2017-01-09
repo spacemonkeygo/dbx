@@ -1,0 +1,49 @@
+// Copyright (C) 2016 Space Monkey, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package ir
+
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+
+func transformModels(ast_models []*ast.Model) (models []*Model, lookup *lookup,
+	err error) {
+
+	lookup = newLookup()
+
+	// step 1. create all the Model and Field instances and set their pointers
+	// to point at each other appropriately.
+	for _, ast_model := range ast_models {
+		link, err := lookup.AddModel(ast_model)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, ast_field := range ast_model.Fields {
+			if err := link.AddField(ast_field); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+
+	// step 2. resolve all of the other fields on the models and Fields
+	// including references between them.
+	for _, ast_model := range ast_models {
+		model_entry := lookup.GetModel(ast_model.Name)
+		if err := transformModel(lookup, model_entry); err != nil {
+			return nil, nil, err
+		}
+		models = append(models, model_entry.model)
+	}
+
+	return models, lookup, nil
+}

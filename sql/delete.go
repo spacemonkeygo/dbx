@@ -16,10 +16,13 @@ package sql
 
 import "gopkg.in/spacemonkeygo/dbx.v1/ir"
 
-const deleteTmpl = `DELETE FROM {{ .From }}
+const (
+	deleteTmpl = `
+	DELETE FROM {{ .From }}
 	{{- if .Where }} WHERE
 	{{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }}
 	{{- end -}}`
+)
 
 func RenderDelete(dialect Dialect, ir_del *ir.Delete) string {
 	return render(dialect, deleteTmpl, DeleteFromIR(ir_del, dialect))
@@ -31,8 +34,28 @@ type Delete struct {
 }
 
 func DeleteFromIR(ir_del *ir.Delete, dialect Dialect) *Delete {
+	if len(ir_del.Joins) == 0 {
+		return &Delete{
+			From:  ir_del.Model.TableName(),
+			Where: WheresFromIR(ir_del.Where),
+		}
+	}
+
+	column_name := ir_del.Model.PrimaryKey[0].ColumnName()
+
+	sel := render(dialect, selectTmpl, Select{
+		From:   ir_del.Model.TableName(),
+		Fields: []string{column_name},
+		Joins:  JoinsFromIR(ir_del.Joins),
+		Where:  WheresFromIR(ir_del.Where),
+	}, noTerminate)
+
 	return &Delete{
-		From:  ir_del.Model.TableName(),
-		Where: WheresFromIR(ir_del.Where),
+		From: ir_del.Model.TableName(),
+		Where: []Where{{
+			Left:  column_name,
+			Op:    "IN",
+			Right: "(" + sel + ")",
+		}},
 	}
 }

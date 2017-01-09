@@ -32,10 +32,10 @@ func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
 	for _, model := range root.Models {
 		root.Inserts = append(root.Inserts,
 			generateBasicInserts(model, options)...)
-		root.Deletes = append(root.Deletes,
-			generateBasicDeletes(model, options)...)
-		root.Updates = append(root.Updates,
-			generateBasicUpdates(model, options)...)
+		// root.Deletes = append(root.Deletes,
+		// 	generateBasicDeletes(model, options)...)
+		// root.Updates = append(root.Updates,
+		// 	generateBasicUpdates(model, options)...)
 	}
 
 	for _, sel := range root.Selects {

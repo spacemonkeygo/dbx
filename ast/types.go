@@ -22,6 +22,8 @@ import (
 type Root struct {
 	Models  []*Model
 	Selects []*Select
+	Updates []*Update
+	Deletes []*Delete
 }
 
 type Model struct {
@@ -32,9 +34,6 @@ type Model struct {
 	PrimaryKey *RelativeFieldRefs
 	Unique     []*RelativeFieldRefs
 	Indexes    []*Index
-	Cruds      []*Crud
-	Updates    []*Update
-	Deletes    []*Delete
 }
 
 type Field struct {
@@ -151,6 +150,13 @@ func (f *FieldRef) Relative() *RelativeFieldRef {
 	}
 }
 
+func (f *FieldRef) ModelRef() *ModelRef {
+	return &ModelRef{
+		Pos:   f.Pos,
+		Model: f.Model,
+	}
+}
+
 type RelativeFieldRefs struct {
 	Pos  scanner.Position
 	Refs []*RelativeFieldRef
@@ -163,6 +169,13 @@ type RelativeFieldRef struct {
 
 func (r *RelativeFieldRef) String() string { return r.Field }
 
+type ModelRef struct {
+	Pos   scanner.Position
+	Model string
+}
+
+func (m *ModelRef) String() string { return m.Model }
+
 type Index struct {
 	Pos    scanner.Position
 	Name   string
@@ -172,7 +185,6 @@ type Index struct {
 
 type Select struct {
 	Pos     scanner.Position
-	Suffix  string
 	Fields  *FieldRefs
 	Joins   []*Join
 	Where   []*Where
@@ -180,22 +192,18 @@ type Select struct {
 	View    *View
 }
 
-type Crud struct {
-	Pos    scanner.Position
-	Suffix string
-	By     *RelativeFieldRef
-}
-
 type Delete struct {
-	Pos    scanner.Position
-	Suffix string
-	By     *RelativeFieldRef
+	Pos   scanner.Position
+	Model *ModelRef
+	Joins []*Join
+	Where []*Where
 }
 
 type Update struct {
-	Pos    scanner.Position
-	Suffix string
-	By     *RelativeFieldRef
+	Pos   scanner.Position
+	Model *ModelRef
+	Joins []*Join
+	Where []*Where
 }
 
 type View struct {

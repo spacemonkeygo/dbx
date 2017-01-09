@@ -157,7 +157,7 @@ func WhereFromIR(ir_where *ir.Where) Where {
 }
 
 func WheresFromIR(ir_wheres []*ir.Where) (wheres []Where) {
-	wheres = make([]Where, len(ir_wheres))
+	wheres = make([]Where, 0, len(ir_wheres))
 	for _, ir_where := range ir_wheres {
 		wheres = append(wheres, WhereFromIR(ir_where))
 	}

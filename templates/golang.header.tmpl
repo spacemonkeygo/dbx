@@ -58,17 +58,6 @@ func (obj *DB) Close() (err error) {
 	return WrapErr(obj.DB.Close())
 }
 
-func (obj *DB) DeleteAll() (total int64, err error) {
-{{- range .StructsReverse }}
-	if n, err := obj.Delete{{ pluralize .Name }}(); err == nil {
-		total += n
-	} else {
-		return total, WrapErr(err)
-	}
-{{- end }}
-	return total, nil
-}
-
 func (obj *DB) Open() (*Tx, error) {
 	tx, err := obj.DB.Begin()
 	if err != nil {
@@ -92,17 +81,6 @@ func (tx *Tx) Commit() (err error) {
 
 func (tx *Tx) Rollback() (err error) {
 	return WrapErr(tx.tx.Rollback())
-}
-
-func (tx *Tx) DeleteAll() (total int64, err error) {
-{{- range .StructsReverse }}
-	if n, err := tx.Delete{{ pluralize .Name }}(); err == nil {
-		total += n
-	} else {
-		return total, WrapErr(err)
-	}
-{{- end }}
-	return total, nil
 }
 
 {{- range .Dialects }}

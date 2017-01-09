@@ -24,6 +24,7 @@ import (
 
 type Delete struct {
 	Model *Model
+	Joins []*Join
 	Where []*Where
 }
 
