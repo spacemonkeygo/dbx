@@ -14,8 +14,6 @@
 
 package ir
 
-import "fmt"
-
 type Model struct {
 	Name       string
 	Table      string
@@ -82,8 +80,7 @@ func (m *Model) FieldSetUnique(fields []*Field) bool {
 
 func (m *Model) SelectRefs() (refs []string) {
 	for _, field := range m.Fields {
-		refs = append(refs,
-			fmt.Sprintf("%s.%s", m.TableName(), field.ColumnName()))
+		refs = append(refs, field.SelectRefs()...)
 	}
 	return refs
 }

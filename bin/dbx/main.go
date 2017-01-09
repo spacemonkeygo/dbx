@@ -56,6 +56,7 @@ func main() {
 		die(err)
 		root, err = ir.Transform(ast_root)
 		die(err)
+		root.SetDefaults()
 
 		if *template_dir_arg != "" {
 			loader = tmplutil.DirLoader(*template_dir_arg)

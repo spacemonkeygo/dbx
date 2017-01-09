@@ -14,7 +14,13 @@
 
 package ir
 
-import "bitbucket.org/pkg/inflect"
+import (
+	"fmt"
+	"strings"
+
+	"bitbucket.org/pkg/inflect"
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+)
 
 func (root *Root) SetDefaults() {
 	for _, model := range root.Models {
@@ -42,6 +48,10 @@ func (model *Model) SetDefaults() {
 	for _, field := range model.Fields {
 		field.SetDefaults()
 	}
+
+	for _, index := range model.Indexes {
+		index.SetDefaults()
+	}
 }
 
 func (field *Field) SetDefaults() {
@@ -50,14 +60,116 @@ func (field *Field) SetDefaults() {
 	}
 }
 
+func (index *Index) SetDefaults() {
+	if index.Name == "" {
+		index.Name = DefaultIndexName(index)
+	}
+}
+
 func (cre *Create) SetDefaults() {
+	if cre.Suffix == "" {
+		cre.Suffix = DefaultCreateSuffix(cre)
+	}
 }
 
 func (read *Read) SetDefaults() {
+	if read.Suffix == "" {
+		read.Suffix = DefaultReadSuffix(read)
+	}
 }
 
-func (udp *Update) SetDefaults() {
+func (upd *Update) SetDefaults() {
+	if upd.Suffix == "" {
+		upd.Suffix = DefaultUpdateSuffix(upd)
+	}
 }
 
 func (del *Delete) SetDefaults() {
+	if del.Suffix == "" {
+		del.Suffix = DefaultDeleteSuffix(del)
+	}
+}
+
+func DefaultIndexName(i *Index) string {
+	parts := []string{i.Model.Table}
+	for _, field := range i.Fields {
+		parts = append(parts, field.Column)
+	}
+	if i.Unique {
+		parts = append(parts, "unique")
+	}
+	parts = append(parts, "index")
+	return strings.Join(parts, "_")
+}
+
+func DefaultCreateSuffix(cre *Create) string {
+	var parts []string
+	if cre.Raw {
+		parts = append(parts, "raw")
+	}
+	parts = append(parts, cre.Model.Name)
+	return strings.Join(parts, "_")
+}
+
+func DefaultReadSuffix(read *Read) string {
+	var parts []string
+	parts = append(parts, read.From.Name)
+	parts = append(parts, whereSuffix(read.Where, len(read.Joins) > 0)...)
+	switch read.View {
+	case All, Count, Has:
+	case Limit:
+		parts = append(parts, "with", "limit")
+	case Offset:
+		parts = append(parts, "with", "offset")
+	case LimitOffset:
+		parts = append(parts, "with", "limit", "offset")
+	case Paged:
+		parts = append(parts, "paged")
+	}
+	return strings.Join(parts, "_")
+}
+
+func DefaultUpdateSuffix(upd *Update) string {
+	var parts []string
+	parts = append(parts, upd.Model.Name)
+	parts = append(parts, whereSuffix(upd.Where, len(upd.Joins) > 0)...)
+	return strings.Join(parts, "_")
+}
+
+func DefaultDeleteSuffix(del *Delete) string {
+	var parts []string
+	parts = append(parts, del.Model.Name)
+	parts = append(parts, whereSuffix(del.Where, len(del.Joins) > 0)...)
+	return strings.Join(parts, "_")
+}
+
+func whereSuffix(wheres []*Where, full bool) (parts []string) {
+	for _, where := range wheres {
+		if where.Right != nil {
+			continue
+		}
+		if full {
+			parts = append(parts, "by", where.Left.Model.Name)
+		} else {
+			parts = append(parts, "by", where.Left.Name)
+		}
+		switch where.Op {
+		case ast.LT:
+			parts = append(parts, "less")
+		case ast.LE:
+			parts = append(parts, "less_or_equal")
+		case ast.GT:
+			parts = append(parts, "greater")
+		case ast.GE:
+			parts = append(parts, "greater_or_equal")
+		case ast.EQ:
+		case ast.NE:
+			parts = append(parts, "not")
+		case ast.Like:
+			parts = append(parts, "like")
+		default:
+			panic(fmt.Sprintf("unhandled operation %q", where.Op))
+		}
+	}
+	return parts
 }

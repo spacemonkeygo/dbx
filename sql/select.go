@@ -46,7 +46,7 @@ func RenderSelect(dialect Dialect, ir_read *ir.Read) string {
 func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
 	sel := Select{
 		Fields: ir_model.SelectRefs(),
-		From:   ir_model.TableName(),
+		From:   ir_model.Table,
 		Where: []Where{
 			{
 				Left:  dialect.RowId(),
@@ -71,7 +71,7 @@ type Select struct {
 
 func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 	sel := &Select{
-		From:  ir_read.From.TableName(),
+		From:  ir_read.From.Table,
 		Where: WheresFromIR(ir_read.Where),
 		Joins: JoinsFromIR(ir_read.Joins),
 	}
@@ -168,7 +168,7 @@ type Join struct {
 func JoinsFromIR(ir_joins []*ir.Join) (joins []Join) {
 	for _, ir_join := range ir_joins {
 		join := Join{
-			Table: ir_join.Right.Model.TableName(),
+			Table: ir_join.Right.Model.Table,
 			Left:  ir_join.Left.ColumnRef(),
 			Right: ir_join.Right.ColumnRef(),
 		}

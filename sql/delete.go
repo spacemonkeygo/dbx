@@ -36,24 +36,24 @@ type Delete struct {
 func DeleteFromIR(ir_del *ir.Delete, dialect Dialect) *Delete {
 	if len(ir_del.Joins) == 0 {
 		return &Delete{
-			From:  ir_del.Model.TableName(),
+			From:  ir_del.Model.Table,
 			Where: WheresFromIR(ir_del.Where),
 		}
 	}
 
-	column_name := ir_del.Model.PrimaryKey[0].ColumnName()
+	pk_column := ir_del.Model.PrimaryKey[0].Column
 
 	sel := render(dialect, selectTmpl, Select{
-		From:   ir_del.Model.TableName(),
-		Fields: []string{column_name},
+		From:   ir_del.Model.Table,
+		Fields: []string{pk_column},
 		Joins:  JoinsFromIR(ir_del.Joins),
 		Where:  WheresFromIR(ir_del.Where),
 	}, noTerminate)
 
 	return &Delete{
-		From: ir_del.Model.TableName(),
+		From: ir_del.Model.Table,
 		Where: []Where{{
-			Left:  column_name,
+			Left:  pk_column,
 			Op:    "IN",
 			Right: "(" + sel + ")",
 		}},

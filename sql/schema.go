@@ -58,18 +58,18 @@ func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
 	schema := &Schema{}
 	for _, ir_model := range ir_models {
 		table := Table{
-			Name: ir_model.TableName(),
+			Name: ir_model.Table,
 		}
 		for _, ir_field := range ir_model.Fields {
 			column := Column{
-				Name:    ir_field.ColumnName(),
+				Name:    ir_field.Column,
 				Type:    dialect.ColumnType(ir_field),
 				NotNull: !ir_field.Nullable,
 			}
 			if ir_field.Relation != nil {
 				column.Reference = &Reference{
-					Table:  ir_field.Relation.Field.TableName(),
-					Column: ir_field.Relation.Field.ColumnName(),
+					Table:  ir_field.Relation.Field.Model.Table,
+					Column: ir_field.Relation.Field.Column,
 				}
 			}
 			table.Columns = append(table.Columns, column)
@@ -77,12 +77,12 @@ func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
 		schema.Tables = append(schema.Tables, table)
 		for _, ir_index := range ir_model.Indexes {
 			index := Index{
-				Name:   ir_index.IndexName(),
-				Table:  ir_index.Model.TableName(),
+				Name:   ir_index.Name,
+				Table:  ir_index.Model.Table,
 				Unique: ir_index.Unique,
 			}
 			for _, ir_field := range ir_index.Fields {
-				index.Columns = append(index.Columns, ir_field.ColumnName())
+				index.Columns = append(index.Columns, ir_field.Column)
 			}
 			schema.Indexes = append(schema.Indexes, index)
 		}

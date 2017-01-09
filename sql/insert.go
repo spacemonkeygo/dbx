@@ -42,14 +42,14 @@ type Insert struct {
 
 func InsertFromIR(ir_cre *ir.Create, dialect Dialect) *Insert {
 	ins := &Insert{
-		Table:     ir_cre.Model.TableName(),
+		Table:     ir_cre.Model.Table,
 		Returning: dialect.Features().Returning,
 	}
 	for _, field := range ir_cre.Fields() {
 		if field == ir_cre.Model.BasicPrimaryKey() && !ir_cre.Raw {
 			continue
 		}
-		ins.Columns = append(ins.Columns, field.ColumnName())
+		ins.Columns = append(ins.Columns, field.Column)
 	}
 	return ins
 }

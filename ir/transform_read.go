@@ -19,9 +19,7 @@ import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 func transformRead(lookup *lookup, ast_read *ast.Read) (
 	reads []*Read, err error) {
 
-	tmpl := &Read{
-		FuncSuffix: "",
-	}
+	tmpl := new(Read)
 
 	if ast_read.Select == nil || len(ast_read.Select.Refs) == 0 {
 		return nil, Error.New("%s: no fields defined to select", ast_read.Pos)

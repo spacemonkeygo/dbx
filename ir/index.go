@@ -14,30 +14,9 @@
 
 package ir
 
-import "strings"
-
 type Index struct {
 	Name   string
 	Model  *Model
 	Fields []*Field
 	Unique bool
-}
-
-func (i *Index) IndexName() string {
-	if i.Name != "" {
-		return i.Name
-	}
-	return defaultIndexName(i)
-}
-
-func defaultIndexName(i *Index) string {
-	parts := []string{i.Model.TableName()}
-	for _, field := range i.Fields {
-		parts = append(parts, field.ColumnName())
-	}
-	if i.Unique {
-		parts = append(parts, "unique")
-	}
-	parts = append(parts, "index")
-	return strings.Join(parts, "_")
 }

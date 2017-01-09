@@ -86,7 +86,7 @@ func ModelFieldFromIR(field *ir.Field) *ModelField {
 		Name:       fieldName(field),
 		ModelName:  structName(field.Model),
 		Type:       fieldType(field),
-		Column:     field.ColumnName(),
+		Column:     field.Column,
 		Nullable:   field.Nullable,
 		Insertable: true,
 		AutoInsert: field.AutoInsert,
