@@ -29,7 +29,7 @@ type GenerateOptions struct {
 }
 
 func GenerateBasicQueries(root *Root, options GenerateOptions) (err error) {
-	for _, model := range root.Models.Models() {
+	for _, model := range root.Models {
 		root.Inserts = append(root.Inserts,
 			generateBasicInserts(model, options)...)
 		root.Deletes = append(root.Deletes,

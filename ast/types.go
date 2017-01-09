@@ -32,6 +32,9 @@ type Model struct {
 	PrimaryKey *RelativeFieldRefs
 	Unique     []*RelativeFieldRefs
 	Indexes    []*Index
+	Cruds      []*Crud
+	Updates    []*Update
+	Deletes    []*Delete
 }
 
 type Field struct {
@@ -168,13 +171,31 @@ type Index struct {
 }
 
 type Select struct {
-	Pos        scanner.Position
-	FuncSuffix string
-	Fields     *FieldRefs
-	Joins      []*Join
-	Where      []*Where
-	OrderBy    *OrderBy
-	View       *View
+	Pos     scanner.Position
+	Suffix  string
+	Fields  *FieldRefs
+	Joins   []*Join
+	Where   []*Where
+	OrderBy *OrderBy
+	View    *View
+}
+
+type Crud struct {
+	Pos    scanner.Position
+	Suffix string
+	By     *RelativeFieldRef
+}
+
+type Delete struct {
+	Pos    scanner.Position
+	Suffix string
+	By     *RelativeFieldRef
+}
+
+type Update struct {
+	Pos    scanner.Position
+	Suffix string
+	By     *RelativeFieldRef
 }
 
 type View struct {

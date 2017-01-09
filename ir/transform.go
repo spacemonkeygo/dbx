@@ -20,56 +20,90 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 )
 
-type Models struct {
-	models []*Model
-	linker *linker
-}
-
-func newModels() *Models {
-	return &Models{
-		linker: newLinker(),
+func Transform(ast_root *ast.Root) (root *Root, err error) {
+	models, linker, err := transformModels(ast_root.Models)
+	if err != nil {
+		return nil, err
 	}
+
+	root = &Root{
+		Models: models,
+	}
+
+	for _, ast_model := range ast_root.Models {
+		link := linker.GetModel(ast_model.Name)
+		for _, ast_crud := range ast_model.Cruds {
+			upd, del, err := createCrud(link, ast_crud)
+			if err != nil {
+				return nil, err
+			}
+			root.Updates = append(root.Updates, upd)
+			root.Deletes = append(root.Deletes, del)
+		}
+		for _, ast_update := range ast_model.Updates {
+			upd, err := createUpdate(link, ast_update)
+			if err != nil {
+				return nil, err
+			}
+			root.Updates = append(root.Updates, upd)
+		}
+		for _, ast_del := range ast_model.Deletes {
+			del, err := createDelete(link, ast_del)
+			if err != nil {
+				return nil, err
+			}
+			root.Deletes = append(root.Deletes, del)
+		}
+	}
+
+	for _, ast_sel := range ast_root.Selects {
+		selects, err := createSelects(linker, ast_sel)
+		if err != nil {
+			return nil, err
+		}
+		root.Selects = append(root.Selects, selects...)
+	}
+
+	return root, nil
 }
 
-func TransformModels(ast_models []*ast.Model) (*Models, error) {
-	m := newModels()
+func transformModels(ast_models []*ast.Model) (models []*Model, linker *linker,
+	err error) {
+
+	linker = newLinker()
 
 	// step 1. create all the Model and Field instances and set their pointers
 	// to point at each other appropriately.
 	for _, ast_model := range ast_models {
-		link, err := m.linker.AddModel(ast_model)
+		link, err := linker.AddModel(ast_model)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, ast_field := range ast_model.Fields {
 			if err := link.AddField(ast_field); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
 
-	// step 2. resolve all of the other fields on the Models and Fields
+	// step 2. resolve all of the other fields on the models and Fields
 	// including references between them.
 	for _, ast_model := range ast_models {
-		model_link := m.linker.GetModel(ast_model.Name)
-		if err := m.transformModel(model_link); err != nil {
-			return nil, err
+		model_link := linker.GetModel(ast_model.Name)
+		if err := transformModel(linker, model_link); err != nil {
+			return nil, nil, err
 		}
-		m.models = append(m.models, model_link.model)
+		models = append(models, model_link.model)
 	}
 
-	return m, nil
+	return models, linker, nil
 }
 
-func (m *Models) Models() []*Model {
-	return m.models
-}
-
-func (m *Models) resolveFields(ast_refs []*ast.FieldRef) (
+func resolveFieldRefs(linker *linker, ast_refs []*ast.FieldRef) (
 	fields []*Field, err error) {
 
 	for _, ast_ref := range ast_refs {
-		field, err := m.linker.FindField(ast_ref)
+		field, err := linker.FindField(ast_ref)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +125,7 @@ func resolveRelativeFieldRefs(model_link *modelLink,
 	return fields, nil
 }
 
-func (m *Models) transformModel(model_link *modelLink) (err error) {
+func transformModel(linker *linker, model_link *modelLink) (err error) {
 	model := model_link.model
 	ast_model := model_link.ast
 
@@ -100,7 +134,7 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 
 	for _, ast_field := range ast_model.Fields {
 		field_link := model_link.GetField(ast_field.Name)
-		if err := m.transformField(field_link); err != nil {
+		if err := transformField(linker, field_link); err != nil {
 			return err
 		}
 	}
@@ -162,7 +196,7 @@ func (m *Models) transformModel(model_link *modelLink) (err error) {
 	return nil
 }
 
-func (m *Models) transformField(field_link *fieldLink) (err error) {
+func transformField(linker *linker, field_link *fieldLink) (err error) {
 	field := field_link.field
 	ast_field := field_link.ast
 
@@ -176,7 +210,7 @@ func (m *Models) transformField(field_link *fieldLink) (err error) {
 	field.Length = ast_field.Length
 
 	if ast_field.Relation != nil {
-		related, err := m.linker.FindField(ast_field.Relation.FieldRef)
+		related, err := linker.FindField(ast_field.Relation.FieldRef)
 		if err != nil {
 			return err
 		}
@@ -189,10 +223,12 @@ func (m *Models) transformField(field_link *fieldLink) (err error) {
 	return nil
 }
 
-func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
-	err error) {
+func createSelects(linker *linker, ast_sel *ast.Select) (
+	selects []*Select, err error) {
 
-	sel_tmpl := new(Select)
+	sel_tmpl := &Select{
+		FuncSuffix: ast_sel.Suffix,
+	}
 
 	var func_suffix []string
 	if ast_sel.Fields == nil || len(ast_sel.Fields.Refs) == 0 {
@@ -221,14 +257,14 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 		fields[ast_fieldref.Field] = ast_fieldref
 
 		if ast_fieldref.Field == "" {
-			model, err := m.linker.FindModel(ast_fieldref)
+			model, err := linker.FindModel(ast_fieldref)
 			if err != nil {
 				return nil, err
 			}
 			sel_tmpl.Fields = append(sel_tmpl.Fields, model)
 			func_suffix = append(func_suffix, ast_fieldref.Model)
 		} else {
-			field, err := m.linker.FindField(ast_fieldref)
+			field, err := linker.FindField(ast_fieldref)
 			if err != nil {
 				return nil, err
 			}
@@ -246,7 +282,7 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 	case len(ast_sel.Joins) > 0:
 		next := ast_sel.Joins[0].Left.Model
 		for _, join := range ast_sel.Joins {
-			left, err := m.linker.FindField(join.Left)
+			left, err := linker.FindField(join.Left)
 			if err != nil {
 				return nil, err
 			}
@@ -255,7 +291,7 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 					"%s: model order must be consistent; expected %q; got %q",
 					join.Left.Pos, next, join.Left.Model)
 			}
-			right, err := m.linker.FindField(join.Right)
+			right, err := linker.FindField(join.Right)
 			if err != nil {
 				return nil, err
 			}
@@ -276,7 +312,7 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 			models[join.Right.Model] = join.Right
 		}
 	case len(selected) == 1:
-		from, err := m.linker.FindModel(ast_sel.Fields.Refs[0])
+		from, err := linker.FindModel(ast_sel.Fields.Refs[0])
 		if err != nil {
 			return nil, err
 		}
@@ -303,7 +339,7 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 		func_suffix = append(func_suffix, "by")
 	}
 	for _, ast_where := range ast_sel.Where {
-		left, err := m.linker.FindField(ast_where.Left)
+		left, err := linker.FindField(ast_where.Left)
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +351,7 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 
 		var right *Field
 		if ast_where.Right != nil {
-			right, err = m.linker.FindField(ast_where.Right)
+			right, err = linker.FindField(ast_where.Right)
 			if err != nil {
 				return nil, err
 			}
@@ -338,7 +374,7 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 
 	// Finalize OrderBy and make sure referenced fields are part of the select
 	if ast_sel.OrderBy != nil {
-		fields, err := m.resolveFields(ast_sel.OrderBy.Fields.Refs)
+		fields, err := resolveFieldRefs(linker, ast_sel.OrderBy.Fields.Refs)
 		if err != nil {
 			return nil, err
 		}
@@ -419,4 +455,38 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 	}
 
 	return selects, nil
+}
+
+func createCrud(link *modelLink, ast_crud *ast.Crud) (upd *Update, del *Delete,
+	err error) {
+
+	return nil, nil, nil
+}
+
+func createUpdate(link *modelLink, ast_upd *ast.Update) (upd *Update,
+	err error) {
+
+	return nil, nil
+}
+
+func createDelete(link *modelLink, ast_del *ast.Delete) (del *Delete,
+	err error) {
+
+	del = &Delete{
+		Model: link.model,
+	}
+	//	if ast_del.By != nil {
+	//		by, err := link.FindField(ast_del.By.Name)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		if
+	//		del.Where = WhereFieldsEquals(by)
+	//	}
+	//		return &Delete{
+	//			Model: model,
+	//			Where: WhereFieldsEquals(model.PrimaryKey...),
+	//		})
+
+	return del, nil
 }

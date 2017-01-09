@@ -250,7 +250,7 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 
 	params := headerParams{
 		Package: r.options.Package,
-		Structs: ModelStructsFromIR(root.Models.Models()),
+		Structs: ModelStructsFromIR(root.Models),
 	}
 
 	for i := len(params.Structs) - 1; i >= 0; i-- {

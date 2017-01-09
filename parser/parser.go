@@ -131,6 +131,24 @@ func parseModel(scanner *Scanner) (model *ast.Model, err error) {
 				return nil, err
 			}
 			model.Indexes = append(model.Indexes, index)
+		case "crud":
+			crud, err := parseCrud(scanner)
+			if err != nil {
+				return nil, err
+			}
+			model.Cruds = append(model.Cruds, crud)
+		case "update":
+			update, err := parseUpdate(scanner)
+			if err != nil {
+				return nil, err
+			}
+			model.Updates = append(model.Updates, update)
+		case "delete":
+			delete, err := parseDelete(scanner)
+			if err != nil {
+				return nil, err
+			}
+			model.Deletes = append(model.Deletes, delete)
 		default:
 			return nil, expectedKeyword(pos, text, "name", "field", "key",
 				"unique", "index")
@@ -410,6 +428,147 @@ func parseIndex(scanner *Scanner) (index *ast.Index, err error) {
 	return index, nil
 }
 
+func parseCrud(scanner *Scanner) (crud *ast.Crud, err error) {
+	crud = new(ast.Crud)
+	crud.Pos = scanner.Pos()
+
+	_, _, err = scanner.ScanExact(OpenParen)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		token, pos, text, err := scanner.ScanOneOf(CloseParen, Ident)
+		if err != nil {
+			return nil, err
+		}
+		if token == CloseParen {
+			break
+		}
+
+		switch strings.ToLower(text) {
+		case "suffix":
+			if crud.Suffix != "" {
+				return nil, Error.New(
+					"%s: suffix can only be defined once", pos)
+			}
+			_, crud.Suffix, err = scanner.ScanExact(Ident)
+			if err != nil {
+				return nil, err
+			}
+			crud.Suffix = strings.ToLower(crud.Suffix)
+		case "by":
+			if crud.By != nil {
+				return nil, Error.New(
+					"%s: by already defined on crud at %s",
+					pos, crud.By.Pos)
+			}
+			crud.By, err = parseRelativeFieldRef(scanner)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, expectedKeyword(pos, text, "suffix", "by")
+		}
+	}
+
+	return crud, nil
+}
+
+func parseUpdate(scanner *Scanner) (upd *ast.Update, err error) {
+	upd = new(ast.Update)
+	upd.Pos = scanner.Pos()
+
+	_, _, err = scanner.ScanExact(OpenParen)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		token, pos, text, err := scanner.ScanOneOf(CloseParen, Ident)
+		if err != nil {
+			return nil, err
+		}
+		if token == CloseParen {
+			break
+		}
+
+		switch strings.ToLower(text) {
+		case "suffix":
+			if upd.Suffix != "" {
+				return nil, Error.New(
+					"%s: suffix can only be defined once", pos)
+			}
+			_, upd.Suffix, err = scanner.ScanExact(Ident)
+			if err != nil {
+				return nil, err
+			}
+			upd.Suffix = strings.ToLower(upd.Suffix)
+		case "by":
+			if upd.By != nil {
+				return nil, Error.New(
+					"%s: by already defined on upd at %s",
+					pos, upd.By.Pos)
+			}
+			upd.By, err = parseRelativeFieldRef(scanner)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, expectedKeyword(pos, text, "suffix", "by")
+		}
+	}
+
+	return upd, nil
+}
+
+func parseDelete(scanner *Scanner) (del *ast.Delete, err error) {
+	del = new(ast.Delete)
+	del.Pos = scanner.Pos()
+
+	_, _, err = scanner.ScanExact(OpenParen)
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		token, pos, text, err := scanner.ScanOneOf(CloseParen, Ident)
+		if err != nil {
+			return nil, err
+		}
+		if token == CloseParen {
+			break
+		}
+
+		switch strings.ToLower(text) {
+		case "suffix":
+			if del.Suffix != "" {
+				return nil, Error.New(
+					"%s: suffix can only be defined once", pos)
+			}
+			_, del.Suffix, err = scanner.ScanExact(Ident)
+			if err != nil {
+				return nil, err
+			}
+			del.Suffix = strings.ToLower(del.Suffix)
+		case "by":
+			if del.By != nil {
+				return nil, Error.New(
+					"%s: by already defined on del at %s",
+					pos, del.By.Pos)
+			}
+			del.By, err = parseRelativeFieldRef(scanner)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, expectedKeyword(pos, text, "suffix", "by")
+		}
+	}
+
+	return del, nil
+}
+
 func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
 	sel = new(ast.Select)
 	sel.Pos = scanner.Pos()
@@ -430,11 +589,11 @@ func parseSelect(scanner *Scanner) (sel *ast.Select, err error) {
 
 		switch text {
 		case "suffix":
-			if sel.FuncSuffix != "" {
+			if sel.Suffix != "" {
 				return nil, Error.New("%s: suffix can only be specified once",
 					pos)
 			}
-			_, sel.FuncSuffix, err = scanner.ScanExact(Ident)
+			_, sel.Suffix, err = scanner.ScanExact(Ident)
 			if err != nil {
 				return nil, err
 			}

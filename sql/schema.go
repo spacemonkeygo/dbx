@@ -51,7 +51,7 @@ CREATE {{ if .Unique }}UNIQUE {{ end }}INDEX {{ .Name }} ON {{ .Table }}(
 
 func RenderSchema(dialect Dialect, ir_root *ir.Root) string {
 	return render(dialect, schemaTmpl,
-		SchemaFromIR(ir_root.Models.Models(), dialect), noFlatten, noTerminate)
+		SchemaFromIR(ir_root.Models, dialect), noFlatten, noTerminate)
 }
 
 func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
