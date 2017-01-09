@@ -46,6 +46,9 @@ func InsertFromIR(ir_ins *ir.Insert, dialect Dialect) *Insert {
 		Returning: dialect.Features().Returning,
 	}
 	for _, field := range ir_ins.Fields() {
+		if field == ir_ins.Model.BasicPrimaryKey() && !ir_ins.Raw {
+			continue
+		}
 		ins.Columns = append(ins.Columns, field.ColumnName())
 	}
 	return ins

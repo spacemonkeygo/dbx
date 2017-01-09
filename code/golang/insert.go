@@ -75,11 +75,14 @@ func InsertFromIR(ir_ins *ir.Insert, dialect sql.Dialect) *Insert {
 
 	// Now for each field
 	for _, field := range ir_ins.Fields() {
+		if field == ir_ins.Model.BasicPrimaryKey() && !ir_ins.Raw {
+			continue
+		}
 		v := VarFromField(field)
 		v.Name = fmt.Sprintf("__%s_val", v.Name)
-		f := ModelFieldFromIR(field)
 		if arg := args[field.Name]; arg != nil {
 			if field.Nullable {
+				f := ModelFieldFromIR(field)
 				v.InitVal = fmt.Sprintf("optional.%s.value()", f.Name)
 			} else {
 				v.InitVal = fmt.Sprintf("%s.value()", arg.Name)
