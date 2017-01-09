@@ -1,11 +1,11 @@
 {{- define "signature" -}}
-PagedGet{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, ctokenout string, err error)
+Get{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, ctokenout string, err error)
 {{- end -}}
 
 {{- define "body" }}{
-    if ctoken == "" {
-        ctoken = "0"
-    }
+	if ctoken == "" {
+		ctoken = "0"
+	}
 
 	const __stmt=`{{ .SQL }}`
 	obj.logStmt(__stmt, {{ arg .Args }})
@@ -28,13 +28,13 @@ PagedGet{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, ctokenout str
 		return nil, "", WrapErr(err)
 	}
 
-    if limit > 0 {
-        if len(rows) == limit {
-            ctokenout = fmt.Sprint(rows[limit-1].{{ .PagedOn }})
-        }
-    } else {
-        ctokenout = ctoken
-    }
+	if limit > 0 {
+		if len(rows) == limit {
+			ctokenout = fmt.Sprint(rows[limit-1].{{ .PagedOn }})
+		}
+	} else {
+		ctokenout = ctoken
+	}
 
 	return rows, ctokenout, nil
 }

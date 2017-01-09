@@ -415,7 +415,7 @@ func (m *Models) CreateSelects(ast_sel *ast.Select) (selects []*Select,
 			return nil, Error.New("%s: cannot page unique select",
 				view.Pos)
 		}
-		appendsel(Paged, "")
+		appendsel(Paged, "_paged")
 	}
 
 	return selects, nil

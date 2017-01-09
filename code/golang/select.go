@@ -42,6 +42,13 @@ func SelectFromIR(ir_sel *ir.Select, dialect sql.Dialect) *Select {
 		}
 	}
 
+	vars := VarsFromSelectables(ir_sel.Fields)
+	if len(vars) == 1 {
+		sel.Row = vars[0]
+	} else {
+		sel.Row = StructVar("row", resultStructName(ir_sel.FuncSuffix), vars)
+	}
+
 	switch ir_sel.View {
 	case ir.All:
 	case ir.Limit:
@@ -72,16 +79,15 @@ func SelectFromIR(ir_sel *ir.Select, dialect sql.Dialect) *Select {
 			Name: "limit",
 			Type: "int",
 		})
-		sel.PagedOn = ModelFieldFromIR(ir_sel.From.BasicPrimaryKey()).Name
+		paged_on := ModelFieldFromIR(ir_sel.From.BasicPrimaryKey()).Name
+		if len(ir_sel.Fields) >= 2 {
+			field := FieldFromSelectable(ir_sel.From)
+			sel.PagedOn = field.Name + "." + paged_on
+		} else {
+			sel.PagedOn = paged_on
+		}
 	default:
 		panic(fmt.Sprintf("unhandled view type %s", ir_sel.View))
-	}
-
-	vars := VarsFromSelectables(ir_sel.Fields)
-	if len(vars) == 1 {
-		sel.Row = vars[0]
-	} else {
-		sel.Row = StructVar("row", resultStructName(ir_sel.FuncSuffix), vars)
 	}
 
 	return sel
