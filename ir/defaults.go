@@ -113,7 +113,11 @@ func DefaultCreateSuffix(cre *Create) string {
 
 func DefaultReadSuffix(read *Read) string {
 	var parts []string
-	parts = append(parts, read.From.Name)
+	if read.One() {
+		parts = append(parts, read.From.Name)
+	} else {
+		parts = append(parts, inflect.Pluralize(read.From.Name))
+	}
 	parts = append(parts, whereSuffix(read.Where, len(read.Joins) > 0)...)
 	switch read.View {
 	case All, Count, Has:
@@ -144,15 +148,15 @@ func DefaultDeleteSuffix(del *Delete) string {
 }
 
 func whereSuffix(wheres []*Where, full bool) (parts []string) {
+	parts = append(parts, "by")
 	for _, where := range wheres {
 		if where.Right != nil {
 			continue
 		}
 		if full {
-			parts = append(parts, "by", where.Left.Model.Name)
-		} else {
-			parts = append(parts, "by", where.Left.Name)
+			parts = append(parts, where.Left.Model.Name)
 		}
+		parts = append(parts, where.Left.Name)
 		switch where.Op {
 		case ast.LT:
 			parts = append(parts, "less")
