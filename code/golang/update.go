@@ -49,7 +49,7 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 
 	for _, where := range ir_upd.Where {
 		if where.Right == nil {
-			upd.Args = append(upd.Args, VarFromField(where.Left))
+			upd.Args = append(upd.Args, ArgFromField(where.Left))
 		}
 	}
 

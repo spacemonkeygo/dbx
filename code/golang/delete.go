@@ -47,7 +47,7 @@ func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
 
 	for _, ir_where := range ir_del.Where {
 		if ir_where.Right == nil {
-			del.Args = append(del.Args, VarFromField(ir_where.Left))
+			del.Args = append(del.Args, ArgFromField(ir_where.Left))
 		}
 	}
 

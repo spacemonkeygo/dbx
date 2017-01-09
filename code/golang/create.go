@@ -51,18 +51,12 @@ func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
 	// type is used (pointer if nullable).
 	has_nullable := false
 	for _, field := range ir_cre.InsertableFields() {
-		arg_type := ModelFieldFromIR(field).UpdateStructName()
-		if field.Nullable {
-			has_nullable = true
-			arg_type = "*" + arg_type
-		}
-		arg := &Var{
-			Name: field.Name,
-			Type: arg_type,
-		}
+		arg := ArgFromField(field)
 		args[field.Name] = arg
 		if !field.Nullable {
 			ins.Args = append(ins.Args, arg)
+		} else {
+			has_nullable = true
 		}
 	}
 

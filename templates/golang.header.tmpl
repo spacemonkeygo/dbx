@@ -153,7 +153,7 @@ type {{ $struct }} struct {
 
 type {{ .CreateStructName }} struct {
 {{- range .OptionalInsertFields }}
-	{{ .Name }} *{{ .UpdateStructName }}
+	{{ .Name }} *{{ .StructName }}
 {{- end }}
 }
 {{- end }}
@@ -162,13 +162,13 @@ type {{ .CreateStructName }} struct {
 
 type {{ .UpdateStructName }} struct {
 {{- range .UpdatableFields }}
-	{{ .Name }} *{{ .UpdateStructName }}
+	{{ .Name }} *{{ .StructName }}
 {{- end }}
 }
 {{- end }}
 
 {{- range .Fields }}
-{{- $fstruct := .UpdateStructName }}
+{{- $fstruct := .StructName }}
 
 type {{ $fstruct }} struct { v {{ .Type }} }
 func {{ $struct }}_{{ .Name }}(v {{ .Type }}) {{ if .Nullable }}*{{ end }}{{ $fstruct }} { return {{ if .Nullable }}&{{ end }}{{ $fstruct }}{v: v} }

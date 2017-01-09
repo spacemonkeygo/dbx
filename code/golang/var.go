@@ -93,6 +93,15 @@ func VarsFromFields(fields []*ir.Field) (vars []*Var) {
 	return vars
 }
 
+func ArgFromField(field *ir.Field) *Var {
+	// we don't set ZeroVal or InitVal because these args should only be used
+	// as incoming arguments to function calls.
+	return &Var{
+		Name: field.Name,
+		Type: ModelFieldFromIR(field).StructName(),
+	}
+}
+
 func StructVar(name string, typ string, vars []*Var) *Var {
 	return &Var{
 		Name:    name,

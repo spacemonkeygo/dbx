@@ -149,6 +149,13 @@ func fieldType(field *ir.Field) string {
 		field.Type, field.Nullable))
 }
 
-func (f *ModelField) UpdateStructName() string {
+func (f *ModelField) StructName() string {
 	return fmt.Sprintf("%s_%sField", f.ModelName, f.Name)
+}
+
+func (f *ModelField) ArgType() string {
+	if f.Nullable {
+		return "*" + f.StructName()
+	}
+	return f.StructName()
 }

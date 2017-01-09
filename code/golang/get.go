@@ -38,7 +38,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 
 	for _, where := range ir_read.Where {
 		if where.Right == nil {
-			get.Args = append(get.Args, VarFromField(where.Left))
+			get.Args = append(get.Args, ArgFromField(where.Left))
 		}
 	}
 
