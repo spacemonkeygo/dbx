@@ -67,7 +67,7 @@ func (f *Field) ColumnRef() string {
 }
 
 func (f *Field) UnderRef() string {
-	return fmt.Sprintf("%s_%s", f.Model.Table, f.Column)
+	return fmt.Sprintf("%s_%s", f.Model.Name, f.Name)
 }
 
 func (f *Field) SelectRefs() (refs []string) {

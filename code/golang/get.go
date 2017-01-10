@@ -16,6 +16,7 @@ package golang
 
 import (
 	"fmt"
+	"strings"
 
 	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -46,7 +47,8 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	if len(vars) == 1 {
 		get.Row = vars[0]
 	} else {
-		get.Row = StructVar("row", resultStructName(ir_read.Suffix), vars)
+		result := ResultStructFromRead(ir_read)
+		get.Row = StructVar("row", result.Name, vars)
 	}
 
 	switch ir_read.View {
@@ -94,12 +96,16 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 }
 
 func ResultStructFromRead(ir_read *ir.Read) *Struct {
-	return &Struct{
-		Name:   resultStructName(ir_read.Suffix),
-		Fields: FieldsFromSelectables(ir_read.Selectables),
-	}
-}
+	fields := FieldsFromSelectables(ir_read.Selectables)
 
-func resultStructName(suffix string) string {
-	return fmt.Sprintf("%sRow", inflect.Camelize(suffix))
+	var parts []string
+	for _, field := range fields {
+		parts = append(parts, inflect.Camelize(field.Name))
+	}
+	parts = append(parts, "Row")
+
+	return &Struct{
+		Name:   strings.Join(parts, "_"),
+		Fields: fields,
+	}
 }

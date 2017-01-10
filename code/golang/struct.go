@@ -38,19 +38,19 @@ type Tag struct {
 }
 
 func FieldFromSelectable(selectable ir.Selectable) Field {
-	var name string
+	field := Field{}
 	switch obj := selectable.(type) {
 	case *ir.Model:
-		name = inflect.Camelize(obj.Name)
+		field.Name = inflect.Camelize(obj.Name)
+		field.Type = field.Name
 	case *ir.Field:
-		name = inflect.Camelize(obj.Name)
+		field.Name = inflect.Camelize(obj.Model.Name) +
+			inflect.Camelize(obj.Name)
+		field.Type = fieldType(obj)
 	default:
 		panic(fmt.Sprintf("unhandled selectable type %T", obj))
 	}
-	return Field{
-		Name: name,
-		Type: name,
-	}
+	return field
 }
 
 func FieldsFromSelectables(selectables []ir.Selectable) (fields []Field) {
