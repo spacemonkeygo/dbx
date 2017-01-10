@@ -148,6 +148,9 @@ func DefaultDeleteSuffix(del *Delete) string {
 }
 
 func whereSuffix(wheres []*Where, full bool) (parts []string) {
+	if len(wheres) == 0 {
+		return nil
+	}
 	parts = append(parts, "by")
 	for i, where := range wheres {
 		if where.Right != nil {
