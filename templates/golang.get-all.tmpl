@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-GetAll{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, err error)
+Get{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, err error)
 {{- end -}}
 
 {{- define "body" }}{

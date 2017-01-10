@@ -38,16 +38,25 @@ type Model struct {
 }
 
 type Field struct {
-	Pos        scanner.Position
-	Name       string
+	Pos  scanner.Position
+	Name string
+
+	// Common to both regular and relation fields
+	Column    string
+	Nullable  bool
+	Updatable bool
+
+	// Only make sense on a regular field
 	Type       FieldType
-	Relation   *Relation
-	Column     string
-	Nullable   bool
-	Updatable  bool
 	AutoInsert bool
 	AutoUpdate bool
 	Length     int
+	Large      bool
+
+	// Only make sense on a relation
+	Relation *FieldRef
+	Owner    bool
+	SetNull  bool
 }
 
 type FieldType int
@@ -113,19 +122,6 @@ func (f FieldType) AsLink() FieldType {
 	default:
 		return f
 	}
-}
-
-type RelationType string
-
-const (
-	HasA    = "has_a"
-	OwnedBy = "owned_by"
-)
-
-type Relation struct {
-	Pos      scanner.Position
-	FieldRef *FieldRef
-	Type     RelationType
 }
 
 type FieldRef struct {
@@ -239,7 +235,7 @@ type Join struct {
 type JoinType int
 
 const (
-	LeftJoin JoinType = iota
+	InnerJoin JoinType = iota
 )
 
 type Where struct {

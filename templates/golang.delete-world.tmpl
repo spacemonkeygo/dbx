@@ -1,0 +1,24 @@
+{{- define "signature" -}}
+DeleteAll() (count int64, err error)
+{{- end -}}
+
+{{- define "body" -}}{
+	var __res sql.Result
+	var __count int64
+
+{{- range .SQLs }}
+	__res, err = obj.driver.Exec(`{{ . }}`)
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+
+	__count, err = __res.RowsAffected()
+	if err != nil {
+		return 0, WrapErr(err)
+	}
+	count += __count
+{{- end }}
+
+	return count, nil
+}
+{{ end -}}

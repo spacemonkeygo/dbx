@@ -173,8 +173,7 @@ func JoinsFromIR(ir_joins []*ir.Join) (joins []Join) {
 			Right: ir_join.Right.ColumnRef(),
 		}
 		switch ir_join.Type {
-		case ast.LeftJoin:
-			join.Type = "LEFT"
+		case ast.InnerJoin:
 		default:
 			panic(fmt.Sprintf("unhandled join type %d", join.Type))
 		}

@@ -27,7 +27,7 @@ func VarFromSelectable(selectable ir.Selectable) (v *Var) {
 		v = VarFromModel(obj)
 	case *ir.Field:
 		v = VarFromField(obj)
-		v.Name = inflect.Camelize(obj.UnderRef())
+		v.Name = inflect.Camelize(v.Name)
 	default:
 		panic(fmt.Sprintf("unhandled selectable type %T", obj))
 	}
@@ -42,8 +42,8 @@ func VarsFromSelectables(selectables []ir.Selectable) (vars []*Var) {
 }
 
 func VarFromModel(model *ir.Model) *Var {
-	return StructVar(model.Name, structName(model),
-		VarsFromFields(model.Fields))
+	fields := VarsFromFields(model.Fields)
+	return StructVar(model.Name, structName(model), fields)
 }
 
 func VarFromField(field *ir.Field) *Var {
@@ -109,7 +109,7 @@ func ArgFromField(field *ir.Field) *Var {
 	// we don't set ZeroVal or InitVal because these args should only be used
 	// as incoming arguments to function calls.
 	return &Var{
-		Name: field.Name,
+		Name: field.UnderRef(),
 		Type: ModelFieldFromIR(field).StructName(),
 	}
 }

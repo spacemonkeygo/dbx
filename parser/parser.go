@@ -88,8 +88,8 @@ func parseRoot(scanner *Scanner) (root *ast.Root, err error) {
 			}
 			root.Deletes = append(root.Deletes, del)
 		default:
-			return nil, expectedKeyword(pos, text, "model", "read", "update",
-				"delete")
+			return nil, expectedKeyword(pos, text, "model", "create", "read",
+				"update", "delete")
 		}
 	}
 }
@@ -237,9 +237,8 @@ func parseField(scanner *Scanner) (field *ast.Field, err error) {
 			if err != nil {
 				return nil, err
 			}
-
-		// TODO: large blob support
 		case "large":
+			field.Large = true
 
 		// TODO: default values (lang side)
 		case "default":
@@ -266,7 +265,7 @@ func parseField(scanner *Scanner) (field *ast.Field, err error) {
 }
 
 func parseFieldType(scanner *Scanner) (field_type ast.FieldType,
-	relation *ast.Relation, err error) {
+	relation *ast.FieldRef, err error) {
 
 	pos, ident, err := scanner.ScanExact(Ident)
 	if err != nil {
@@ -315,14 +314,11 @@ func parseFieldType(scanner *Scanner) (field_type ast.FieldType,
 	}
 	suffix = strings.ToLower(suffix)
 
-	relation = &ast.Relation{
-		FieldRef: &ast.FieldRef{
-			Pos:   pos,
-			Model: ident,
-			Field: suffix,
-		},
-	}
-	return ast.UnsetField, relation, nil
+	return ast.UnsetField, &ast.FieldRef{
+		Pos:   pos,
+		Model: ident,
+		Field: suffix,
+	}, nil
 }
 
 func parseAttribute(scanner *Scanner) (string, error) {
@@ -767,18 +763,7 @@ func parseWhere(scanner *Scanner) (where *ast.Where, err error) {
 func parseJoin(scanner *Scanner) (join *ast.Join, err error) {
 	join = new(ast.Join)
 	join.Pos = scanner.Pos()
-
-	pos, join_type, err := scanner.ScanExact(Ident)
-	if err != nil {
-		return nil, err
-	}
-
-	switch join_type {
-	case "left":
-		join.Type = ast.LeftJoin
-	default:
-		return nil, expectedKeyword(pos, join_type, "left")
-	}
+	join.Type = ast.InnerJoin
 
 	join.Left, err = parseFieldRef(scanner, fullRef)
 	if err != nil {

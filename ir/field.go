@@ -21,7 +21,9 @@ import (
 )
 
 type Relation struct {
-	Field *Field
+	Field   *Field
+	Owner   bool
+	SetNull bool
 }
 
 type Field struct {
@@ -34,7 +36,8 @@ type Field struct {
 	AutoInsert bool
 	AutoUpdate bool
 	Updatable  bool
-	Length     int
+	Length     int  // Text only
+	Large      bool // Blob only
 }
 
 func (f *Field) Insertable() bool {
@@ -42,6 +45,10 @@ func (f *Field) Insertable() bool {
 		return true
 	}
 	return f.Type != ast.SerialField && f.Type != ast.Serial64Field
+}
+
+func (f *Field) Unique() bool {
+	return f.Model.FieldUnique(f)
 }
 
 func (f *Field) IsInt() bool {

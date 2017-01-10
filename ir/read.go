@@ -32,7 +32,7 @@ type Read struct {
 }
 
 func (r *Read) One() bool {
-	return WhereSetUnique(r.Where)
+	return queryUnique(r.From, r.Joins, r.Where)
 }
 
 type View int

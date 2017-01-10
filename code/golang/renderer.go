@@ -54,6 +54,7 @@ type Renderer struct {
 	upd        *template.Template
 	del        *template.Template
 	del_all    *template.Template
+	del_world  *template.Template
 	get_last   *template.Template
 	signatures map[string]bool
 	options    Options
@@ -140,6 +141,11 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
+	r.del_world, err = loader.Load("golang.delete-world.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
 	r.get_last, err = loader.Load("golang.get-last.tmpl", funcs)
 	if err != nil {
 		return nil, err
@@ -210,6 +216,10 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 				}
 			}
 		}
+
+		if err := r.renderDeleteWorld(&buf, root.Models, dialect); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := r.renderFooter(&buf); err != nil {
@@ -239,20 +249,15 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	}
 
 	type headerParams struct {
-		Package        string
-		ExtraImports   []headerImport
-		Dialects       []headerDialect
-		Structs        []*ModelStruct
-		StructsReverse []*ModelStruct
+		Package      string
+		ExtraImports []headerImport
+		Dialects     []headerDialect
+		Structs      []*ModelStruct
 	}
 
 	params := headerParams{
 		Package: r.options.Package,
 		Structs: ModelStructsFromIR(root.Models),
-	}
-
-	for i := len(params.Structs) - 1; i >= 0; i-- {
-		params.StructsReverse = append(params.StructsReverse, params.Structs[i])
 	}
 
 	for _, dialect := range dialects {
@@ -339,6 +344,23 @@ func (r *Renderer) renderDelete(w io.Writer, ir_del *ir.Delete,
 	} else {
 		return r.renderFunc(r.del_all, w, del, dialect)
 	}
+}
+
+func (r *Renderer) renderDeleteWorld(w io.Writer, ir_models []*ir.Model,
+	dialect sql.Dialect) error {
+
+	type deleteWorld struct {
+		SQLs []string
+	}
+
+	var del deleteWorld
+	for i := len(ir_models) - 1; i >= 0; i-- {
+		del.SQLs = append(del.SQLs, sql.RenderDelete(dialect, &ir.Delete{
+			Model: ir_models[i],
+		}))
+	}
+
+	return r.renderFunc(r.del_world, w, del, dialect)
 }
 
 func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,

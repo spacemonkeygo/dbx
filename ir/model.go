@@ -66,6 +66,10 @@ func (m *Model) AutoUpdatableFields() (fields []*Field) {
 	return fields
 }
 
+func (m *Model) FieldUnique(field *Field) bool {
+	return m.FieldSetUnique([]*Field{field})
+}
+
 func (m *Model) FieldSetUnique(fields []*Field) bool {
 	if fieldSetSubset(m.PrimaryKey, fields) {
 		return true

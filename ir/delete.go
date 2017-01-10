@@ -22,5 +22,5 @@ type Delete struct {
 }
 
 func (d *Delete) One() bool {
-	return WhereSetUnique(d.Where)
+	return queryUnique(d.Model, d.Joins, d.Where)
 }

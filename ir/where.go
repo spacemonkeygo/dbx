@@ -47,29 +47,3 @@ func FilterWhere(wheres []*Where, op ast.Operator) (filtered []*Where) {
 	}
 	return filtered
 }
-
-func WhereSetUnique(wheres []*Where) bool {
-	// Aggregate fields involved in EQ relationships
-	fields := map[*Model][]*Field{}
-	for _, eq := range FilterWhere(wheres, ast.EQ) {
-		fields[eq.Left.Model] = append(fields[eq.Left.Model], eq.Left)
-		if eq.Right != nil {
-			fields[eq.Right.Model] = append(fields[eq.Right.Model], eq.Right)
-		}
-	}
-
-	// No where conditions that can provide unique contraints
-	if len(fields) == 0 {
-		return false
-	}
-
-	// If any of the where conditions for a given model do not uniquely identify
-	// a single entry for that model, then the select can return more than one.
-	for m, fs := range fields {
-		if !m.FieldSetUnique(fs) {
-			return false
-		}
-	}
-
-	return true
-}
