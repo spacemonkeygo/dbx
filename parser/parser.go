@@ -226,18 +226,6 @@ func parseField(scanner *Scanner) (field *ast.Field, err error) {
 			field.Column, err = parseAttribute(scanner)
 		case "nullable":
 			field.Nullable = true
-		case "default":
-			//field.Default, err = parseAttribute(scanner)
-			_, err = parseAttribute(scanner)
-			if err != nil {
-				return nil, err
-			}
-		case "sqldefault":
-			//field.SQLDefault, err = parseAttribute(scanner)
-			_, err = parseAttribute(scanner)
-			if err != nil {
-				return nil, err
-			}
 		case "autoinsert":
 			field.AutoInsert = true
 		case "autoupdate":
@@ -249,9 +237,29 @@ func parseField(scanner *Scanner) (field *ast.Field, err error) {
 			if err != nil {
 				return nil, err
 			}
+
+		// TODO: large blob support
 		case "large":
+
+		// TODO: default values (lang side)
+		case "default":
+			//field.Default, err = parseAttribute(scanner)
+			_, err = parseAttribute(scanner)
+			if err != nil {
+				return nil, err
+			}
+
+		// TODO: default values (sql side)
+		case "sqldefault":
+			//field.SQLDefault, err = parseAttribute(scanner)
+			_, err = parseAttribute(scanner)
+			if err != nil {
+				return nil, err
+			}
+
 		default:
-			return nil, expectedKeyword(pos, attr, "")
+			return nil, expectedKeyword(pos, attr, "column", "nullable",
+				"autoinsert", "autoupdate", "updatable", "length", "large")
 		}
 	}
 	return field, nil

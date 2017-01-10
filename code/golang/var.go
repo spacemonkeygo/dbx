@@ -52,8 +52,18 @@ func VarFromField(field *ir.Field) *Var {
 
 	// zero val
 	switch v.Type {
-	case "int", "int64", "uint", "uint64", "float", "float64":
+	case "int":
 		v.ZeroVal = "0"
+	case "int64":
+		v.ZeroVal = "int64(0)"
+	case "uint":
+		v.ZeroVal = "uint(0)"
+	case "uint64":
+		v.ZeroVal = "uint64(0)"
+	case "float":
+		v.ZeroVal = "float32(0)"
+	case "float64":
+		v.ZeroVal = "float64(0)"
 	case "string":
 		v.ZeroVal = `""`
 	case "sql.NullBool":
