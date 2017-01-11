@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // DBX implements code generation for database schemas and accessors.
-package main // import "gopkg.in/spacemonkeygo/dbx.v1/bin/dbx"
+package main
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir/xform"
 	"gopkg.in/spacemonkeygo/dbx.v1/parser"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-	pubtemplates "gopkg.in/spacemonkeygo/dbx.v1/templates"
+	"gopkg.in/spacemonkeygo/dbx.v1/templates"
 	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
 
@@ -62,7 +62,7 @@ func main() {
 		if *template_dir_arg != "" {
 			loader = tmplutil.DirLoader(*template_dir_arg)
 		} else {
-			loader = tmplutil.BinLoader(pubtemplates.Asset)
+			loader = tmplutil.BinLoader(templates.Asset)
 		}
 	}
 
