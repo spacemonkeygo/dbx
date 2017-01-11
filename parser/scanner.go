@@ -199,15 +199,3 @@ func convertToken(tok rune) Token {
 		return Illegal
 	}
 }
-
-func expectedToken(pos scanner.Position, actual Token, expected ...Token) (
-	err error) {
-
-	if len(expected) == 1 {
-		return Error.New("%s: expected %q; got %q",
-			pos, expected[0], actual)
-	} else {
-		return Error.New("%s: expected one of %v; got %q",
-			pos, expected, actual)
-	}
-}

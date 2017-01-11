@@ -15,6 +15,7 @@
 package golang
 
 import (
+	"fmt"
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
@@ -93,6 +94,21 @@ func flattenFn(intf interface{}) (flattened []*Var, err error) {
 		return nil, Error.New("unsupported type %T", obj)
 	}
 	return flattened, nil
+}
+
+func fieldvalueFn(vars []*Var) string {
+	var values []string
+	for _, v := range vars {
+		values = append(values, fmt.Sprintf("%s.value()", v.Name))
+	}
+	return strings.Join(values, ", ")
+}
+
+func commaFn(in string) string {
+	if in == "" {
+		return ""
+	}
+	return in + ", "
 }
 
 func forVars(intf interface{}, fn func(v *Var) string) ([]string, error) {

@@ -8,7 +8,7 @@ Create{{ .Suffix }}({{ param .Args }}) ({{ param .Return }}, err error)
 	{{ end -}}
 	{{ initnew .Fields }}
 
-	const __stmt=`{{ .SQL }}`
+	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ arg .Fields }})
 
 	{{ if .SupportsReturning }}

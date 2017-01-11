@@ -14,7 +14,10 @@
 
 package xform
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
 func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 	field := field_entry.field
@@ -28,14 +31,24 @@ func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 	field.AutoInsert = ast_field.AutoInsert
 	field.AutoUpdate = ast_field.AutoUpdate
 	field.Length = ast_field.Length
+	if field.AutoUpdate {
+		field.Updatable = true
+	}
 
 	if ast_field.Relation != nil {
-		related, err := lookup.FindField(ast_field.Relation.FieldRef)
+		related, err := lookup.FindField(ast_field.Relation)
 		if err != nil {
 			return err
 		}
+
+		if ast_field.RelationKind == ast.SetNull && !field.Nullable {
+			return Error.New("%s: setnull relationships must be nullable",
+				ast_field.Pos)
+		}
+
 		field.Relation = &ir.Relation{
 			Field: related,
+			Kind:  ast_field.RelationKind,
 		}
 		field.Type = related.Type.AsLink()
 	}

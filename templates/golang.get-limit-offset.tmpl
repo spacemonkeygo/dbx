@@ -1,12 +1,12 @@
 {{- define "signature" -}}
-Get{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, err error)
+Get{{ .Suffix }}({{ param .Args | comma }}limit int, offset int64) (rows {{ sliceof .Row }}, err error
 {{- end -}}
 
 {{- define "body" }}{
 	const __stmt={{ printf "%q" .SQL }}
-	obj.logStmt(__stmt, {{ fieldvalue .Args }})
+	obj.logStmt(__stmt, {{ fieldvalue .Args | comma }}limit, offset)
 
-	__rows, err := obj.driver.Query(__stmt, {{ fieldvalue .Args}})
+	__rows, err := obj.driver.Query(__stmt, {{ fieldvalue.Args | comma}}limit, offset)
 	if err != nil {
 		return nil, WrapErr(err)
 	}

@@ -3,10 +3,10 @@ Delete{{ .Suffix }}({{ param .Args }}) (deleted bool, err error)
 {{- end -}}
 
 {{- define "body" -}}{
-	const __stmt=`{{ .SQL }}`
-	obj.logStmt(__stmt, {{ arg .Args }})
+	const __stmt={{ printf "%q" .SQL }}
+	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
-	__res, err := obj.driver.Exec(__stmt, {{ arg .Args }})
+	__res, err := obj.driver.Exec(__stmt, {{ fieldvalue .Args }})
 	if err != nil {
 		return false, WrapErr(err)
 	}

@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-Get{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, ctokenout string, err error)
+Get{{ .Suffix }}({{ param .Args | comma }}ctoken string, limit int) (rows {{ sliceof .Row }}, ctokenout string, err error)
 {{- end -}}
 
 {{- define "body" }}{
@@ -7,10 +7,10 @@ Get{{ .Suffix }}({{ param .Args }}) (rows {{ sliceof .Row }}, ctokenout string, 
 		ctoken = "0"
 	}
 
-	const __stmt=`{{ .SQL }}`
-	obj.logStmt(__stmt, {{ arg .Args }})
+	const __stmt={{ printf "%q" .SQL }}
+	obj.logStmt(__stmt, {{ fieldvalue .Args | comma }}ctoken, limit)
 
-	__rows, err := obj.driver.Query(__stmt, {{ arg .Args}})
+	__rows, err := obj.driver.Query(__stmt, {{ fieldvalue .Args | comma}}ctoken, limit)
 	if err != nil {
 		return nil, "", WrapErr(err)
 	}

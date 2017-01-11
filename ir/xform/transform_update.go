@@ -104,5 +104,11 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 		})
 	}
 
+	if !upd.One() {
+		return nil, Error.New(
+			"%s: updates for more than one row are unsupported",
+			ast_upd.Pos)
+	}
+
 	return upd, nil
 }

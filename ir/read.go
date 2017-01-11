@@ -39,8 +39,6 @@ type View int
 
 const (
 	All View = iota
-	Limit
-	Offset
 	LimitOffset
 	Paged
 	Count

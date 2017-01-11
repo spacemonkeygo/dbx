@@ -32,9 +32,18 @@ type DB struct {
 	dbMethods
 }
 
-func Open(driver, source string) (*DB, error) {
-	db, err := sql.Open(driver, source)
+func Open(driver, source string) (db *DB, err error) {
+	sql_db, err := sql.Open(driver, source)
 	if err != nil {
+		return nil, WrapErr(err)
+	}
+	defer func(sql_db *sql.DB) {
+		if err != nil {
+			sql_db.Close()		
+		}
+	}(sql_db)
+
+	if err := sql_db.Ping(); err != nil {
 		return nil, WrapErr(err)
 	}
 	
@@ -42,14 +51,19 @@ func Open(driver, source string) (*DB, error) {
 	switch driver {
 {{- range .Dialects }}
 	case {{ .Name | printf "%q" }}:
-		impl = new{{ .Name }}(db)
+		impl = new{{ .Name }}(sql_db)
+{{- range .ExecOnOpen }}
+		if _,  err := sql_db.Exec({{ printf "%q" . }}); err != nil {
+			return nil, WrapErr(err)
+		}
+{{- end }}
 {{- end }}
 	default:
 		return nil, WrapErr(fmt.Errorf("unsupported driver %s", driver))
 	}
 
 	return &DB{
-		DB: db,
+		DB: sql_db,
 		dbMethods: impl,
 	}, nil
 }
@@ -112,9 +126,7 @@ func new{{ .Name }}(db *sql.DB) *{{ $dbtype }} {
 }
 
 func (obj *{{ $dbtype }}) Schema() string {
-return `
-{{- .SchemaSQL -}}
-`
+	return `{{ .SchemaSQL }}`
 }
 
 func (obj *{{ $dbtype }}) wrapTx(tx *sql.Tx) txMethods {
@@ -134,7 +146,7 @@ type {{ $txtype }} struct {
 func {{ .Name }}LogStmt(stmt string, args ...interface{}) {
 	// TODO: render placeholders
 	if Logger != nil {
-		Logger("sql:\n%s\nargs:\n%v", stmt, args)
+		Logger("sql:\n%s\nargs:\n%q", stmt, args)
 	}
 }
 

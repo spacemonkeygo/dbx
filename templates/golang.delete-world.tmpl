@@ -7,7 +7,7 @@ DeleteAll() (count int64, err error)
 	var __count int64
 
 {{- range .SQLs }}
-	__res, err = obj.driver.Exec(`{{ . }}`)
+	__res, err = obj.driver.Exec({{ printf "%q" . }})
 	if err != nil {
 		return 0, WrapErr(err)
 	}

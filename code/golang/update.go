@@ -32,6 +32,7 @@ type Update struct {
 	PositionalArguments bool
 	ArgumentPrefix      string
 	NeedsNow            bool
+	GetSQL              string
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
@@ -56,6 +57,15 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 	for _, field := range ir_upd.AutoUpdatableFields() {
 		upd.NeedsNow = upd.NeedsNow || field.IsTime()
 		upd.AutoFields = append(upd.AutoFields, VarFromField(field))
+	}
+
+	if !upd.SupportsReturning {
+		upd.GetSQL = sql.RenderSelect(dialect, &ir.Read{
+			From:        ir_upd.Model,
+			Selectables: []ir.Selectable{ir_upd.Model},
+			Joins:       ir_upd.Joins,
+			Where:       ir_upd.Where,
+		})
 	}
 
 	return upd

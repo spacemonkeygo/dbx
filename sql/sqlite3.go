@@ -34,9 +34,8 @@ func (s *sqlite3) Name() string {
 
 func (s *sqlite3) Features() Features {
 	return Features{
-		Returning:          false,
-		NeedsLimitOnOffset: true,
-		NoLimitToken:       "-1",
+		Returning:    false,
+		NoLimitToken: "-1",
 	}
 }
 
@@ -70,3 +69,9 @@ func (s *sqlite3) Rebind(sql string) string {
 }
 
 func (s *sqlite3) ArgumentPrefix() string { return "?" }
+
+func (s *sqlite3) ExecOnOpen() []string {
+	return []string{
+		"PRAGMA foreign_keys = ON;",
+	}
+}

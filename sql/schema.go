@@ -14,7 +14,12 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
+import (
+	"fmt"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+)
 
 const (
 	schemaTmpl = `
@@ -60,6 +65,16 @@ func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
 		table := Table{
 			Name: ir_model.Table,
 		}
+		for _, ir_field := range ir_model.PrimaryKey {
+			table.PrimaryKey = append(table.PrimaryKey, ir_field.Column)
+		}
+		for _, ir_unique := range ir_model.Unique {
+			var unique []string
+			for _, ir_field := range ir_unique {
+				unique = append(unique, ir_field.Column)
+			}
+			table.Unique = append(table.Unique, unique)
+		}
 		for _, ir_field := range ir_model.Fields {
 			column := Column{
 				Name:    ir_field.Column,
@@ -70,6 +85,20 @@ func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
 				column.Reference = &Reference{
 					Table:  ir_field.Relation.Field.Model.Table,
 					Column: ir_field.Relation.Field.Column,
+				}
+				switch ir_field.Relation.Kind {
+				case ast.SetNull:
+					column.Reference.OnDelete = "SET NULL"
+					//column.Reference.OnUpdate = "RESTRICT"
+				case ast.Cascade:
+					column.Reference.OnDelete = "CASCADE"
+					//column.Reference.OnUpdate = "RESTRICT"
+				case ast.Restrict:
+					column.Reference.OnDelete = ""
+					//column.Reference.OnUpdate = "RESTRICT"
+				default:
+					panic(fmt.Sprintf("unhandled relation kind %q",
+						ir_field.Relation.Kind))
 				}
 			}
 			table.Columns = append(table.Columns, column)

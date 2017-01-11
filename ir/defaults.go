@@ -121,10 +121,6 @@ func DefaultReadSuffix(read *Read) string {
 	parts = append(parts, whereSuffix(read.Where, len(read.Joins) > 0)...)
 	switch read.View {
 	case All, Count, Has:
-	case Limit:
-		parts = append(parts, "with", "limit")
-	case Offset:
-		parts = append(parts, "with", "offset")
 	case LimitOffset:
 		parts = append(parts, "with", "limit", "offset")
 	case Paged:

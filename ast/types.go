@@ -37,6 +37,14 @@ type Model struct {
 	Indexes    []*Index
 }
 
+type RelationKind int
+
+const (
+	SetNull = iota + 1
+	Cascade
+	Restrict
+)
+
 type Field struct {
 	Pos  scanner.Position
 	Name string
@@ -51,12 +59,10 @@ type Field struct {
 	AutoInsert bool
 	AutoUpdate bool
 	Length     int
-	Large      bool
 
 	// Only make sense on a relation
-	Relation *FieldRef
-	Owner    bool
-	SetNull  bool
+	Relation     *FieldRef
+	RelationKind RelationKind
 }
 
 type FieldType int
@@ -212,8 +218,6 @@ type Create struct {
 type View struct {
 	Pos         scanner.Position
 	All         bool
-	Limit       bool
-	Offset      bool
 	LimitOffset bool
 	Paged       bool
 	Count       bool

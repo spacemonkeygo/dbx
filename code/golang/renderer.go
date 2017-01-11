@@ -86,14 +86,16 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	funcs := template.FuncMap{
-		"sliceof": sliceofFn,
-		"param":   paramFn,
-		"arg":     argFn,
-		"zero":    zeroFn,
-		"init":    initFn,
-		"initnew": initnewFn,
-		"addrof":  addrofFn,
-		"flatten": flattenFn,
+		"sliceof":    sliceofFn,
+		"param":      paramFn,
+		"arg":        argFn,
+		"zero":       zeroFn,
+		"init":       initFn,
+		"initnew":    initnewFn,
+		"addrof":     addrofFn,
+		"flatten":    flattenFn,
+		"fieldvalue": fieldvalueFn,
+		"comma":      commaFn,
 	}
 
 	r.cre, err = loader.Load("golang.create.tmpl", funcs)
@@ -244,8 +246,9 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	}
 
 	type headerDialect struct {
-		Name      string
-		SchemaSQL string
+		Name       string
+		SchemaSQL  string
+		ExecOnOpen []string
 	}
 
 	type headerParams struct {
@@ -279,8 +282,9 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 		})
 
 		params.Dialects = append(params.Dialects, headerDialect{
-			Name:      dialect.Name(),
-			SchemaSQL: dialect_schema,
+			Name:       dialect.Name(),
+			SchemaSQL:  dialect_schema,
+			ExecOnOpen: dialect.ExecOnOpen(),
 		})
 	}
 
@@ -299,7 +303,7 @@ func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,
 
 	get := GetFromIR(ir_read, dialect)
 	switch ir_read.View {
-	case ir.All, ir.Offset, ir.Limit, ir.LimitOffset:
+	case ir.All, ir.LimitOffset:
 		if ir_read.One() {
 			if err := r.renderFunc(r.get, w, get, dialect); err != nil {
 				return err

@@ -37,7 +37,6 @@ func (p *postgres) Features() Features {
 	return Features{
 		Returning:           true,
 		PositionalArguments: true,
-		NeedsLimitOnOffset:  false,
 		NoLimitToken:        "ALL",
 	}
 }
@@ -101,4 +100,5 @@ func (p *postgres) Rebind(sql string) string {
 	return string(out)
 }
 
-func (s *postgres) ArgumentPrefix() string { return "$" }
+func (p *postgres) ArgumentPrefix() string { return "$" }
+func (p *postgres) ExecOnOpen() []string   { return nil }

@@ -21,9 +21,8 @@ import (
 )
 
 type Relation struct {
-	Field   *Field
-	Owner   bool
-	SetNull bool
+	Field *Field
+	Kind  ast.RelationKind
 }
 
 type Field struct {
@@ -36,8 +35,7 @@ type Field struct {
 	AutoInsert bool
 	AutoUpdate bool
 	Updatable  bool
-	Length     int  // Text only
-	Large      bool // Blob only
+	Length     int // Text only
 }
 
 func (f *Field) Insertable() bool {

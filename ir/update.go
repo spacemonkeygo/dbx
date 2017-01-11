@@ -24,3 +24,7 @@ type Update struct {
 func (upd *Update) AutoUpdatableFields() (fields []*Field) {
 	return upd.Model.AutoUpdatableFields()
 }
+
+func (upd *Update) One() bool {
+	return queryUnique(upd.Model, upd.Joins, upd.Where)
+}

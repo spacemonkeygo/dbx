@@ -23,9 +23,6 @@ type Features struct {
 	// Supports positional argument placeholders
 	PositionalArguments bool
 
-	// Needs to emit a LIMIT whenever an OFFSET is used (i.e. sqlite3)
-	NeedsLimitOnOffset bool
-
 	// Token used with LIMIT to mean "no limit"
 	NoLimitToken string
 }
@@ -37,4 +34,5 @@ type Dialect interface {
 	ColumnType(field *ir.Field) string
 	Rebind(sql string) string
 	ArgumentPrefix() string
+	ExecOnOpen() []string
 }

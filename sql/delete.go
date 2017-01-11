@@ -41,11 +41,11 @@ func DeleteFromIR(ir_del *ir.Delete, dialect Dialect) *Delete {
 		}
 	}
 
-	pk_column := ir_del.Model.PrimaryKey[0].Column
+	pk := ir_del.Model.PrimaryKey[0].ColumnRef()
 
 	sel := render(dialect, selectTmpl, Select{
 		From:   ir_del.Model.Table,
-		Fields: []string{pk_column},
+		Fields: []string{pk},
 		Joins:  JoinsFromIR(ir_del.Joins),
 		Where:  WheresFromIR(ir_del.Where),
 	}, noTerminate)
@@ -53,7 +53,7 @@ func DeleteFromIR(ir_del *ir.Delete, dialect Dialect) *Delete {
 	return &Delete{
 		From: ir_del.Model.Table,
 		Where: []Where{{
-			Left:  pk_column,
+			Left:  pk,
 			Op:    "IN",
 			Right: "(" + sel + ")",
 		}},

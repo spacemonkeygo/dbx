@@ -3,11 +3,11 @@ Get{{ .Suffix }}({{ param .Args }}) ({{ param .Row }}, err error)
 {{- end -}}
 
 {{- define "body" }}{
-	const __stmt=`{{ .SQL }}`
-	obj.logStmt(__stmt, {{ arg .Args }})
+	const __stmt={{ printf "%q" .SQL }}
+	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
 	{{ init .Row }}
-	err = obj.driver.QueryRow(__stmt, {{ arg .Args }}).Scan({{ addrof (flatten .Row) }})
+	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Row) }})
 	if err == sql.ErrNoRows {
 		return {{ zero .Row }}, nil
 	}

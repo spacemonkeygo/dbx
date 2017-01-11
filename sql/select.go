@@ -92,13 +92,6 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 
 	switch ir_read.View {
 	case ir.All:
-	case ir.Limit:
-		sel.Limit = "?"
-	case ir.Offset:
-		if dialect.Features().NeedsLimitOnOffset {
-			sel.Limit = dialect.Features().NoLimitToken
-		}
-		sel.Offset = "?"
 	case ir.LimitOffset:
 		sel.Limit = "?"
 		sel.Offset = "?"
@@ -106,7 +99,7 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 		pk := ir_read.From.BasicPrimaryKey()
 		sel.Where = append(sel.Where, WhereFromIR(&ir.Where{
 			Left: pk,
-			Op:   ast.EQ,
+			Op:   ast.GT,
 		}))
 		sel.OrderBy = &OrderBy{
 			Fields: []string{pk.ColumnRef()},

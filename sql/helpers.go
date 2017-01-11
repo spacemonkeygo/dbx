@@ -16,9 +16,9 @@ package sql
 
 import (
 	"bytes"
-	"html/template"
 	"regexp"
 	"strings"
+	"text/template"
 )
 
 type renderOp int

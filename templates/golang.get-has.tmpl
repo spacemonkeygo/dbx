@@ -3,10 +3,10 @@ Has{{ .Suffix }}({{ param .Args }}) (has bool, err error)
 {{- end -}}
 
 {{- define "body" }}{
-	const __stmt=`{{ .SQL }}`
-	obj.logStmt(__stmt, {{ arg .Args }})
+	const __stmt={{ printf "%q" .SQL }}
+	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
-	err = obj.driver.QueryRow(__stmt, {{ arg .Args }}).Scan(&has)
+	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan(&has)
 	if err != nil {
 		return false, WrapErr(err)
 	}

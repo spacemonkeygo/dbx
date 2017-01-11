@@ -3,7 +3,7 @@ getLast{{ .Return.Type }}(pk int64) ({{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{
-	const __stmt=`{{ .SQL }}`
+	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, pk)
 
 	{{ init .Return }}

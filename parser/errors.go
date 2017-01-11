@@ -38,3 +38,15 @@ func unallowedAttribute(pos scanner.Position, field_type ast.FieldType,
 	return Error.New("%s: attribute %q not allowed for field type %q",
 		pos, attr, field_type)
 }
+
+func expectedToken(pos scanner.Position, actual Token, expected ...Token) (
+	err error) {
+
+	if len(expected) == 1 {
+		return Error.New("%s: expected %q; got %q",
+			pos, expected[0], actual)
+	} else {
+		return Error.New("%s: expected one of %v; got %q",
+			pos, expected, actual)
+	}
+}

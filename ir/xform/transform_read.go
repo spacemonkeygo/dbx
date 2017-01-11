@@ -180,9 +180,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	view := ast_read.View
 	if view == nil {
 		view = &ast.View{
-			All:   true,
-			Has:   true,
-			Count: true,
+			All: true,
 		}
 	}
 
@@ -202,26 +200,12 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	if view.Has {
 		addView(ir.Has)
 	}
-	if view.Limit {
-		if tmpl.One() {
-			return nil, Error.New("%s: cannot limit unique select",
-				view.Pos)
-		}
-		addView(ir.Limit)
-	}
 	if view.LimitOffset {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit/offset unique select",
 				view.Pos)
 		}
 		addView(ir.LimitOffset)
-	}
-	if view.Offset {
-		if tmpl.One() {
-			return nil, Error.New("%s: cannot offset unique select",
-				view.Pos)
-		}
-		addView(ir.Offset)
 	}
 	if view.Paged {
 		if tmpl.OrderBy != nil {

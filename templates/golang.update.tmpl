@@ -3,15 +3,15 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 {{- end -}}
 
 {{- define "body" -}}{
-	const __stmt_prefix=`{{ .SQLPrefix }}`
-	const __stmt_suffix=`{{ .SQLSuffix }}`
+	const __stmt_prefix={{ printf "%q" .SQLPrefix }}
+	const __stmt_suffix={{ printf "%q" .SQLSuffix }}
 
 	var qs []byte
 	var values []interface{}
 
 	{{ if .PositionalArguments }}
 	j := {{ len .Args }}
-	values = append(values, {{ arg .Args }})
+	values = append(values, {{ fieldvalue .Args }})
 	{{ end -}}
 
 	addArgument := func(name string) {
@@ -48,29 +48,37 @@ Update{{ .Suffix }}({{ param .Args }}, update {{ .Struct.UpdateStructName }}) ({
 	{{ end }}
 
 	{{ if not .PositionalArguments -}}
-	values = append(values, {{ arg .Args }})
+	values = append(values, {{ fieldvalue .Args }})
 	{{ end }}
 
 	__stmt := __stmt_prefix + string(qs[:len(qs)-2]) + __stmt_suffix
-	obj.logStmt(__stmt, {{ arg .Args }})
+	obj.logStmt(__stmt, values...)
 
-	{{ if .SupportsReturning }}
 	{{ init .Return }}
+	{{ if .SupportsReturning }}
 	err = obj.driver.QueryRow(__stmt, values...).Scan({{ addrof (flatten .Return) }})
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, WrapErr(err)
 	}
-	return {{ arg .Return }}, nil
 	{{ else -}}
-	__res, err := obj.driver.Exec(__stmt, values...)
+	_, err = obj.driver.Exec(__stmt, values...)
 	if err != nil {
 		return nil, WrapErr(err)
 	}
-	__pk, err := __res.LastInsertId()
+	const __get_stmt={{ printf "%q" .GetSQL }}
+	obj.logStmt("(IMPLIED) " + __get_stmt, {{ fieldvalue .Args }})
+
+	err = obj.driver.QueryRow(__get_stmt, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Return) }})
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, WrapErr(err)
 	}
-	return obj.getLast{{ .Return.Type }}(__pk)
 	{{ end -}}
+	return {{ arg .Return }}, nil
 }
 {{- end -}}

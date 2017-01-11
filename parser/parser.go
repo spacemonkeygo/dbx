@@ -173,6 +173,10 @@ var podFields = map[ast.FieldType]bool{
 	ast.Float64Field:      true,
 }
 
+var relationFields = map[ast.FieldType]bool{
+	ast.UnsetField: true,
+}
+
 var allowedAttributes = map[string]map[ast.FieldType]bool{
 	"column":     nil,
 	"nullable":   nil,
@@ -184,6 +188,8 @@ var allowedAttributes = map[string]map[ast.FieldType]bool{
 	"length": {
 		ast.TextField: true,
 	},
+	"owner":   relationFields,
+	"setnull": relationFields,
 }
 
 func parseField(scanner *Scanner) (field *ast.Field, err error) {
@@ -197,6 +203,14 @@ func parseField(scanner *Scanner) (field *ast.Field, err error) {
 	field.Type, field.Relation, err = parseFieldType(scanner)
 	if err != nil {
 		return nil, err
+	}
+
+	if field.Relation != nil {
+		err = parseRelation(scanner, field)
+		if err != nil {
+			return nil, err
+		}
+		return field, nil
 	}
 
 	if _, _, ok := scanner.ScanIf(OpenParen); !ok {
@@ -223,23 +237,41 @@ func parseField(scanner *Scanner) (field *ast.Field, err error) {
 
 		switch attr {
 		case "column":
+			if field.Column != "" {
+				return nil, Error.New("%s: %q already set on field", pos, attr)
+			}
 			field.Column, err = parseAttribute(scanner)
+			if err != nil {
+				return nil, err
+			}
 		case "nullable":
+			if field.Nullable {
+				return nil, Error.New("%s: %q already set on field", pos, attr)
+			}
 			field.Nullable = true
 		case "autoinsert":
+			if field.AutoInsert {
+				return nil, Error.New("%s: %q already set on field", pos, attr)
+			}
 			field.AutoInsert = true
 		case "autoupdate":
+			if field.AutoUpdate {
+				return nil, Error.New("%s: %q already set on field", pos, attr)
+			}
 			field.AutoUpdate = true
 		case "updatable":
+			if field.Updatable {
+				return nil, Error.New("%s: %q already set on field", pos, attr)
+			}
 			field.Updatable = true
 		case "length":
+			if field.Length > 0 {
+				return nil, Error.New("%s: %q already set on field", pos, attr)
+			}
 			field.Length, err = parseIntAttribute(scanner)
 			if err != nil {
 				return nil, err
 			}
-		case "large":
-			field.Large = true
-
 		// TODO: default values (lang side)
 		case "default":
 			//field.Default, err = parseAttribute(scanner)
@@ -258,7 +290,7 @@ func parseField(scanner *Scanner) (field *ast.Field, err error) {
 
 		default:
 			return nil, expectedKeyword(pos, attr, "column", "nullable",
-				"autoinsert", "autoupdate", "updatable", "length", "large")
+				"autoinsert", "autoupdate", "updatable", "length")
 		}
 	}
 	return field, nil
@@ -319,6 +351,62 @@ func parseFieldType(scanner *Scanner) (field_type ast.FieldType,
 		Model: ident,
 		Field: suffix,
 	}, nil
+}
+
+func parseRelation(scanner *Scanner, field *ast.Field) (err error) {
+	pos, text, err := scanner.ScanExact(Ident)
+	if err != nil {
+		return err
+	}
+
+	switch strings.ToLower(text) {
+	case "setnull":
+		field.RelationKind = ast.SetNull
+	case "cascade":
+		field.RelationKind = ast.Cascade
+	case "restrict":
+		field.RelationKind = ast.Restrict
+	default:
+		return expectedKeyword(pos, text, "setnull", "cascade", "restrict")
+	}
+
+	if _, _, ok := scanner.ScanIf(OpenParen); !ok {
+		return nil
+	}
+
+	for {
+		token, pos, attr, err := scanner.ScanOneOf(Ident, CloseParen)
+		if err != nil {
+			return err
+		}
+		if token == CloseParen {
+			break
+		}
+
+		switch strings.ToLower(attr) {
+		case "column":
+			if field.Column != "" {
+				return Error.New("%s: %q already set on field", pos, attr)
+			}
+			field.Column, err = parseAttribute(scanner)
+			if err != nil {
+				return err
+			}
+		case "nullable":
+			if field.Nullable {
+				return Error.New("%s: %q already set on field", pos, attr)
+			}
+			field.Nullable = true
+		case "updatable":
+			if field.Updatable {
+				return Error.New("%s: %q already set on field", pos, attr)
+			}
+			field.Updatable = true
+		default:
+			return expectedKeyword(pos, attr, "column", "nullable", "updatable")
+		}
+	}
+	return nil
 }
 
 func parseAttribute(scanner *Scanner) (string, error) {
@@ -639,21 +727,11 @@ func parseView(scanner *Scanner) (view *ast.View, err error) {
 				return nil, Error.New("%s: %q already specified", pos, text)
 			}
 			view.All = true
-		case "limit":
-			if view.Limit {
-				return nil, Error.New("%s: %q already specified", pos, text)
-			}
-			view.Limit = true
 		case "limitoffset":
 			if view.LimitOffset {
 				return nil, Error.New("%s: %q already specified", pos, text)
 			}
 			view.LimitOffset = true
-		case "offset":
-			if view.Offset {
-				return nil, Error.New("%s: %q already specified", pos, text)
-			}
-			view.Offset = true
 		case "paged":
 			if view.Paged {
 				return nil, Error.New("%s: %q already specified", pos, text)

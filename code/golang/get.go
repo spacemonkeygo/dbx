@@ -15,7 +15,6 @@
 package golang
 
 import (
-	"fmt"
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
@@ -51,36 +50,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 		get.Row = StructVar("row", result.Name, vars)
 	}
 
-	switch ir_read.View {
-	case ir.All, ir.Count, ir.Has:
-	case ir.Limit:
-		get.Args = append(get.Args, &Var{
-			Name: "limit",
-			Type: "int",
-		})
-	case ir.Offset:
-		get.Args = append(get.Args, &Var{
-			Name: "offset",
-			Type: "int64",
-		})
-	case ir.LimitOffset:
-		get.Args = append(get.Args, &Var{
-			Name: "limit",
-			Type: "int",
-		})
-		get.Args = append(get.Args, &Var{
-			Name: "offset",
-			Type: "int64",
-		})
-	case ir.Paged:
-		get.Args = append(get.Args, &Var{
-			Name: "ctoken",
-			Type: "string",
-		})
-		get.Args = append(get.Args, &Var{
-			Name: "limit",
-			Type: "int",
-		})
+	if ir_read.View == ir.Paged {
 		paged_on := ModelFieldFromIR(ir_read.From.BasicPrimaryKey()).Name
 		if len(ir_read.Selectables) >= 2 {
 			field := FieldFromSelectable(ir_read.From)
@@ -88,8 +58,6 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 		} else {
 			get.PagedOn = paged_on
 		}
-	default:
-		panic(fmt.Sprintf("unhandled view type %s", ir_read.View))
 	}
 
 	return get
