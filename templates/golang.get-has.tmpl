@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-Has{{ .Suffix }}({{ param .Args }}) (has bool, err error)
+Has{{ .Suffix }}({{ ctxparam .Args }}) (has bool, err error)
 {{- end -}}
 
 {{- define "body" }}{

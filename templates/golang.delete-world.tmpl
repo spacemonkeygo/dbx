@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-DeleteAll() (count int64, err error)
+DeleteAll(ctx context.Context) (count int64, err error)
 {{- end -}}
 
 {{- define "body" -}}{

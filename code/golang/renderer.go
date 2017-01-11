@@ -96,6 +96,7 @@ func New(loader tmplutil.Loader, options *Options) (
 		"flatten":    flattenFn,
 		"fieldvalue": fieldvalueFn,
 		"comma":      commaFn,
+		"ctxparam":   ctxparamFn,
 	}
 
 	r.cre, err = loader.Load("golang.create.tmpl", funcs)

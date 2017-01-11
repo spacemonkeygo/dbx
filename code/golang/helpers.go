@@ -104,6 +104,17 @@ func fieldvalueFn(vars []*Var) string {
 	return strings.Join(values, ", ")
 }
 
+func ctxparamFn(intf interface{}) (string, error) {
+	param, err := paramFn(intf)
+	if err != nil {
+		return "", err
+	}
+	if param == "" {
+		return "", nil
+	}
+	return "ctx context.Context, " + param, nil
+}
+
 func commaFn(in string) string {
 	if in == "" {
 		return ""

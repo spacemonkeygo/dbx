@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-Create{{ .Suffix }}({{ param .Args }}) ({{ param .Return }}, err error)
+Create{{ .Suffix }}({{ ctxparam .Args }}) ({{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{
