@@ -14,18 +14,18 @@
 
 package ir
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import "gopkg.in/spacemonkeygo/dbx.v1/consts"
 
 type Where struct {
 	Left  *Field
-	Op    ast.Operator
+	Op    consts.Operator
 	Right *Field
 }
 
 func WhereFieldEquals(field *Field) *Where {
 	return &Where{
 		Left: field,
-		Op:   ast.EQ,
+		Op:   consts.EQ,
 	}
 }
 
@@ -39,7 +39,7 @@ func WhereFieldsEquals(fields ...*Field) (wheres []*Where) {
 	return wheres
 }
 
-func FilterWhere(wheres []*Where, op ast.Operator) (filtered []*Where) {
+func FilterWhere(wheres []*Where, op consts.Operator) (filtered []*Where) {
 	for _, where := range wheres {
 		if where.Op == op {
 			filtered = append(filtered, where)

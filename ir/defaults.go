@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 )
 
 func (root *Root) SetDefaults() {
@@ -162,18 +162,18 @@ func whereSuffix(wheres []*Where, full bool) (parts []string) {
 		}
 		parts = append(parts, where.Left.Name)
 		switch where.Op {
-		case ast.LT:
+		case consts.LT:
 			parts = append(parts, "less")
-		case ast.LE:
+		case consts.LE:
 			parts = append(parts, "less_or_equal")
-		case ast.GT:
+		case consts.GT:
 			parts = append(parts, "greater")
-		case ast.GE:
+		case consts.GE:
 			parts = append(parts, "greater_or_equal")
-		case ast.EQ:
-		case ast.NE:
+		case consts.EQ:
+		case consts.NE:
 			parts = append(parts, "not")
-		case ast.Like:
+		case consts.Like:
 			parts = append(parts, "like")
 		default:
 			panic(fmt.Sprintf("unhandled operation %q", where.Op))

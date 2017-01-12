@@ -23,11 +23,11 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 	model := model_entry.model
 	ast_model := model_entry.ast
 
-	model.Name = ast_model.Name
-	model.Table = ast_model.Table
+	model.Name = ast_model.Name.Value
+	model.Table = ast_model.Table.Get()
 
 	for _, ast_field := range ast_model.Fields {
-		field_entry := model_entry.GetField(ast_field.Name)
+		field_entry := model_entry.GetField(ast_field.Name.Value)
 		if err := transformField(lookup, field_entry); err != nil {
 			return err
 		}
@@ -63,15 +63,17 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 
 	index_names := map[string]*ast.Index{}
 	for _, ast_index := range ast_model.Indexes {
-		if existing, ok := index_names[ast_index.Name]; ok {
+		// BUG(jeff): we can only have one index without a name specified when
+		// really we want to pick a name for them that won't collide.
+		if existing, ok := index_names[ast_index.Name.Get()]; ok {
 			return Error.New("%s: index %q already defined at %s",
 				ast_index.Pos, ast_index.Name, existing.Pos)
 		}
-		index_names[ast_index.Name] = ast_index
+		index_names[ast_index.Name.Get()] = ast_index
 
 		if ast_index.Fields == nil || len(ast_index.Fields.Refs) < 1 {
 			return Error.New("%s: index %q has no fields defined",
-				ast_index.Pos, ast_index.Name)
+				ast_index.Pos, ast_index.Name.Get())
 		}
 
 		fields, err := resolveRelativeFieldRefs(
@@ -80,10 +82,10 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 			return err
 		}
 		model.Indexes = append(model.Indexes, &ir.Index{
-			Name:   ast_index.Name,
+			Name:   ast_index.Name.Get(),
 			Model:  fields[0].Model,
 			Fields: fields,
-			Unique: ast_index.Unique,
+			Unique: ast_index.Unique.Get(),
 		})
 	}
 

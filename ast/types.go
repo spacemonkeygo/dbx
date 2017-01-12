@@ -15,8 +15,9 @@
 package ast
 
 import (
-	"fmt"
 	"text/scanner"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 )
 
 type Root struct {
@@ -27,123 +28,86 @@ type Root struct {
 	Deletes []*Delete
 }
 
+type String struct {
+	Pos   scanner.Position
+	Value string
+}
+
+func (s *String) Get() string {
+	if s == nil {
+		return ""
+	}
+	return s.Value
+}
+
 type Model struct {
 	Pos        scanner.Position
-	Name       string
-	Table      string
+	Name       *String
+	Table      *String
 	Fields     []*Field
 	PrimaryKey *RelativeFieldRefs
 	Unique     []*RelativeFieldRefs
 	Indexes    []*Index
 }
 
-type RelationKind int
+type Bool struct {
+	Pos   scanner.Position
+	Value bool
+}
 
-const (
-	SetNull = iota + 1
-	Cascade
-	Restrict
-)
+func (b *Bool) Get() bool {
+	if b == nil {
+		return false
+	}
+	return b.Value
+}
+
+type Int struct {
+	Pos   scanner.Position
+	Value int
+}
+
+func (i *Int) Get() int {
+	if i == nil {
+		return 0
+	}
+	return i.Value
+}
 
 type Field struct {
 	Pos  scanner.Position
-	Name string
+	Name *String
 
 	// Common to both regular and relation fields
-	Column    string
-	Nullable  bool
-	Updatable bool
+	Column    *String
+	Nullable  *Bool
+	Updatable *Bool
 
 	// Only make sense on a regular field
-	Type       FieldType
-	AutoInsert bool
-	AutoUpdate bool
-	Length     int
+	Type       *FieldType
+	AutoInsert *Bool
+	AutoUpdate *Bool
+	Length     *Int
 
 	// Only make sense on a relation
 	Relation     *FieldRef
-	RelationKind RelationKind
+	RelationKind *RelationKind
 }
 
-type FieldType int
-
-const (
-	UnsetField FieldType = iota
-	SerialField
-	Serial64Field
-	IntField
-	Int64Field
-	UintField
-	Uint64Field
-	FloatField
-	Float64Field
-	TextField
-	BoolField
-	TimestampField
-	TimestampUTCField
-	BlobField
-)
-
-func (f FieldType) String() string {
-	switch f {
-	case UnsetField:
-		return "<UNSET-FIELD>"
-	case SerialField:
-		return "serial"
-	case Serial64Field:
-		return "serial64"
-	case IntField:
-		return "int"
-	case Int64Field:
-		return "int64"
-	case UintField:
-		return "uint"
-	case Uint64Field:
-		return "uint64"
-	case FloatField:
-		return "float"
-	case Float64Field:
-		return "float64"
-	case TextField:
-		return "text"
-	case BoolField:
-		return "bool"
-	case TimestampField:
-		return "timestamp"
-	case TimestampUTCField:
-		return "utimestamp"
-	case BlobField:
-		return "blob"
-	default:
-		return "<UNKNOWN-FIELD>"
-	}
+type RelationKind struct {
+	Pos   scanner.Position
+	Value consts.RelationKind
 }
 
-func (f FieldType) AsLink() FieldType {
-	switch f {
-	case SerialField:
-		return IntField
-	case Serial64Field:
-		return Int64Field
-	default:
-		return f
-	}
+type FieldType struct {
+	Pos   scanner.Position
+	Value consts.FieldType
 }
 
 type FieldRef struct {
 	Pos   scanner.Position
-	Model string
-	Field string
-}
-
-func (r *FieldRef) String() string {
-	if r.Field == "" {
-		return r.Model
-	}
-	if r.Model == "" {
-		return r.Field
-	}
-	return fmt.Sprintf("%s.%s", r.Model, r.Field)
+	Model *String
+	Field *String
 }
 
 func (f *FieldRef) Relative() *RelativeFieldRef {
@@ -167,23 +131,19 @@ type RelativeFieldRefs struct {
 
 type RelativeFieldRef struct {
 	Pos   scanner.Position
-	Field string
+	Field *String
 }
-
-func (r *RelativeFieldRef) String() string { return r.Field }
 
 type ModelRef struct {
 	Pos   scanner.Position
-	Model string
+	Model *String
 }
-
-func (m *ModelRef) String() string { return m.Model }
 
 type Index struct {
 	Pos    scanner.Position
-	Name   string
+	Name   *String
 	Fields *RelativeFieldRefs
-	Unique bool
+	Unique *Bool
 }
 
 type Read struct {
@@ -212,16 +172,16 @@ type Update struct {
 type Create struct {
 	Pos   scanner.Position
 	Model *ModelRef
-	Raw   bool
+	Raw   *Bool
 }
 
 type View struct {
 	Pos         scanner.Position
-	All         bool
-	LimitOffset bool
-	Paged       bool
-	Count       bool
-	Has         bool
+	All         *Bool
+	LimitOffset *Bool
+	Paged       *Bool
+	Count       *Bool
+	Has         *Bool
 }
 
 type FieldRefs struct {
@@ -233,36 +193,35 @@ type Join struct {
 	Pos   scanner.Position
 	Left  *FieldRef
 	Right *FieldRef
-	Type  JoinType
+	Type  *JoinType
 }
 
-type JoinType int
+type JoinType struct {
+	Pos   scanner.Position
+	Value consts.JoinType
+}
 
-const (
-	InnerJoin JoinType = iota
-)
+func (j *JoinType) Get() consts.JoinType {
+	if j == nil {
+		return consts.InnerJoin
+	}
+	return j.Value
+}
 
 type Where struct {
 	Pos   scanner.Position
 	Left  *FieldRef
-	Op    Operator
+	Op    *Operator
 	Right *FieldRef
 }
 
-type Operator string
-
-const (
-	LT   Operator = "<"
-	LE   Operator = "<="
-	GT   Operator = ">"
-	GE   Operator = ">="
-	EQ   Operator = "="
-	NE   Operator = "!="
-	Like Operator = "like"
-)
+type Operator struct {
+	Pos   scanner.Position
+	Value consts.Operator
+}
 
 type OrderBy struct {
 	Pos        scanner.Position
 	Fields     *FieldRefs
-	Descending bool
+	Descending *Bool
 }

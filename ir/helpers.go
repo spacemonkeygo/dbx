@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"sort"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 )
 
 // returns true if left is a subset of right
@@ -59,7 +59,7 @@ func fieldSetPrune(all, bad []*Field) (out []*Field) {
 
 func whereUnique(wheres []*Where) (unique map[string]bool) {
 	fields := map[*Model][]*Field{}
-	for _, eq := range FilterWhere(wheres, ast.EQ) {
+	for _, eq := range FilterWhere(wheres, consts.EQ) {
 		fields[eq.Left.Model] = append(fields[eq.Left.Model], eq.Left)
 		if eq.Right != nil {
 			fields[eq.Right.Model] = append(fields[eq.Right.Model], eq.Right)
@@ -85,7 +85,7 @@ func queryUnique(targets []*Model, joins []*Join, wheres []*Where) (out bool) {
 	// Constrain based on joins with unique columns
 	for _, join := range joins {
 		switch join.Type {
-		case ast.InnerJoin:
+		case consts.InnerJoin:
 			if unique[join.Left.Model.Name] {
 				if join.Right.Unique() {
 					unique[join.Right.Model.Name] = true

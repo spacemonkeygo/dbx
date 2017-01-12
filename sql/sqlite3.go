@@ -17,7 +17,7 @@ package sql
 import (
 	"fmt"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -45,19 +45,19 @@ func (s *sqlite3) RowId() string {
 
 func (s *sqlite3) ColumnType(field *ir.Field) string {
 	switch field.Type {
-	case ast.SerialField, ast.Serial64Field,
-		ast.IntField, ast.Int64Field,
-		ast.UintField, ast.Uint64Field:
+	case consts.SerialField, consts.Serial64Field,
+		consts.IntField, consts.Int64Field,
+		consts.UintField, consts.Uint64Field:
 		return "INTEGER"
-	case ast.FloatField, ast.Float64Field:
+	case consts.FloatField, consts.Float64Field:
 		return "REAL"
-	case ast.TextField:
+	case consts.TextField:
 		return "TEXT"
-	case ast.BoolField:
+	case consts.BoolField:
 		return "INTEGER"
-	case ast.TimestampField, ast.TimestampUTCField:
+	case consts.TimestampField, consts.TimestampUTCField:
 		return "TIMESTAMP"
-	case ast.BlobField:
+	case consts.BlobField:
 		return "BLOB"
 	default:
 		panic(fmt.Sprintf("unhandled field type %s", field.Type))

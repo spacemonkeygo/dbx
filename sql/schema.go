@@ -17,7 +17,7 @@ package sql
 import (
 	"fmt"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -87,13 +87,13 @@ func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
 					Column: ir_field.Relation.Field.Column,
 				}
 				switch ir_field.Relation.Kind {
-				case ast.SetNull:
+				case consts.SetNull:
 					column.Reference.OnDelete = "SET NULL"
 					//column.Reference.OnUpdate = "RESTRICT"
-				case ast.Cascade:
+				case consts.Cascade:
 					column.Reference.OnDelete = "CASCADE"
 					//column.Reference.OnUpdate = "RESTRICT"
-				case ast.Restrict:
+				case consts.Restrict:
 					column.Reference.OnDelete = ""
 					//column.Reference.OnUpdate = "RESTRICT"
 				default:

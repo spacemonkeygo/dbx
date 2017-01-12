@@ -41,13 +41,13 @@ func newLookup() *lookup {
 }
 
 func (l *lookup) AddModel(ast_model *ast.Model) (link *modelEntry, err error) {
-	if existing, ok := l.models[ast_model.Name]; ok {
+	if existing, ok := l.models[ast_model.Name.Value]; ok {
 		return nil, Error.New("%s: model %q already defined at %s",
 			ast_model.Pos, ast_model.Name, existing.ast.Pos)
 	}
 
 	link = newModelEntry(ast_model)
-	l.models[ast_model.Name] = link
+	l.models[ast_model.Name.Value] = link
 	return link, nil
 }
 
@@ -56,7 +56,7 @@ func (l *lookup) GetModel(name string) *modelEntry {
 }
 
 func (l *lookup) FindModel(ref *ast.ModelRef) (*ir.Model, error) {
-	link := l.models[ref.Model]
+	link := l.models[ref.Model.Value]
 	if link != nil {
 		return link.model, nil
 	}
@@ -65,7 +65,7 @@ func (l *lookup) FindModel(ref *ast.ModelRef) (*ir.Model, error) {
 }
 
 func (l *lookup) FindField(ref *ast.FieldRef) (*ir.Field, error) {
-	model_link := l.models[ref.Model]
+	model_link := l.models[ref.Model.Value]
 	if model_link == nil {
 		return nil, Error.New("%s: no model %q defined",
 			ref.Pos, ref.Model)
@@ -76,7 +76,7 @@ func (l *lookup) FindField(ref *ast.FieldRef) (*ir.Field, error) {
 func newModelEntry(ast_model *ast.Model) *modelEntry {
 	return &modelEntry{
 		model: &ir.Model{
-			Name: ast_model.Name,
+			Name: ast_model.Name.Value,
 		},
 		ast:    ast_model,
 		fields: make(map[string]*fieldEntry),
@@ -85,9 +85,11 @@ func newModelEntry(ast_model *ast.Model) *modelEntry {
 
 func (m *modelEntry) newFieldEntry(ast_field *ast.Field) *fieldEntry {
 	field := &ir.Field{
-		Name:  ast_field.Name,
-		Type:  ast_field.Type,
+		Name:  ast_field.Name.Value,
 		Model: m.model,
+	}
+	if ast_field.Type != nil {
+		field.Type = ast_field.Type.Value
 	}
 	m.model.Fields = append(m.model.Fields, field)
 
@@ -98,11 +100,11 @@ func (m *modelEntry) newFieldEntry(ast_field *ast.Field) *fieldEntry {
 }
 
 func (m *modelEntry) AddField(ast_field *ast.Field) (err error) {
-	if existing, ok := m.fields[ast_field.Name]; ok {
+	if existing, ok := m.fields[ast_field.Name.Value]; ok {
 		return Error.New("%s: field %q already defined at %s",
 			ast_field.Pos, ast_field.Name, existing.ast.Pos)
 	}
-	m.fields[ast_field.Name] = m.newFieldEntry(ast_field)
+	m.fields[ast_field.Name.Value] = m.newFieldEntry(ast_field)
 	return nil
 }
 
@@ -111,7 +113,7 @@ func (m *modelEntry) GetField(name string) *fieldEntry {
 }
 
 func (m *modelEntry) FindField(ref *ast.RelativeFieldRef) (*ir.Field, error) {
-	field_link := m.fields[ref.Field]
+	field_link := m.fields[ref.Field.Value]
 	if field_link == nil {
 		return nil, Error.New("%s: no field %q defined on model %q",
 			ref.Pos, ref.Field, m.model.Name)

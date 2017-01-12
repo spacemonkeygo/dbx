@@ -12,23 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xform
+package syntax
 
-import (
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
-	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-)
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
-func transformCreate(lookup *lookup, ast_cre *ast.Create) (
-	cre *ir.Create, err error) {
+func parseOrderBy(node *tupleNode) (*ast.OrderBy, error) {
+	order_by := new(ast.OrderBy)
+	order_by.Pos = node.getPos()
 
-	model, err := lookup.FindModel(ast_cre.Model)
+	err := node.consumeAnyToken(tokenCases{
+		{Ident, "asc"}: func(token *tokenNode) error { return nil },
+		{Ident, "desc"}: func(token *tokenNode) error {
+			order_by.Descending = boolFromValue(token, true)
+			return nil
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &ir.Create{
-		Model: model,
-		Raw:   ast_cre.Raw.Get(),
-	}, nil
+	field_refs, err := parseFieldRefs(node, true)
+	if err != nil {
+		return nil, err
+	}
+	order_by.Fields = field_refs
+
+	return order_by, nil
 }

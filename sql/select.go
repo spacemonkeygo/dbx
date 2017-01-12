@@ -17,7 +17,7 @@ package sql
 import (
 	"fmt"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -99,7 +99,7 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 		pk := ir_read.From.BasicPrimaryKey()
 		sel.Where = append(sel.Where, WhereFromIR(&ir.Where{
 			Left: pk,
-			Op:   ast.GT,
+			Op:   consts.GT,
 		}))
 		sel.OrderBy = &OrderBy{
 			Fields: []string{pk.ColumnRef()},
@@ -166,7 +166,7 @@ func JoinsFromIR(ir_joins []*ir.Join) (joins []Join) {
 			Right: ir_join.Right.ColumnRef(),
 		}
 		switch ir_join.Type {
-		case ast.InnerJoin:
+		case consts.InnerJoin:
 		default:
 			panic(fmt.Sprintf("unhandled join type %d", join.Type))
 		}

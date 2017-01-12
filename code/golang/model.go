@@ -17,7 +17,7 @@ package golang
 import (
 	"fmt"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -104,41 +104,41 @@ func ModelFieldsFromIR(fields []*ir.Field) (out []*ModelField) {
 
 func fieldType(field *ir.Field) string {
 	switch field.Type {
-	case ast.TextField:
+	case consts.TextField:
 		if field.Nullable {
 			return "sql.NullString"
 		} else {
 			return "string"
 		}
-	case ast.IntField, ast.SerialField:
+	case consts.IntField, consts.SerialField:
 		if field.Nullable {
 			return "sql.NullInt64"
 		} else {
 			return "int64"
 		}
-	case ast.UintField:
+	case consts.UintField:
 		if !field.Nullable {
 			return "uint"
 		}
-	case ast.Int64Field, ast.Serial64Field:
+	case consts.Int64Field, consts.Serial64Field:
 		if field.Nullable {
 			return "sql.NullInt64"
 		} else {
 			return "int64"
 		}
-	case ast.Uint64Field:
+	case consts.Uint64Field:
 		if !field.Nullable {
 			return "uint64"
 		}
-	case ast.BlobField:
+	case consts.BlobField:
 		return "[]byte"
-	case ast.TimestampField, ast.TimestampUTCField:
+	case consts.TimestampField, consts.TimestampUTCField:
 		if field.Nullable {
 			return "*time.Time"
 		} else {
 			return "time.Time"
 		}
-	case ast.BoolField:
+	case consts.BoolField:
 		if field.Nullable {
 			return "sql.NullBool"
 		} else {

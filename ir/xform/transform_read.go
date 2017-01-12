@@ -32,24 +32,24 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	// references aren't repetetive.
 	selected := map[string]map[string]*ast.FieldRef{}
 	for _, ast_fieldref := range ast_read.Select.Refs {
-		fields := selected[ast_fieldref.Model]
+		fields := selected[ast_fieldref.Model.Value]
 		if fields == nil {
 			fields = map[string]*ast.FieldRef{}
-			selected[ast_fieldref.Model] = fields
+			selected[ast_fieldref.Model.Value] = fields
 		}
 
 		existing := fields[""]
 		if existing == nil {
-			existing = fields[ast_fieldref.Field]
+			existing = fields[ast_fieldref.Field.Get()]
 		}
 		if existing != nil {
 			return nil, Error.New(
 				"%s: field %s already selected by field %s",
 				ast_fieldref.Pos, ast_fieldref, existing)
 		}
-		fields[ast_fieldref.Field] = ast_fieldref
+		fields[ast_fieldref.Field.Get()] = ast_fieldref
 
-		if ast_fieldref.Field == "" {
+		if ast_fieldref.Field.Get() == "" {
 			model, err := lookup.FindModel(ast_fieldref.ModelRef())
 			if err != nil {
 				return nil, err
@@ -74,7 +74,8 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 		tmpl.From = from
 		if len(ast_read.Joins) == 0 {
-			models[ast_read.Select.Refs[0].Model] = ast_read.Select.Refs[0]
+			model_name := ast_read.Select.Refs[0].Model.Value
+			models[model_name] = ast_read.Select.Refs[0]
 		}
 	case len(ast_read.Joins) == 0:
 		return nil, Error.New(
@@ -94,37 +95,37 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 
 		tmpl.Joins = append(tmpl.Joins, &ir.Join{
-			Type:  join.Type,
+			Type:  join.Type.Get(),
 			Left:  left,
 			Right: right,
 		})
 
 		switch {
 		case next == "":
-			if existing := models[join.Left.Model]; existing != nil {
+			if existing := models[join.Left.Model.Value]; existing != nil {
 				return nil, Error.New("%s: model %q already joined at %s",
-					join.Left.Pos, join.Left.Model, existing.Pos)
+					join.Left.Pos, join.Left.Model.Value, existing.Pos)
 			}
-			models[join.Left.Model] = join.Left
+			models[join.Left.Model.Value] = join.Left
 			tmpl.From = left.Model
-		case next != join.Left.Model:
+		case next != join.Left.Model.Value:
 			return nil, Error.New(
 				"%s: model order must have continuity; expected %q; got %q",
 				join.Left.Pos, next, join.Left.Model)
 		}
 
-		if existing := models[join.Right.Model]; existing != nil {
+		if existing := models[join.Right.Model.Value]; existing != nil {
 			return nil, Error.New("%s: model %q already joined at %s",
-				join.Right.Pos, join.Right.Model, existing.Pos)
+				join.Right.Pos, join.Right.Model.Value, existing.Pos)
 		}
-		models[join.Right.Model] = join.Right
+		models[join.Right.Model.Value] = join.Right
 
-		next = join.Right.Model
+		next = join.Right.Model.Value
 	}
 
 	// Make sure all of the fields are accounted for in the set of models
 	for _, ast_fieldref := range ast_read.Select.Refs {
-		if models[ast_fieldref.Model] == nil {
+		if models[ast_fieldref.Model.Value] == nil {
 			return nil, Error.New(
 				"%s: cannot select field/model %q; model %q is not joined",
 				ast_fieldref.Pos, ast_fieldref, ast_fieldref.Model)
@@ -138,7 +139,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		if err != nil {
 			return nil, err
 		}
-		if models[ast_where.Left.Model] == nil {
+		if models[ast_where.Left.Model.Value] == nil {
 			return nil, Error.New(
 				"%s: invalid where condition %q; model %q is not joined",
 				ast_where.Pos, ast_where, ast_where.Left.Model)
@@ -150,7 +151,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			if err != nil {
 				return nil, err
 			}
-			if models[ast_where.Right.Model] == nil {
+			if models[ast_where.Right.Model.Value] == nil {
 				return nil, Error.New(
 					"%s: invalid where condition %q; model %q is not joined",
 					ast_where.Pos, ast_where, ast_where.Right.Model)
@@ -158,7 +159,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 
 		tmpl.Where = append(tmpl.Where, &ir.Where{
-			Op:    ast_where.Op,
+			Op:    ast_where.Op.Value,
 			Left:  left,
 			Right: right,
 		})
@@ -171,7 +172,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			return nil, err
 		}
 		for _, order_by_field := range ast_read.OrderBy.Fields.Refs {
-			if models[order_by_field.Model] == nil {
+			if models[order_by_field.Model.Value] == nil {
 				return nil, Error.New(
 					"%s: invalid orderby field %q; model %q is not joined",
 					order_by_field.Pos, order_by_field, order_by_field.Model)
@@ -180,7 +181,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 
 		tmpl.OrderBy = &ir.OrderBy{
 			Fields:     fields,
-			Descending: ast_read.OrderBy.Descending,
+			Descending: ast_read.OrderBy.Descending.Get(),
 		}
 	}
 
@@ -188,7 +189,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	view := ast_read.View
 	if view == nil {
 		view = &ast.View{
-			All: true,
+			All: &ast.Bool{Value: true},
 		}
 	}
 
@@ -198,24 +199,24 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		reads = append(reads, &read_copy)
 	}
 
-	if view.All {
+	if view.All.Get() {
 		// template is already sufficient for "all"
 		addView(ir.All)
 	}
-	if view.Count {
+	if view.Count.Get() {
 		addView(ir.Count)
 	}
-	if view.Has {
+	if view.Has.Get() {
 		addView(ir.Has)
 	}
-	if view.LimitOffset {
+	if view.LimitOffset.Get() {
 		if tmpl.One() {
 			return nil, Error.New("%s: cannot limit/offset unique select",
 				view.Pos)
 		}
 		addView(ir.LimitOffset)
 	}
-	if view.Paged {
+	if view.Paged.Get() {
 		if tmpl.OrderBy != nil {
 			return nil, Error.New(
 				"%s: cannot page on table %s with order by",

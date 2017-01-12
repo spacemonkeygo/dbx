@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
+package syntax
 
 import (
+	"fmt"
 	"text/scanner"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
@@ -48,5 +49,38 @@ func expectedToken(pos scanner.Position, actual Token, expected ...Token) (
 	} else {
 		return Error.New("%s: expected one of %v; got %q",
 			pos, expected, actual)
+	}
+}
+
+func errorAt(n node, format string, args ...interface{}) error {
+	return Error.New("%s: %s", n.getPos(), fmt.Sprintf(format, args...))
+}
+
+func previouslyDefined(n node, kind, field string,
+	where scanner.Position) error {
+
+	return errorAt(n, "%s already defined on %s. previous definition at %s",
+		field, kind, where)
+}
+
+func flagField(kind, field string, val **ast.Bool) func(*tupleNode) error {
+	return func(node *tupleNode) error {
+		if *val != nil {
+			return previouslyDefined(node, kind, field, (*val).Pos)
+		}
+
+		*val = boolFromValue(node, true)
+		return nil
+	}
+}
+
+func tokenFlagField(kind, field string, val **ast.Bool) func(*tokenNode) error {
+	return func(node *tokenNode) error {
+		if *val != nil {
+			return previouslyDefined(node, kind, field, (*val).Pos)
+		}
+
+		*val = boolFromValue(node, true)
+		return nil
 	}
 }

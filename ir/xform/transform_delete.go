@@ -49,7 +49,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		if err != nil {
 			return nil, err
 		}
-		if join.Left.Model != next {
+		if join.Left.Model.Value != next {
 			return nil, Error.New(
 				"%s: model order must be consistent; expected %q; got %q",
 				join.Left.Pos, next, join.Left.Model)
@@ -58,17 +58,17 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		if err != nil {
 			return nil, err
 		}
-		next = join.Right.Model
+		next = join.Right.Model.Value
 		del.Joins = append(del.Joins, &ir.Join{
-			Type:  join.Type,
+			Type:  join.Type.Get(),
 			Left:  left,
 			Right: right,
 		})
-		if existing := models[join.Right.Model]; existing != nil {
+		if existing := models[join.Right.Model.Value]; existing != nil {
 			return nil, Error.New("%s: model %q already joined at %s",
 				join.Right.Pos, join.Right.Model, existing.Pos)
 		}
-		models[join.Right.Model] = join.Right.ModelRef()
+		models[join.Right.Model.Value] = join.Right.ModelRef()
 	}
 
 	// Finalize the where conditions and make sure referenced models are part
@@ -78,7 +78,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		if err != nil {
 			return nil, err
 		}
-		if models[ast_where.Left.Model] == nil {
+		if models[ast_where.Left.Model.Value] == nil {
 			return nil, Error.New(
 				"%s: invalid where condition %q; model %q is not joined",
 				ast_where.Pos, ast_where, ast_where.Left.Model)
@@ -90,7 +90,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 			if err != nil {
 				return nil, err
 			}
-			if models[ast_where.Right.Model] == nil {
+			if models[ast_where.Right.Model.Value] == nil {
 				return nil, Error.New(
 					"%s: invalid where condition %q; model %q is not joined",
 					ast_where.Pos, ast_where, ast_where.Right.Model)
@@ -98,7 +98,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		}
 
 		del.Where = append(del.Where, &ir.Where{
-			Op:    ast_where.Op,
+			Op:    ast_where.Op.Value,
 			Left:  left,
 			Right: right,
 		})

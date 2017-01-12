@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -47,34 +47,34 @@ func (p *postgres) RowId() string {
 
 func (p *postgres) ColumnType(field *ir.Field) string {
 	switch field.Type {
-	case ast.SerialField:
+	case consts.SerialField:
 		return "serial"
-	case ast.Serial64Field:
+	case consts.Serial64Field:
 		return "bigserial"
-	case ast.IntField:
+	case consts.IntField:
 		return "integer"
-	case ast.Int64Field:
+	case consts.Int64Field:
 		return "bigint"
-	case ast.UintField:
+	case consts.UintField:
 		return "integer"
-	case ast.Uint64Field:
+	case consts.Uint64Field:
 		return "bigint"
-	case ast.FloatField:
+	case consts.FloatField:
 		return "real"
-	case ast.Float64Field:
+	case consts.Float64Field:
 		return "double precision"
-	case ast.TextField:
+	case consts.TextField:
 		if field.Length > 0 {
 			return fmt.Sprintf("varchar(%d)", field.Length)
 		}
 		return "text"
-	case ast.BoolField:
+	case consts.BoolField:
 		return "boolean"
-	case ast.TimestampField:
+	case consts.TimestampField:
 		return "timestamp with time zone"
-	case ast.TimestampUTCField:
+	case consts.TimestampUTCField:
 		return "timestamp"
-	case ast.BlobField:
+	case consts.BlobField:
 		return "bytea"
 	default:
 		panic(fmt.Sprintf("unhandled field type %s", field.Type))

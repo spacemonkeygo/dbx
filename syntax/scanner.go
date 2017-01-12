@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package parser
+package syntax
 
 import (
 	"bytes"
@@ -45,6 +45,41 @@ const (
 	Illegal     Token = "Illegal"
 )
 
+func (t Token) String() string {
+	switch t {
+	case Ident:
+		return "Ident"
+	case Int:
+		return "Int"
+	case EOF:
+		return "EOF"
+	case Colon:
+		return "Colon"
+	case Dot:
+		return "Dot"
+	case Comma:
+		return "Comma"
+	case Equal:
+		return "Equal"
+	case LeftAngle:
+		return "LeftAngle"
+	case RightAngle:
+		return "RightAngle"
+	case Question:
+		return "Question"
+	case OpenParen:
+		return "OpenParen"
+	case CloseParen:
+		return "CloseParen"
+	case Exclamation:
+		return "Exclamation"
+	case Illegal:
+		return "Illegal"
+	default:
+		return "Unknown"
+	}
+}
+
 type token struct {
 	tok  Token
 	pos  scanner.Position
@@ -56,13 +91,12 @@ type Scanner struct {
 	pos    int
 }
 
-const ws = 1<<'\t' | 1<<' '
-
 func NewScanner(filename string, data []byte) (*Scanner, error) {
 	var s scanner.Scanner
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanInts | scanner.ScanIdents | scanner.ScanComments |
 		scanner.SkipComments
+	s.Whitespace = 0
 
 	base_filename := filepath.Base(filename)
 
@@ -70,9 +104,34 @@ func NewScanner(filename string, data []byte) (*Scanner, error) {
 
 	var tok rune
 	for tok != scanner.EOF {
-		tok = s.Scan()
 		pos := s.Pos()
 		pos.Filename = base_filename
+		tok = s.Scan()
+
+		if tok == ' ' || tok == '\r' || tok == '\t' {
+			continue
+		}
+
+		// insert a comma at newlines and eof unless we already have a comma
+		// or we have a list opening
+		if tok == '\n' || tok == scanner.EOF {
+			if len(tokens) == 0 {
+				continue
+			}
+			switch tokens[len(tokens)-1].tok {
+			case OpenParen, Comma:
+			default:
+				tokens = append(tokens, token{
+					tok:  Comma,
+					pos:  pos,
+					text: ",",
+				})
+			}
+			if tok == '\n' {
+				continue
+			}
+		}
+
 		tokens = append(tokens, token{
 			tok:  convertToken(tok),
 			pos:  pos,
@@ -116,9 +175,9 @@ func (s *Scanner) ScanTo(token Token) {
 }
 
 func (s *Scanner) scan() (token Token, pos scanner.Position, text string) {
-	//	defer func() {
-	//		fmt.Printf("SCAN: %20s %-10s %q\n", pos, token, text)
-	//	}()
+	// defer func() {
+	// 	fmt.Printf("SCAN: %20s %-10s %q\n", pos, token, text)
+	// }()
 
 	t := s.tokens[s.pos]
 	if (s.pos + 1) < len(s.tokens) {

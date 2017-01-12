@@ -14,7 +14,7 @@
 
 package ir
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import "gopkg.in/spacemonkeygo/dbx.v1/consts"
 
 type Selectable interface {
 	SelectRefs() []string
@@ -52,7 +52,7 @@ const (
 )
 
 type Join struct {
-	Type  ast.JoinType
+	Type  consts.JoinType
 	Left  *Field
 	Right *Field
 }

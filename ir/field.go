@@ -17,19 +17,19 @@ package ir
 import (
 	"fmt"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 )
 
 type Relation struct {
 	Field *Field
-	Kind  ast.RelationKind
+	Kind  consts.RelationKind
 }
 
 type Field struct {
 	Name       string
 	Column     string
 	Model      *Model
-	Type       ast.FieldType
+	Type       consts.FieldType
 	Relation   *Relation
 	Nullable   bool
 	AutoInsert bool
@@ -42,7 +42,7 @@ func (f *Field) Insertable() bool {
 	if f.Relation != nil {
 		return true
 	}
-	return f.Type != ast.SerialField && f.Type != ast.Serial64Field
+	return f.Type != consts.SerialField && f.Type != consts.Serial64Field
 }
 
 func (f *Field) Unique() bool {
@@ -51,7 +51,7 @@ func (f *Field) Unique() bool {
 
 func (f *Field) IsInt() bool {
 	switch f.Type {
-	case ast.SerialField, ast.Serial64Field, ast.IntField, ast.Int64Field:
+	case consts.SerialField, consts.Serial64Field, consts.IntField, consts.Int64Field:
 		return true
 	default:
 		return false
@@ -60,7 +60,7 @@ func (f *Field) IsInt() bool {
 
 func (f *Field) IsTime() bool {
 	switch f.Type {
-	case ast.TimestampField, ast.TimestampUTCField:
+	case consts.TimestampField, consts.TimestampUTCField:
 		return true
 	default:
 		return false

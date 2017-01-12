@@ -15,7 +15,7 @@
 package xform
 
 import (
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -23,14 +23,14 @@ func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 	field := field_entry.field
 	ast_field := field_entry.ast
 
-	field.Name = ast_field.Name
-	field.Type = ast_field.Type
-	field.Column = ast_field.Column
-	field.Nullable = ast_field.Nullable
-	field.Updatable = ast_field.Updatable
-	field.AutoInsert = ast_field.AutoInsert
-	field.AutoUpdate = ast_field.AutoUpdate
-	field.Length = ast_field.Length
+	field.Name = ast_field.Name.Value
+	field.Column = ast_field.Column.Get()
+	field.Nullable = ast_field.Nullable.Get()
+	field.Updatable = ast_field.Updatable.Get()
+	field.AutoInsert = ast_field.AutoInsert.Get()
+	field.AutoUpdate = ast_field.AutoUpdate.Get()
+	field.Length = ast_field.Length.Get()
+
 	if field.AutoUpdate {
 		field.Updatable = true
 	}
@@ -40,18 +40,47 @@ func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 		if err != nil {
 			return err
 		}
+		relation_kind := ast_field.RelationKind.Value
 
-		if ast_field.RelationKind == ast.SetNull && !field.Nullable {
+		if relation_kind == consts.SetNull && !field.Nullable {
 			return Error.New("%s: setnull relationships must be nullable",
 				ast_field.Pos)
 		}
 
 		field.Relation = &ir.Relation{
 			Field: related,
-			Kind:  ast_field.RelationKind,
+			Kind:  relation_kind,
 		}
 		field.Type = related.Type.AsLink()
+	} else {
+		field.Type = ast_field.Type.Value
+	}
+
+	if ast_field.AutoUpdate != nil && !podFields[field.Type] {
+		return Error.New("%s: autoinsert must be on plain data type",
+			ast_field.AutoInsert.Pos)
+	}
+	if ast_field.AutoUpdate != nil && !podFields[field.Type] {
+		return Error.New("%s: autoupdate must be on plain data type",
+			ast_field.AutoUpdate.Pos)
+	}
+	if ast_field.Length != nil && field.Type != consts.TextField {
+		return Error.New("%s: length must be on a text field",
+			ast_field.Length.Pos)
 	}
 
 	return nil
+}
+
+var podFields = map[consts.FieldType]bool{
+	consts.IntField:          true,
+	consts.Int64Field:        true,
+	consts.UintField:         true,
+	consts.Uint64Field:       true,
+	consts.BoolField:         true,
+	consts.TextField:         true,
+	consts.TimestampField:    true,
+	consts.TimestampUTCField: true,
+	consts.FloatField:        true,
+	consts.Float64Field:      true,
 }

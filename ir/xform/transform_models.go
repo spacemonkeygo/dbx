@@ -39,7 +39,7 @@ func transformModels(lookup *lookup, ast_models []*ast.Model) (
 	// step 2. resolve all of the other fields on the models and Fields
 	// including references between them.
 	for _, ast_model := range ast_models {
-		model_entry := lookup.GetModel(ast_model.Name)
+		model_entry := lookup.GetModel(ast_model.Name.Value)
 		if err := transformModel(lookup, model_entry); err != nil {
 			return nil, err
 		}

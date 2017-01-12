@@ -25,8 +25,8 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/code/golang"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir/xform"
-	"gopkg.in/spacemonkeygo/dbx.v1/parser"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/syntax"
 	"gopkg.in/spacemonkeygo/dbx.v1/templates"
 	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
@@ -148,7 +148,7 @@ func renderSchema(dialect sql.Dialect, root *ir.Root) []byte {
 }
 
 func parseDBX(in string) (*ir.Root, error) {
-	ast_root, err := parser.ParseFile(in)
+	ast_root, err := syntax.ParseFile(in)
 	if err != nil {
 		return nil, err
 	}
