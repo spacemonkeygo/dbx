@@ -64,44 +64,8 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 	}
 
-	// Figure out set of models that are included in the read. These come from
-	// explicit joins, or implicitly if there is only a single model referenced
-	// in the fields.
+	// Make sure models referenced in joins have continuity
 	models := map[string]*ast.FieldRef{}
-	if len(ast_read.Joins) > 0 {
-		next := ast_read.Joins[0].Left.Model
-		models[next] = ast_read.Joins[0].Left
-		for _, join := range ast_read.Joins {
-			left, err := lookup.FindField(join.Left)
-			if err != nil {
-				return nil, err
-			}
-			if join.Left.Model != next {
-				return nil, Error.New(
-					"%s: model order must be consistent; expected %q; got %q",
-					join.Left.Pos, next, join.Left.Model)
-			}
-			right, err := lookup.FindField(join.Right)
-			if err != nil {
-				return nil, err
-			}
-			next = join.Right.Model
-			tmpl.Joins = append(tmpl.Joins, &ir.Join{
-				Type:  join.Type,
-				Left:  left,
-				Right: right,
-			})
-			if existing := models[join.Right.Model]; existing != nil {
-				return nil, Error.New("%s: model %q already joined at %s",
-					join.Right.Pos, join.Right.Model, existing.Pos)
-			}
-			models[join.Right.Model] = join.Right
-		}
-	}
-
-	// The from is either
-	// 1) the only table referenced in the select fields
-	// 2) the left side of the first join
 	switch {
 	case len(selected) == 1:
 		from, err := lookup.FindModel(ast_read.Select.Refs[0].ModelRef())
@@ -109,13 +73,53 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			return nil, err
 		}
 		tmpl.From = from
-		models[from.Name] = ast_read.Select.Refs[0]
-	case len(ast_read.Joins) > 0:
-		tmpl.From = tmpl.Joins[0].Left.Model
-	default:
+		if len(ast_read.Joins) == 0 {
+			models[ast_read.Select.Refs[0].Model] = ast_read.Select.Refs[0]
+		}
+	case len(ast_read.Joins) == 0:
 		return nil, Error.New(
 			"%s: cannot select from multiple models without a join",
 			ast_read.Select.Pos)
+	}
+
+	var next string
+	for _, join := range ast_read.Joins {
+		left, err := lookup.FindField(join.Left)
+		if err != nil {
+			return nil, err
+		}
+		right, err := lookup.FindField(join.Right)
+		if err != nil {
+			return nil, err
+		}
+
+		tmpl.Joins = append(tmpl.Joins, &ir.Join{
+			Type:  join.Type,
+			Left:  left,
+			Right: right,
+		})
+
+		switch {
+		case next == "":
+			if existing := models[join.Left.Model]; existing != nil {
+				return nil, Error.New("%s: model %q already joined at %s",
+					join.Left.Pos, join.Left.Model, existing.Pos)
+			}
+			models[join.Left.Model] = join.Left
+			tmpl.From = left.Model
+		case next != join.Left.Model:
+			return nil, Error.New(
+				"%s: model order must have continuity; expected %q; got %q",
+				join.Left.Pos, next, join.Left.Model)
+		}
+
+		if existing := models[join.Right.Model]; existing != nil {
+			return nil, Error.New("%s: model %q already joined at %s",
+				join.Right.Pos, join.Right.Model, existing.Pos)
+		}
+		models[join.Right.Model] = join.Right
+
+		next = join.Right.Model
 	}
 
 	// Make sure all of the fields are accounted for in the set of models
