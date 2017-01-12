@@ -27,7 +27,7 @@ Create{{ .Suffix }}({{ ctxparam .Args }}) ({{ param .Return }}, err error)
 	if err != nil {
 		return nil, WrapErr(err)
 	}
-	return obj.getLast{{ .Return.Type }}(__pk)
+	return obj.getLast{{ .Return.Type }}(ctx, __pk)
 	{{ end -}}
 }
 {{ end -}}

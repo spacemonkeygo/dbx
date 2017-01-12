@@ -26,5 +26,5 @@ func (upd *Update) AutoUpdatableFields() (fields []*Field) {
 }
 
 func (upd *Update) One() bool {
-	return queryUnique(upd.Model, upd.Joins, upd.Where)
+	return queryUnique([]*Model{upd.Model}, upd.Joins, upd.Where)
 }

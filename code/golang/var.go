@@ -27,7 +27,6 @@ func VarFromSelectable(selectable ir.Selectable) (v *Var) {
 		v = VarFromModel(obj)
 	case *ir.Field:
 		v = VarFromField(obj)
-		v.Name = inflect.Camelize(v.Name)
 	default:
 		panic(fmt.Sprintf("unhandled selectable type %T", obj))
 	}

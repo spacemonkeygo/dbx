@@ -113,10 +113,12 @@ func DefaultCreateSuffix(cre *Create) string {
 
 func DefaultReadSuffix(read *Read) string {
 	var parts []string
-	if read.One() {
-		parts = append(parts, read.From.Name)
-	} else {
-		parts = append(parts, inflect.Pluralize(read.From.Name))
+	for _, selectable := range read.Selectables {
+		part := selectable.UnderRef()
+		if !read.One() {
+			part = inflect.Pluralize(part)
+		}
+		parts = append(parts, part)
 	}
 	parts = append(parts, whereSuffix(read.Where, len(read.Joins) > 0)...)
 	switch read.View {

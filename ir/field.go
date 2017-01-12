@@ -71,6 +71,10 @@ func (f *Field) ColumnRef() string {
 	return fmt.Sprintf("%s.%s", f.Model.Table, f.Column)
 }
 
+func (f *Field) ModelOf() *Model {
+	return f.Model
+}
+
 func (f *Field) UnderRef() string {
 	return fmt.Sprintf("%s_%s", f.Model.Name, f.Name)
 }

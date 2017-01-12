@@ -73,20 +73,13 @@ func whereUnique(wheres []*Where) (unique map[string]bool) {
 	return unique
 }
 
-func queryUnique(model *Model, joins []*Join, wheres []*Where) (out bool) {
+func queryUnique(targets []*Model, joins []*Join, wheres []*Where) (out bool) {
 	// Build up a list of models involved in the query.
 	unique := map[string]bool{}
-	unique[model.Name] = false
-	for _, join := range joins {
-		unique[join.Left.Model.Name] = false
-		unique[join.Right.Model.Name] = false
-	}
 
 	// Contrain based on the where conditions
 	for model_name, model_unique := range whereUnique(wheres) {
-		if !unique[model_name] {
-			unique[model_name] = model_unique
-		}
+		unique[model_name] = model_unique
 	}
 
 	// Constrain based on joins with unique columns
@@ -99,7 +92,7 @@ func queryUnique(model *Model, joins []*Join, wheres []*Where) (out bool) {
 				}
 				if join.Right.Relation != nil &&
 					join.Right.Relation.Field.Unique() {
-					unique[join.Right.Model.Name] = true
+					unique[join.Right.Relation.Field.Model.Name] = true
 				}
 			}
 			if unique[join.Right.Model.Name] {
@@ -108,7 +101,7 @@ func queryUnique(model *Model, joins []*Join, wheres []*Where) (out bool) {
 				}
 				if join.Left.Relation != nil &&
 					join.Left.Relation.Field.Unique() {
-					unique[join.Left.Model.Name] = true
+					unique[join.Left.Relation.Field.Model.Name] = true
 				}
 			}
 		default:
@@ -116,13 +109,15 @@ func queryUnique(model *Model, joins []*Join, wheres []*Where) (out bool) {
 		}
 	}
 
-	for _, model_unique := range unique {
-		if !model_unique {
-			return false
+	// if any table from the set of targets is unique, then only one row would
+	// ever be returned, so it is a "unique" query.
+	for _, target := range targets {
+		if unique[target.Name] {
+			return true
 		}
 	}
 
-	return true
+	return false
 }
 
 func SortModels(models []*Model) (sorted []*Model) {
@@ -165,4 +160,22 @@ func modelDepth(model *Model) (depth int) {
 		}
 	}
 	return depth
+}
+
+func distinctModels(models []*Model) (distinct []*Model) {
+	set := map[string]*Model{}
+	var names []string
+	for _, model := range models {
+		if set[model.Name] != nil {
+			continue
+		}
+		set[model.Name] = model
+		names = append(names, model.Name)
+	}
+	sort.Sort(sort.StringSlice(names))
+
+	for _, name := range names {
+		distinct = append(distinct, set[name])
+	}
+	return distinct
 }

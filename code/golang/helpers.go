@@ -110,7 +110,7 @@ func ctxparamFn(intf interface{}) (string, error) {
 		return "", err
 	}
 	if param == "" {
-		return "", nil
+		return "ctx context.Context", nil
 	}
 	return "ctx context.Context, " + param, nil
 }

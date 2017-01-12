@@ -42,22 +42,23 @@ type Options struct {
 }
 
 type Renderer struct {
-	header     *template.Template
-	footer     *template.Template
-	misc       *template.Template
-	cre        *template.Template
-	get        *template.Template
-	get_all    *template.Template
-	get_paged  *template.Template
-	get_has    *template.Template
-	get_count  *template.Template
-	upd        *template.Template
-	del        *template.Template
-	del_all    *template.Template
-	del_world  *template.Template
-	get_last   *template.Template
-	signatures map[string]bool
-	options    Options
+	header          *template.Template
+	footer          *template.Template
+	misc            *template.Template
+	cre             *template.Template
+	get             *template.Template
+	get_all         *template.Template
+	get_has         *template.Template
+	get_count       *template.Template
+	get_limitoffset *template.Template
+	get_paged       *template.Template
+	upd             *template.Template
+	del             *template.Template
+	del_all         *template.Template
+	del_world       *template.Template
+	get_last        *template.Template
+	signatures      map[string]bool
+	options         Options
 }
 
 var _ code.Renderer = (*Renderer)(nil)
@@ -114,17 +115,22 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
-	r.get_paged, err = loader.Load("golang.get-paged.tmpl", funcs)
-	if err != nil {
-		return nil, err
-	}
-
 	r.get_has, err = loader.Load("golang.get-has.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
 
 	r.get_count, err = loader.Load("golang.get-count.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.get_paged, err = loader.Load("golang.get-paged.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.get_limitoffset, err = loader.Load("golang.get-limitoffset.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +310,7 @@ func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,
 
 	get := GetFromIR(ir_read, dialect)
 	switch ir_read.View {
-	case ir.All, ir.LimitOffset:
+	case ir.All:
 		if ir_read.One() {
 			if err := r.renderFunc(r.get, w, get, dialect); err != nil {
 				return err
@@ -313,6 +319,10 @@ func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,
 			if err := r.renderFunc(r.get_all, w, get, dialect); err != nil {
 				return err
 			}
+		}
+	case ir.LimitOffset:
+		if err := r.renderFunc(r.get_limitoffset, w, get, dialect); err != nil {
+			return err
 		}
 	case ir.Paged:
 		if err := r.renderFunc(r.get_paged, w, get, dialect); err != nil {

@@ -18,6 +18,8 @@ import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
 type Selectable interface {
 	SelectRefs() []string
+	UnderRef() string
+	ModelOf() *Model
 	selectable()
 }
 
@@ -32,7 +34,11 @@ type Read struct {
 }
 
 func (r *Read) One() bool {
-	return queryUnique(r.From, r.Joins, r.Where)
+	var targets []*Model
+	for _, selectable := range r.Selectables {
+		targets = append(targets, selectable.ModelOf())
+	}
+	return queryUnique(distinctModels(targets), r.Joins, r.Where)
 }
 
 type View int

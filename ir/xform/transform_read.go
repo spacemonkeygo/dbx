@@ -68,9 +68,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	// explicit joins, or implicitly if there is only a single model referenced
 	// in the fields.
 	models := map[string]*ast.FieldRef{}
-	switch {
-	case len(ast_read.Joins) > 0:
+	if len(ast_read.Joins) > 0 {
 		next := ast_read.Joins[0].Left.Model
+		models[next] = ast_read.Joins[0].Left
 		for _, join := range ast_read.Joins {
 			left, err := lookup.FindField(join.Left)
 			if err != nil {
@@ -86,10 +86,6 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 				return nil, err
 			}
 			next = join.Right.Model
-			if tmpl.From == nil {
-				tmpl.From = left.Model
-				models[join.Left.Model] = join.Left
-			}
 			tmpl.Joins = append(tmpl.Joins, &ir.Join{
 				Type:  join.Type,
 				Left:  left,
@@ -101,6 +97,12 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			}
 			models[join.Right.Model] = join.Right
 		}
+	}
+
+	// The from is either
+	// 1) the only table referenced in the select fields
+	// 2) the left side of the first join
+	switch {
 	case len(selected) == 1:
 		from, err := lookup.FindModel(ast_read.Select.Refs[0].ModelRef())
 		if err != nil {
@@ -108,6 +110,8 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 		tmpl.From = from
 		models[from.Name] = ast_read.Select.Refs[0]
+	case len(ast_read.Joins) > 0:
+		tmpl.From = tmpl.Joins[0].Left.Model
 	default:
 		return nil, Error.New(
 			"%s: cannot select from multiple models without a join",

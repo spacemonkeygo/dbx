@@ -82,6 +82,14 @@ func (m *Model) FieldSetUnique(fields []*Field) bool {
 	return false
 }
 
+func (m *Model) ModelOf() *Model {
+	return m
+}
+
+func (m *Model) UnderRef() string {
+	return m.Name
+}
+
 func (m *Model) SelectRefs() (refs []string) {
 	for _, field := range m.Fields {
 		refs = append(refs, field.SelectRefs()...)
