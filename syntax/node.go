@@ -27,8 +27,9 @@ type node interface {
 }
 
 type listNode struct {
-	pos   scanner.Position
-	value []node
+	pos     scanner.Position
+	end_pos scanner.Position
+	value   []node
 }
 
 type tupleNode struct {
@@ -130,7 +131,7 @@ func newListNode(scanner *Scanner) (*listNode, error) {
 	for {
 		switch tok := scanner.Peek(); tok {
 		case CloseParen:
-			scanner.Scan()
+			_, l.end_pos, _ = scanner.Scan()
 			return l, nil
 		default:
 			tuple, err := newTupleNode(scanner)
@@ -205,6 +206,17 @@ func (l *listNode) consume() (n node, err error) {
 func (l *listNode) consumeTuple() (*tupleNode, error) {
 	if len(l.value) == 0 {
 		return nil, errorAt(l, "expected a tuple. found nothing")
+	}
+	node, err := l.consume()
+	if err != nil {
+		return nil, err
+	}
+	return expectTuple(node)
+}
+
+func (l *listNode) consumeTupleOrEmpty() (*tupleNode, error) {
+	if len(l.value) == 0 {
+		return nil, nil
 	}
 	node, err := l.consume()
 	if err != nil {

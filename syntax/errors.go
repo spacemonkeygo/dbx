@@ -33,13 +33,6 @@ func expectedKeyword(pos scanner.Position, actual string, expected ...string) (
 	}
 }
 
-func unallowedAttribute(pos scanner.Position, field_type ast.FieldType,
-	attr string) (err error) {
-
-	return Error.New("%s: attribute %q not allowed for field type %q",
-		pos, attr, field_type)
-}
-
 func expectedToken(pos scanner.Position, actual Token, expected ...Token) (
 	err error) {
 

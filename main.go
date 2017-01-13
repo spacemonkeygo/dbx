@@ -69,9 +69,12 @@ func main() {
 		outdir_arg := cmd.StringArg("OUTDIR", "",
 			"output directory")
 		cmd.Action = func() {
-			die(schemaCmd(
-				*dialects_opt, *dbxfile_arg, *outdir_arg))
+			die(schemaCmd(*dialects_opt, *dbxfile_arg, *outdir_arg))
 		}
+	})
+
+	app.Command("format", "format dbx file on stdin", func(cmd *cli.Cmd) {
+		cmd.Action = func() { die(formatCmd()) }
 	})
 
 	die(app.Run(os.Args))
@@ -139,6 +142,19 @@ func schemaCmd(dialects_opt []string, dbxfile, outdir string) (err error) {
 	}
 
 	return nil
+}
+
+func formatCmd() (err error) {
+	data, err := ioutil.ReadAll(os.Stdin)
+	if err != nil {
+		return err
+	}
+	formatted, err := syntax.Format(data)
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(formatted)
+	return err
 }
 
 func renderSchema(dialect sql.Dialect, root *ir.Root) []byte {
