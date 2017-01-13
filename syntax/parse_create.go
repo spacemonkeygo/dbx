@@ -32,7 +32,7 @@ func parseCreate(node *tupleNode) (*ast.Create, error) {
 	}
 
 	err = list_token.consumeAnyTuples(tupleCases{
-		"raw": flagField("create", "raw", &cre.Raw),
+		"raw": tupleFlagField("create", "raw", &cre.Raw),
 	})
 	if err != nil {
 		return nil, err

@@ -15,13 +15,11 @@
 package xform
 
 import (
-	"github.com/spacemonkeygo/errors"
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
-	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-)
+	"text/scanner"
 
-var (
-	Error = errors.NewClass("xform")
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
 func resolveFieldRefs(lookup *lookup, ast_refs []*ast.FieldRef) (
@@ -48,4 +46,12 @@ func resolveRelativeFieldRefs(model_entry *modelEntry,
 		fields = append(fields, field)
 	}
 	return fields, nil
+}
+
+func previouslyDefined(pos scanner.Position, kind string,
+	where scanner.Position) error {
+
+	return errutil.New(pos,
+		"%s already defined. previous definiton at %s",
+		kind, where)
 }

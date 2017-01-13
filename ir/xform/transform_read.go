@@ -16,6 +16,7 @@ package xform
 
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -25,7 +26,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	tmpl := new(ir.Read)
 
 	if ast_read.Select == nil || len(ast_read.Select.Refs) == 0 {
-		return nil, Error.New("%s: no fields defined to select", ast_read.Pos)
+		return nil, errutil.New(ast_read.Pos, "no fields defined to select")
 	}
 
 	// Figure out which models are needed for the fields and that the field
@@ -43,9 +44,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			existing = fields[ast_fieldref.Field.Get()]
 		}
 		if existing != nil {
-			return nil, Error.New(
-				"%s: field %s already selected by field %s",
-				ast_fieldref.Pos, ast_fieldref, existing)
+			return nil, errutil.New(ast_fieldref.Pos,
+				"field %q already selected by field %q",
+				ast_fieldref, existing)
 		}
 		fields[ast_fieldref.Field.Get()] = ast_fieldref
 
@@ -78,9 +79,8 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			models[model_name] = ast_read.Select.Refs[0]
 		}
 	case len(ast_read.Joins) == 0:
-		return nil, Error.New(
-			"%s: cannot select from multiple models without a join",
-			ast_read.Select.Pos)
+		return nil, errutil.New(ast_read.Select.Pos,
+			"cannot select from multiple models without a join")
 	}
 
 	var next string
@@ -103,20 +103,22 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		switch {
 		case next == "":
 			if existing := models[join.Left.Model.Value]; existing != nil {
-				return nil, Error.New("%s: model %q already joined at %s",
-					join.Left.Pos, join.Left.Model.Value, existing.Pos)
+				return nil, errutil.New(join.Left.Model.Pos,
+					"model %q already joined at %s",
+					join.Left.Model.Value, existing.Pos)
 			}
 			models[join.Left.Model.Value] = join.Left
 			tmpl.From = left.Model
 		case next != join.Left.Model.Value:
-			return nil, Error.New(
-				"%s: model order must have continuity; expected %q; got %q",
-				join.Left.Pos, next, join.Left.Model)
+			return nil, errutil.New(join.Left.Model.Pos,
+				"model order must have continuity; expected %q; got %q",
+				next, join.Left.Model.Value)
 		}
 
 		if existing := models[join.Right.Model.Value]; existing != nil {
-			return nil, Error.New("%s: model %q already joined at %s",
-				join.Right.Pos, join.Right.Model.Value, existing.Pos)
+			return nil, errutil.New(join.Right.Model.Pos,
+				"model %q already joined at %s",
+				join.Right.Model.Value, existing.Pos)
 		}
 		models[join.Right.Model.Value] = join.Right
 
@@ -126,9 +128,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	// Make sure all of the fields are accounted for in the set of models
 	for _, ast_fieldref := range ast_read.Select.Refs {
 		if models[ast_fieldref.Model.Value] == nil {
-			return nil, Error.New(
-				"%s: cannot select field/model %q; model %q is not joined",
-				ast_fieldref.Pos, ast_fieldref, ast_fieldref.Model)
+			return nil, errutil.New(ast_fieldref.Pos,
+				"cannot select %q; model %q is not joined",
+				ast_fieldref, ast_fieldref.Model.Value)
 		}
 	}
 
@@ -140,9 +142,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			return nil, err
 		}
 		if models[ast_where.Left.Model.Value] == nil {
-			return nil, Error.New(
-				"%s: invalid where condition %q; model %q is not joined",
-				ast_where.Pos, ast_where, ast_where.Left.Model)
+			return nil, errutil.New(ast_where.Pos,
+				"invalid where condition %q; model %q is not joined",
+				ast_where, ast_where.Left.Model.Value)
 		}
 
 		var right *ir.Field
@@ -152,9 +154,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 				return nil, err
 			}
 			if models[ast_where.Right.Model.Value] == nil {
-				return nil, Error.New(
-					"%s: invalid where condition %q; model %q is not joined",
-					ast_where.Pos, ast_where, ast_where.Right.Model)
+				return nil, errutil.New(ast_where.Pos,
+					"invalid where condition %q; model %q is not joined",
+					ast_where, ast_where.Right.Model.Value)
 			}
 		}
 
@@ -173,9 +175,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 		for _, order_by_field := range ast_read.OrderBy.Fields.Refs {
 			if models[order_by_field.Model.Value] == nil {
-				return nil, Error.New(
-					"%s: invalid orderby field %q; model %q is not joined",
-					order_by_field.Pos, order_by_field, order_by_field.Model)
+				return nil, errutil.New(order_by_field.Pos,
+					"invalid orderby field %q; model %q is not joined",
+					order_by_field, order_by_field.Model.Value)
 			}
 		}
 
@@ -211,25 +213,25 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	}
 	if view.LimitOffset.Get() {
 		if tmpl.One() {
-			return nil, Error.New("%s: cannot limit/offset unique select",
-				view.Pos)
+			return nil, errutil.New(view.LimitOffset.Pos,
+				"cannot limit/offset unique select")
 		}
 		addView(ir.LimitOffset)
 	}
 	if view.Paged.Get() {
 		if tmpl.OrderBy != nil {
-			return nil, Error.New(
-				"%s: cannot page on table %s with order by",
-				view.Pos, tmpl.From)
+			return nil, errutil.New(view.Paged.Pos,
+				"cannot page on model %q with order by",
+				tmpl.From.Name)
 		}
 		if tmpl.From.BasicPrimaryKey() == nil {
-			return nil, Error.New(
-				"%s: cannot page on table %s with composite primary key",
-				view.Pos, tmpl.From)
+			return nil, errutil.New(view.Paged.Pos,
+				"cannot page on model %q with composite primary key",
+				tmpl.From.Name)
 		}
 		if tmpl.One() {
-			return nil, Error.New("%s: cannot page unique select",
-				view.Pos)
+			return nil, errutil.New(view.Paged.Pos,
+				"cannot page unique select")
 		}
 		addView(ir.Paged)
 	}

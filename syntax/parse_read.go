@@ -28,7 +28,7 @@ func parseRead(node *tupleNode) (*ast.Read, error) {
 	err = list_token.consumeAnyTuples(tupleCases{
 		"select": func(node *tupleNode) error {
 			if read.Select != nil {
-				return previouslyDefined(node, "read", "select",
+				return previouslyDefined(node.getPos(), "read", "select",
 					read.Select.Pos)
 			}
 
@@ -60,7 +60,7 @@ func parseRead(node *tupleNode) (*ast.Read, error) {
 		},
 		"view": func(node *tupleNode) error {
 			if read.View != nil {
-				return previouslyDefined(node, "read", "view",
+				return previouslyDefined(node.getPos(), "read", "view",
 					read.View.Pos)
 			}
 
@@ -74,7 +74,7 @@ func parseRead(node *tupleNode) (*ast.Read, error) {
 		},
 		"orderby": func(node *tupleNode) error {
 			if read.OrderBy != nil {
-				return previouslyDefined(node, "read", "orderby",
+				return previouslyDefined(node.getPos(), "read", "orderby",
 					read.OrderBy.Pos)
 			}
 

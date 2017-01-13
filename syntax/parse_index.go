@@ -28,7 +28,7 @@ func parseIndex(node *tupleNode) (*ast.Index, error) {
 	err = list_token.consumeAnyTuples(tupleCases{
 		"name": func(node *tupleNode) error {
 			if index.Name != nil {
-				return previouslyDefined(node, "index", "name",
+				return previouslyDefined(node.getPos(), "index", "name",
 					index.Name.Pos)
 			}
 
@@ -42,7 +42,7 @@ func parseIndex(node *tupleNode) (*ast.Index, error) {
 		},
 		"fields": func(node *tupleNode) error {
 			if index.Fields != nil {
-				return previouslyDefined(node, "index", "fields",
+				return previouslyDefined(node.getPos(), "index", "fields",
 					index.Fields.Pos)
 			}
 
@@ -54,7 +54,7 @@ func parseIndex(node *tupleNode) (*ast.Index, error) {
 
 			return nil
 		},
-		"unique": flagField("index", "unique", &index.Unique),
+		"unique": tupleFlagField("index", "unique", &index.Unique),
 	})
 	if err != nil {
 		return nil, err

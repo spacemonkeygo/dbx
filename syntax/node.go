@@ -19,6 +19,8 @@ import (
 	"sort"
 	"strings"
 	"text/scanner"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 )
 
 type node interface {
@@ -74,7 +76,7 @@ func stringNodes(values []node, join string) string {
 func expectList(n node) (*listNode, error) {
 	list, ok := n.(*listNode)
 	if !ok {
-		return nil, errorAt(n, "expected a list. got a %s: %s",
+		return nil, errutil.New(n.getPos(), "expected a list. got a %s: %s",
 			n.nodeType(), n)
 	}
 	return list, nil
@@ -83,7 +85,7 @@ func expectList(n node) (*listNode, error) {
 func expectTuple(n node) (*tupleNode, error) {
 	tuple, ok := n.(*tupleNode)
 	if !ok {
-		return nil, errorAt(n, "expected a tuple. got a %s: %s",
+		return nil, errutil.New(n.getPos(), "expected a tuple. got a %s: %s",
 			n.nodeType(), n)
 	}
 	return tuple, nil
@@ -92,7 +94,7 @@ func expectTuple(n node) (*tupleNode, error) {
 func expectToken(n node) (*tokenNode, error) {
 	token, ok := n.(*tokenNode)
 	if !ok {
-		return nil, errorAt(n, "expected a token. got a %s: %s",
+		return nil, errutil.New(n.getPos(), "expected a token. got a %s: %s",
 			n.nodeType(), n)
 	}
 	return token, nil
@@ -177,10 +179,10 @@ func newTokenNode(scanner *Scanner) (*tokenNode, error) {
 
 	switch tok := scanner.Peek(); tok {
 	case EOF:
-		return nil, Error.New("%s: unexpected EOF", scanner.Pos())
+		return nil, errutil.New(scanner.Pos(), "unexpected EOF")
 	case Illegal:
 		_, pos, text := scanner.Scan()
-		return nil, Error.New("%s: illegal token: %q", pos, text)
+		return nil, errutil.New(pos, "illegal token: %q", text)
 	default:
 		_, pos, text := scanner.Scan()
 		t.tok = tok
@@ -196,7 +198,7 @@ func newTokenNode(scanner *Scanner) (*tokenNode, error) {
 
 func (l *listNode) consume() (n node, err error) {
 	if len(l.value) == 0 {
-		return nil, errorAt(l, "expected a node. found nothing")
+		return nil, errutil.New(l.getPos(), "expected a node. found nothing")
 	}
 	n, l.value = l.value[0], l.value[1:]
 	// fmt.Printf("consumed list entry: %s\n", n)
@@ -205,7 +207,7 @@ func (l *listNode) consume() (n node, err error) {
 
 func (l *listNode) consumeTuple() (*tupleNode, error) {
 	if len(l.value) == 0 {
-		return nil, errorAt(l, "expected a tuple. found nothing")
+		return nil, errutil.New(l.getPos(), "expected a tuple. found nothing")
 	}
 	node, err := l.consume()
 	if err != nil {
@@ -272,7 +274,7 @@ func (l *listNode) consumeAnyTuple(cases tupleCases) error {
 
 func (t *tupleNode) consume() (n node, err error) {
 	if len(t.value) == 0 {
-		return nil, errorAt(t, "expected a node. found nothing")
+		return nil, errutil.New(t.getPos(), "expected a node. found nothing")
 	}
 	n, t.value = t.value[0], t.value[1:]
 	// fmt.Printf("consumed tuple entry: %s\n", n)
@@ -281,7 +283,7 @@ func (t *tupleNode) consume() (n node, err error) {
 
 func (t *tupleNode) consumeToken(kinds ...Token) (*tokenNode, error) {
 	if len(t.value) == 0 {
-		return nil, errorAt(t, "expected a token. found nothing")
+		return nil, errutil.New(t.getPos(), "expected a token. found nothing")
 	}
 	node, err := t.consume()
 	if err != nil {
@@ -321,7 +323,7 @@ func (t *tupleNode) consumeTokenOrEmpty(kinds ...Token) (*tokenNode, error) {
 
 func (t *tupleNode) consumeList() (*listNode, error) {
 	if len(t.value) == 0 {
-		return nil, errorAt(t, "expected a list. found nothing")
+		return nil, errutil.New(t.getPos(), "expected a list. found nothing")
 	}
 	node, err := t.consume()
 	if err != nil {
@@ -425,7 +427,8 @@ func (t *tupleNode) consumeDottedIdentsOrEmpty() (
 
 func (t *tupleNode) assertEmpty() error {
 	if len(t.value) > 0 {
-		return errorAt(t.value[0], "expected end of tuple. got a %s: %s",
+		return errutil.New(t.value[0].getPos(),
+			"expected end of tuple. got a %s: %s",
 			t.value[0].nodeType(), t.value[0])
 	}
 	return nil

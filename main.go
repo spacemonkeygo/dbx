@@ -20,9 +20,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	cli "github.com/jawher/mow.cli"
+	"github.com/spacemonkeygo/errors"
 	"gopkg.in/spacemonkeygo/dbx.v1/code/golang"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir/xform"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
@@ -37,7 +40,14 @@ import (
 func main() {
 	die := func(err error) {
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			// if the error came from errutil, don't bother with the dbx prefix
+			err_string := strings.TrimPrefix(errors.GetMessage(err), "dbx: ")
+			fmt.Fprintln(os.Stderr, err_string)
+			if context := errutil.GetContext(err); context != "" {
+				fmt.Fprintln(os.Stderr)
+				fmt.Fprintln(os.Stderr, "context:")
+				fmt.Fprintln(os.Stderr, context)
+			}
 			cli.Exit(1)
 		}
 	}

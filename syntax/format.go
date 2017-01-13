@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"io/ioutil"
 	"strings"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 )
 
 func FormatFile(path string) (formatted []byte, err error) {
@@ -25,6 +27,7 @@ func FormatFile(path string) (formatted []byte, err error) {
 	if err != nil {
 		return nil, Error.Wrap(err)
 	}
+	errutil.SetContextSource(data)
 
 	scanner, err := NewScanner(path, data)
 	if err != nil {
@@ -36,10 +39,17 @@ func FormatFile(path string) (formatted []byte, err error) {
 		return nil, err
 	}
 
-	return formatRoot(root)
+	formatted, err = formatRoot(root)
+	if err != nil {
+		return nil, err
+	}
+
+	return formatted, nil
 }
 
 func Format(data []byte) (formatted []byte, err error) {
+	errutil.SetContextSource(data)
+
 	scanner, err := NewScanner("", data)
 	if err != nil {
 		return nil, err
@@ -50,7 +60,12 @@ func Format(data []byte) (formatted []byte, err error) {
 		return nil, err
 	}
 
-	return formatRoot(root)
+	formatted, err = formatRoot(root)
+	if err != nil {
+		return nil, err
+	}
+
+	return formatted, nil
 }
 
 func formatRoot(node *listNode) (formatted []byte, err error) {
@@ -227,7 +242,7 @@ func stringifyTuple(tuple *tupleNode) (words []string, list *listNode,
 		case *listNode:
 			if i != len(tuple.value)-1 {
 				invalid := tuple.value[i+1]
-				return nil, nil, errorAt(invalid,
+				return nil, nil, errutil.New(invalid.getPos(),
 					"expected end of tuple. got a %s: %s",
 					invalid.nodeType(), invalid)
 			}

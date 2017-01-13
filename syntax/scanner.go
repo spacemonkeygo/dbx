@@ -18,12 +18,6 @@ import (
 	"bytes"
 	"path/filepath"
 	"text/scanner"
-
-	"github.com/spacemonkeygo/errors"
-)
-
-var (
-	Error = errors.NewClass("parser")
 )
 
 type Token string

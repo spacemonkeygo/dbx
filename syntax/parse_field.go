@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 )
 
 func parseField(node *tupleNode) (*ast.Field, error) {
@@ -48,7 +49,7 @@ func parseField(node *tupleNode) (*ast.Field, error) {
 		err := attributes_list.consumeAnyTuples(tupleCases{
 			"column": func(node *tupleNode) error {
 				if field.Column != nil {
-					return previouslyDefined(node, "field", "column",
+					return previouslyDefined(node.getPos(), "field", "column",
 						field.Column.Pos)
 				}
 
@@ -60,13 +61,17 @@ func parseField(node *tupleNode) (*ast.Field, error) {
 
 				return nil
 			},
-			"nullable":   flagField("field", "nullable", &field.Nullable),
-			"autoinsert": flagField("field", "autoinsert", &field.AutoInsert),
-			"autoupdate": flagField("field", "autoupdate", &field.AutoUpdate),
-			"updatable":  flagField("field", "updatable", &field.Updatable),
+			"nullable": tupleFlagField("field", "nullable",
+				&field.Nullable),
+			"autoinsert": tupleFlagField("field", "autoinsert",
+				&field.AutoInsert),
+			"autoupdate": tupleFlagField("field", "autoupdate",
+				&field.AutoUpdate),
+			"updatable": tupleFlagField("field", "updatable",
+				&field.Updatable),
 			"length": func(node *tupleNode) error {
 				if field.Length != nil {
-					return previouslyDefined(node, "field", "length",
+					return previouslyDefined(node.getPos(), "field", "length",
 						field.Length.Pos)
 				}
 
@@ -76,8 +81,9 @@ func parseField(node *tupleNode) (*ast.Field, error) {
 				}
 				value, err := strconv.Atoi(length_token.text)
 				if err != nil {
-					return Error.New("%s: unable to parse integer %q: %v",
-						length_token.getPos(), length_token.text, err)
+					return errutil.New(length_token.getPos(),
+						"unable to parse integer %q: %v",
+						length_token.text, err)
 				}
 				field.Length = intFromValue(length_token, value)
 
@@ -96,8 +102,8 @@ func parseField(node *tupleNode) (*ast.Field, error) {
 
 	if node.assertEmpty() != nil {
 		invalid, _ := node.consume()
-		return nil, errorAt(invalid, "expected list or end of tuple. got %s",
-			invalid)
+		return nil, errutil.New(invalid.getPos(),
+			"expected list or end of tuple. got %s", invalid)
 	}
 
 	return field, nil

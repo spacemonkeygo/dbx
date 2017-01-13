@@ -16,6 +16,7 @@ package xform
 
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -28,9 +29,8 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 	}
 
 	if len(model.PrimaryKey) > 1 && len(ast_del.Joins) > 0 {
-		return nil, Error.New(
-			"%s: delete with joins unsupported on multicolumn primary key",
-			ast_del.Pos)
+		return nil, errutil.New(ast_del.Joins[0].Pos,
+			"delete with joins unsupported on multicolumn primary key")
 	}
 
 	del = &ir.Delete{
@@ -50,9 +50,9 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 			return nil, err
 		}
 		if join.Left.Model.Value != next {
-			return nil, Error.New(
-				"%s: model order must be consistent; expected %q; got %q",
-				join.Left.Pos, next, join.Left.Model)
+			return nil, errutil.New(join.Left.Model.Pos,
+				"model order must be consistent; expected %q; got %q",
+				next, join.Left.Model.Value)
 		}
 		right, err := lookup.FindField(join.Right)
 		if err != nil {
@@ -65,8 +65,9 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 			Right: right,
 		})
 		if existing := models[join.Right.Model.Value]; existing != nil {
-			return nil, Error.New("%s: model %q already joined at %s",
-				join.Right.Pos, join.Right.Model, existing.Pos)
+			return nil, errutil.New(join.Right.Model.Pos,
+				"model %q already joined at %s",
+				join.Right.Model.Value, existing.Pos)
 		}
 		models[join.Right.Model.Value] = join.Right.ModelRef()
 	}
@@ -79,9 +80,9 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 			return nil, err
 		}
 		if models[ast_where.Left.Model.Value] == nil {
-			return nil, Error.New(
-				"%s: invalid where condition %q; model %q is not joined",
-				ast_where.Pos, ast_where, ast_where.Left.Model)
+			return nil, errutil.New(ast_where.Pos,
+				"invalid where condition %q; model %q is not joined",
+				ast_where, ast_where.Left.Model.Value)
 		}
 
 		var right *ir.Field
@@ -91,9 +92,9 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 				return nil, err
 			}
 			if models[ast_where.Right.Model.Value] == nil {
-				return nil, Error.New(
-					"%s: invalid where condition %q; model %q is not joined",
-					ast_where.Pos, ast_where, ast_where.Right.Model)
+				return nil, errutil.New(ast_where.Pos,
+					"invalid where condition %q; model %q is not joined",
+					ast_where, ast_where.Right.Model.Value)
 			}
 		}
 

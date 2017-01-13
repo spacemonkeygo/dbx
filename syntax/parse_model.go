@@ -34,7 +34,7 @@ func parseModel(node *tupleNode) (*ast.Model, error) {
 	err = list_token.consumeAnyTuples(tupleCases{
 		"table": func(node *tupleNode) error {
 			if model.Table != nil {
-				return previouslyDefined(node, "model", "table",
+				return previouslyDefined(node.getPos(), "model", "table",
 					model.Table.Pos)
 			}
 
@@ -57,7 +57,7 @@ func parseModel(node *tupleNode) (*ast.Model, error) {
 		},
 		"key": func(node *tupleNode) error {
 			if model.PrimaryKey != nil {
-				return previouslyDefined(node, "model", "key",
+				return previouslyDefined(node.getPos(), "model", "key",
 					model.PrimaryKey.Pos)
 			}
 			primary_key, err := parseRelativeFieldRefs(node)

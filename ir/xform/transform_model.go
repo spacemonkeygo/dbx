@@ -16,6 +16,7 @@ package xform
 
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -34,7 +35,7 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 	}
 
 	if ast_model.PrimaryKey == nil || len(ast_model.PrimaryKey.Refs) == 0 {
-		return Error.New("%s: no primary key defined", ast_model.Pos)
+		return errutil.New(ast_model.Pos, "no primary key defined")
 	}
 
 	for _, ast_fieldref := range ast_model.PrimaryKey.Refs {
@@ -43,12 +44,14 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 			return err
 		}
 		if field.Nullable {
-			return Error.New("%s: nullable field %q cannot be a primary key",
-				ast_fieldref.Pos, ast_fieldref.Field)
+			return errutil.New(ast_fieldref.Pos,
+				"nullable field %q cannot be a primary key",
+				ast_fieldref)
 		}
 		if field.Updatable {
-			return Error.New("%s: updatable field %q cannot be a primary key",
-				ast_fieldref.Pos, ast_fieldref.Field)
+			return errutil.New(ast_fieldref.Pos,
+				"updatable field %q cannot be a primary key",
+				ast_fieldref)
 		}
 		model.PrimaryKey = append(model.PrimaryKey, field)
 	}
@@ -66,14 +69,14 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 		// BUG(jeff): we can only have one index without a name specified when
 		// really we want to pick a name for them that won't collide.
 		if existing, ok := index_names[ast_index.Name.Get()]; ok {
-			return Error.New("%s: index %q already defined at %s",
-				ast_index.Pos, ast_index.Name, existing.Pos)
+			return previouslyDefined(ast_index.Pos, "index", existing.Pos)
 		}
 		index_names[ast_index.Name.Get()] = ast_index
 
 		if ast_index.Fields == nil || len(ast_index.Fields.Refs) < 1 {
-			return Error.New("%s: index %q has no fields defined",
-				ast_index.Pos, ast_index.Name.Get())
+			return errutil.New(ast_index.Pos,
+				"index %q has no fields defined",
+				ast_index.Name.Get())
 		}
 
 		fields, err := resolveRelativeFieldRefs(

@@ -16,6 +16,7 @@ package xform
 
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -42,8 +43,7 @@ func newLookup() *lookup {
 
 func (l *lookup) AddModel(ast_model *ast.Model) (link *modelEntry, err error) {
 	if existing, ok := l.models[ast_model.Name.Value]; ok {
-		return nil, Error.New("%s: model %q already defined at %s",
-			ast_model.Pos, ast_model.Name, existing.ast.Pos)
+		return nil, previouslyDefined(ast_model.Pos, "model", existing.ast.Pos)
 	}
 
 	link = newModelEntry(ast_model)
@@ -60,15 +60,15 @@ func (l *lookup) FindModel(ref *ast.ModelRef) (*ir.Model, error) {
 	if link != nil {
 		return link.model, nil
 	}
-	return nil, Error.New("%s: no model %q defined",
-		ref.Pos, ref.Model)
+	return nil, errutil.New(ref.Pos, "no model %q defined",
+		ref.Model.Value)
 }
 
 func (l *lookup) FindField(ref *ast.FieldRef) (*ir.Field, error) {
 	model_link := l.models[ref.Model.Value]
 	if model_link == nil {
-		return nil, Error.New("%s: no model %q defined",
-			ref.Pos, ref.Model)
+		return nil, errutil.New(ref.Pos, "no model %q defined",
+			ref.Model.Value)
 	}
 	return model_link.FindField(ref.Relative())
 }
@@ -101,8 +101,7 @@ func (m *modelEntry) newFieldEntry(ast_field *ast.Field) *fieldEntry {
 
 func (m *modelEntry) AddField(ast_field *ast.Field) (err error) {
 	if existing, ok := m.fields[ast_field.Name.Value]; ok {
-		return Error.New("%s: field %q already defined at %s",
-			ast_field.Pos, ast_field.Name, existing.ast.Pos)
+		return previouslyDefined(ast_field.Pos, "field", existing.ast.Pos)
 	}
 	m.fields[ast_field.Name.Value] = m.newFieldEntry(ast_field)
 	return nil
@@ -115,8 +114,8 @@ func (m *modelEntry) GetField(name string) *fieldEntry {
 func (m *modelEntry) FindField(ref *ast.RelativeFieldRef) (*ir.Field, error) {
 	field_link := m.fields[ref.Field.Value]
 	if field_link == nil {
-		return nil, Error.New("%s: no field %q defined on model %q",
-			ref.Pos, ref.Field, m.model.Name)
+		return nil, errutil.New(ref.Pos, "no field %q defined on model %q",
+			ref.Field.Value, m.model.Name)
 	}
 	return field_link.field, nil
 }

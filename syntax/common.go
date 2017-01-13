@@ -15,33 +15,16 @@
 package syntax
 
 import (
-	"io/ioutil"
 	"sort"
 
+	"github.com/spacemonkeygo/errors"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 )
 
-func ParseFile(path string) (root *ast.Root, err error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, Error.Wrap(err)
-	}
-
-	scanner, err := NewScanner(path, data)
-	if err != nil {
-		return nil, err
-	}
-	return parseRoot(scanner)
-}
-
-func Parse(data []byte) (root *ast.Root, err error) {
-	scanner, err := NewScanner("", data)
-	if err != nil {
-		return nil, err
-	}
-	return parseRoot(scanner)
-}
+var (
+	Error = errors.NewClass("syntax")
+)
 
 func debugConsume(node *tupleNode) error {
 	for {
@@ -49,6 +32,28 @@ func debugConsume(node *tupleNode) error {
 		if err != nil {
 			return nil
 		}
+	}
+}
+
+func tupleFlagField(kind, field string, val **ast.Bool) func(*tupleNode) error {
+	return func(node *tupleNode) error {
+		if *val != nil {
+			return previouslyDefined(node.getPos(), kind, field, (*val).Pos)
+		}
+
+		*val = boolFromValue(node, true)
+		return nil
+	}
+}
+
+func tokenFlagField(kind, field string, val **ast.Bool) func(*tokenNode) error {
+	return func(node *tokenNode) error {
+		if *val != nil {
+			return previouslyDefined(node.getPos(), kind, field, (*val).Pos)
+		}
+
+		*val = boolFromValue(node, true)
+		return nil
 	}
 }
 

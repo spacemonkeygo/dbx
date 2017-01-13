@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ast
+package golang
 
 import "github.com/spacemonkeygo/errors"
 
 var (
-	Error = errors.NewClass("ast")
+	Error = errors.NewClass("golang")
 )

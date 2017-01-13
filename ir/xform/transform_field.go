@@ -16,6 +16,7 @@ package xform
 
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -43,8 +44,8 @@ func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 		relation_kind := ast_field.RelationKind.Value
 
 		if relation_kind == consts.SetNull && !field.Nullable {
-			return Error.New("%s: setnull relationships must be nullable",
-				ast_field.Pos)
+			return errutil.New(ast_field.Pos,
+				"setnull relationships must be nullable")
 		}
 
 		field.Relation = &ir.Relation{
@@ -57,16 +58,16 @@ func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 	}
 
 	if ast_field.AutoUpdate != nil && !podFields[field.Type] {
-		return Error.New("%s: autoinsert must be on plain data type",
-			ast_field.AutoInsert.Pos)
+		return errutil.New(ast_field.AutoInsert.Pos,
+			"autoinsert must be on plain data type")
 	}
 	if ast_field.AutoUpdate != nil && !podFields[field.Type] {
-		return Error.New("%s: autoupdate must be on plain data type",
-			ast_field.AutoUpdate.Pos)
+		return errutil.New(ast_field.AutoUpdate.Pos,
+			"autoupdate must be on plain data type")
 	}
 	if ast_field.Length != nil && field.Type != consts.TextField {
-		return Error.New("%s: length must be on a text field",
-			ast_field.Length.Pos)
+		return errutil.New(ast_field.Length.Pos,
+			"length must be on a text field")
 	}
 
 	return nil

@@ -15,21 +15,18 @@
 package syntax
 
 import (
-	"fmt"
 	"text/scanner"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 )
 
 func expectedKeyword(pos scanner.Position, actual string, expected ...string) (
 	err error) {
 
 	if len(expected) == 1 {
-		return Error.New("%s: expected %q, got %q",
-			pos, expected[0], actual)
+		return errutil.New(pos, "expected %q, got %q", expected[0], actual)
 	} else {
-		return Error.New("%s: expected one of %q, got %q",
-			pos, expected, actual)
+		return errutil.New(pos, "expected one of %q, got %q", expected, actual)
 	}
 }
 
@@ -37,43 +34,16 @@ func expectedToken(pos scanner.Position, actual Token, expected ...Token) (
 	err error) {
 
 	if len(expected) == 1 {
-		return Error.New("%s: expected %q; got %q",
-			pos, expected[0], actual)
+		return errutil.New(pos, "expected %q; got %q", expected[0], actual)
 	} else {
-		return Error.New("%s: expected one of %v; got %q",
-			pos, expected, actual)
+		return errutil.New(pos, "expected one of %v; got %q", expected, actual)
 	}
 }
 
-func errorAt(n node, format string, args ...interface{}) error {
-	return Error.New("%s: %s", n.getPos(), fmt.Sprintf(format, args...))
-}
-
-func previouslyDefined(n node, kind, field string,
+func previouslyDefined(pos scanner.Position, kind, field string,
 	where scanner.Position) error {
 
-	return errorAt(n, "%s already defined on %s. previous definition at %s",
+	return errutil.New(pos,
+		"%s already defined on %s. previous definiton at %s",
 		field, kind, where)
-}
-
-func flagField(kind, field string, val **ast.Bool) func(*tupleNode) error {
-	return func(node *tupleNode) error {
-		if *val != nil {
-			return previouslyDefined(node, kind, field, (*val).Pos)
-		}
-
-		*val = boolFromValue(node, true)
-		return nil
-	}
-}
-
-func tokenFlagField(kind, field string, val **ast.Bool) func(*tokenNode) error {
-	return func(node *tokenNode) error {
-		if *val != nil {
-			return previouslyDefined(node, kind, field, (*val).Pos)
-		}
-
-		*val = boolFromValue(node, true)
-		return nil
-	}
 }

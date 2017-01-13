@@ -14,7 +14,10 @@
 
 package syntax
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
+)
 
 func parseFieldRefs(node *tupleNode, needs_dot bool) (*ast.FieldRefs, error) {
 	refs := new(ast.FieldRefs)
@@ -43,7 +46,8 @@ func parseFieldRefOrEmpty(node *tupleNode, needs_dot bool) (
 		return nil, nil
 	}
 	if second == nil && needs_dot {
-		return nil, errorAt(first, "field ref must specify a model")
+		return nil, errutil.New(first.getPos(),
+			"field ref must specify a model")
 	}
 	return fieldRefFromTokens(first, second), nil
 }
@@ -54,7 +58,8 @@ func parseFieldRef(node *tupleNode, needs_dot bool) (*ast.FieldRef, error) {
 		return nil, err
 	}
 	if second == nil && needs_dot {
-		return nil, errorAt(first, "field ref must specify a model")
+		return nil, errutil.New(first.getPos(),
+			"field ref must specify a model")
 	}
 	return fieldRefFromTokens(first, second), nil
 }

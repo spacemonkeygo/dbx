@@ -15,6 +15,7 @@
 package ast
 
 import (
+	"fmt"
 	"text/scanner"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
@@ -110,6 +111,16 @@ type FieldRef struct {
 	Field *String
 }
 
+func (r *FieldRef) String() string {
+	if r.Field == nil {
+		return r.Model.Value
+	}
+	if r.Model == nil {
+		return r.Field.Value
+	}
+	return fmt.Sprintf("%s.%s", r.Model.Value, r.Field.Value)
+}
+
 func (f *FieldRef) Relative() *RelativeFieldRef {
 	return &RelativeFieldRef{
 		Pos:   f.Pos,
@@ -134,9 +145,17 @@ type RelativeFieldRef struct {
 	Field *String
 }
 
+func (r *RelativeFieldRef) String() string {
+	return r.Field.Value
+}
+
 type ModelRef struct {
 	Pos   scanner.Position
 	Model *String
+}
+
+func (m *ModelRef) String() string {
+	return m.Model.Value
 }
 
 type Index struct {
@@ -215,10 +234,20 @@ type Where struct {
 	Right *FieldRef
 }
 
+func (w *Where) String() string {
+	right := "?"
+	if w.Right != nil {
+		right = w.Right.String()
+	}
+	return fmt.Sprintf("%s %s %s", w.Left, w.Op, right)
+}
+
 type Operator struct {
 	Pos   scanner.Position
 	Value consts.Operator
 }
+
+func (o *Operator) String() string { return string(o.Value) }
 
 type OrderBy struct {
 	Pos        scanner.Position

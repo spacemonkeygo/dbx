@@ -43,7 +43,7 @@ func parseRelation(node *tupleNode, field *ast.Field) error {
 		err := attributes_list.consumeAnyTuples(tupleCases{
 			"column": func(node *tupleNode) error {
 				if field.Column != nil {
-					return previouslyDefined(node, "relation", "column",
+					return previouslyDefined(node.getPos(), "relation", "column",
 						field.Column.Pos)
 				}
 
@@ -55,8 +55,10 @@ func parseRelation(node *tupleNode, field *ast.Field) error {
 
 				return nil
 			},
-			"nullable":  flagField("relation", "nullable", &field.Nullable),
-			"updatable": flagField("relation", "updatable", &field.Updatable),
+			"nullable": tupleFlagField("relation", "nullable",
+				&field.Nullable),
+			"updatable": tupleFlagField("relation", "updatable",
+				&field.Updatable),
 		})
 		if err != nil {
 			return err

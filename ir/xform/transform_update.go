@@ -16,6 +16,7 @@ package xform
 
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -28,9 +29,8 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 	}
 
 	if len(model.PrimaryKey) > 1 && len(ast_upd.Joins) > 0 {
-		return nil, Error.New(
-			"%s: update with joins unsupported on multicolumn primary key",
-			ast_upd.Pos)
+		return nil, errutil.New(ast_upd.Joins[0].Pos,
+			"update with joins unsupported on multicolumn primary key:")
 	}
 
 	upd = &ir.Update{
@@ -50,9 +50,9 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 			return nil, err
 		}
 		if join.Left.Model.Value != next {
-			return nil, Error.New(
-				"%s: model order must be consistent; expected %q; got %q",
-				join.Left.Pos, next, join.Left.Model)
+			return nil, errutil.New(join.Left.Model.Pos,
+				"model order must be consistent; expected %q; got %q",
+				next, join.Left.Model.Value)
 		}
 		right, err := lookup.FindField(join.Right)
 		if err != nil {
@@ -65,8 +65,9 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 			Right: right,
 		})
 		if existing := models[join.Right.Model.Value]; existing != nil {
-			return nil, Error.New("%s: model %q already joined at %s",
-				join.Right.Pos, join.Right.Model, existing.Pos)
+			return nil, errutil.New(join.Right.Model.Pos,
+				"model %q already joined at %s",
+				join.Right.Model.Value, existing.Pos)
 		}
 		models[join.Right.Model.Value] = join.Right.ModelRef()
 	}
@@ -79,9 +80,9 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 			return nil, err
 		}
 		if models[ast_where.Left.Model.Value] == nil {
-			return nil, Error.New(
-				"%s: invalid where condition %q; model %q is not joined",
-				ast_where.Pos, ast_where, ast_where.Left.Model)
+			return nil, errutil.New(ast_where.Pos,
+				"invalid where condition %q; model %q is not joined",
+				ast_where, ast_where.Left.Model.Value)
 		}
 
 		var right *ir.Field
@@ -91,9 +92,9 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 				return nil, err
 			}
 			if models[ast_where.Right.Model.Value] == nil {
-				return nil, Error.New(
-					"%s: invalid where condition %q; model %q is not joined",
-					ast_where.Pos, ast_where, ast_where.Right.Model)
+				return nil, errutil.New(ast_where.Pos,
+					"invalid where condition %q; model %q is not joined",
+					ast_where, ast_where.Right.Model.Value)
 			}
 		}
 
@@ -105,9 +106,8 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 	}
 
 	if !upd.One() {
-		return nil, Error.New(
-			"%s: updates for more than one row are unsupported",
-			ast_upd.Pos)
+		return nil, errutil.New(ast_upd.Pos,
+			"updates for more than one row are unsupported")
 	}
 
 	return upd, nil

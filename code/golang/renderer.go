@@ -24,7 +24,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/spacemonkeygo/errors"
 	"gopkg.in/spacemonkeygo/dbx.v1/code"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
@@ -32,8 +31,6 @@ import (
 )
 
 var (
-	Error = errors.NewClass("golang")
-
 	reCollapseSpace = regexp.MustCompile(`\s+`)
 )
 
