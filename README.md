@@ -87,7 +87,7 @@ function so that you may process them however you wish: by adding contextual
 information or stack traces for example.
 - If the `Logger` is not nil, all of the SQL statements that would be executed
 are passed to it in the args.
-- `Now` is for mocking out time in perhaps your tests so that any
+- `Now` is for mocking out time in your tests so that any
 `autoinsert`/`autoupdate` time fields can be given a deterministic value.
 
 The package has an `Open` function that returns a `*DB` instance. It's
@@ -97,7 +97,7 @@ signature looks like
 func Open(driver, source string) (db *DB, err error)
 ```
 
-The driver must be one of the dialects passed in to generation time, which by
+The driver must be one of the dialects passed in at generation time, which by
 default is just `postgres`. The `*DB` type lets you `Open` a new transaction
 represented by `*Tx`, `Close` the database, or run queries as normal. It has a
 `DB` field that exposes the raw `"database/sql".(*DB)` value.
@@ -139,7 +139,7 @@ For example, to create a user, we could write
 
 ```
 db.CreateUser(ctx,
-		User_Id("some unqiue id i just generated"),
+		User_Id("some unique id i just generated"),
 		User_Name("Donny B. Xavier"))
 ```
 
@@ -164,7 +164,7 @@ func createUser(ctx context.Context, db *DB) (user *User, err error) {
 	}()
 
 	return tx.CreateUser(ctx, 
-		User_Id("some unqiue id i just generated"), 
+		User_Id("some unique id i just generated"), 
 		User_Name("Donny B. Xavier"))
 }
 ```
@@ -196,20 +196,21 @@ Then `createUser` can be succinctly written
 
 ```
 func createUser(ctx context.Context, db *DB) (user *User, err error) {
-    err = db.WithTx(func(ctx context.Context, tx *Tx) error) {
-        user, err = tx.CreateUser(ctx,
-        	User_Id("some unique id i just generated"),
-        	User_Name("Donny B. Xavier"))
-        return err
-    })
-    return user, err
+	err = db.WithTx(func(ctx context.Context, tx *Tx) error) {
+		user, err = tx.CreateUser(ctx,
+			User_Id("some unique id i just generated"),
+			User_Name("Donny B. Xavier"))
+		return err
+	})
+	return user, err
 }
 ```
 
 DBX does not generate this helper for you so that you can have full control
 over how you want to handle the error in the Rollback case.
 
-If you added that file it's a great place to add a `go:generate` directive:
+If you added that file with the `WithTx` helper, it's also a great place to add
+a `go:generate` directive:
 
 ```
 //go:generate dbx.v1 golang example.dbx .
