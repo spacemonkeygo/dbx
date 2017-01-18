@@ -71,7 +71,7 @@ func main() {
 		}
 	})
 
-	app.Command("schema", "generate Go code", func(cmd *cli.Cmd) {
+	app.Command("schema", "generate table schema", func(cmd *cli.Cmd) {
 		dialects_opt := cmd.StringsOpt("d dialect", nil,
 			"SQL dialects (default is postgres)")
 		dbxfile_arg := cmd.StringArg("DBXFILE", "",
