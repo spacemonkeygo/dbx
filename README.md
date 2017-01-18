@@ -7,6 +7,12 @@ DBX is a tool to generate database schemas and code to operate with it.
 DBX takes a description of models and operations to perform on those models
 and can generate code to interact with sql databases.
 
+## Installing
+
+```
+go get gopkg.in/spacemonkeygo/dbx.v1
+```
+
 ## Basic Example
 
 ### Declaring a Model
