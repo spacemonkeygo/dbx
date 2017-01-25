@@ -171,14 +171,11 @@ type {{ .CreateStructName }} struct {
 }
 {{- end }}
 
-{{- if .UpdatableFields }}
-
 type {{ .UpdateStructName }} struct {
 {{- range .UpdatableFields }}
 	{{ .Name }} *{{ .StructName }}
 {{- end }}
 }
-{{- end }}
 
 {{- range .Fields }}
 {{- $fstruct := .StructName }}

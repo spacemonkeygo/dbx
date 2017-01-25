@@ -25,6 +25,7 @@ Update{{ .Suffix }}({{ ctxparam .Args }}, update {{ .Struct.UpdateStructName }})
 		qs = append(qs, " = {{ .ArgumentPrefix }}, "...)
 		{{- end }}
 	}
+	_ = addArgument
 
 	{{ range .Struct.UpdatableFields }}
 	if update.{{ .Name }} != nil {
