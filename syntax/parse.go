@@ -14,32 +14,10 @@
 
 package syntax
 
-import (
-	"io/ioutil"
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
-	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
-)
-
-func ParseFile(path string) (root *ast.Root, err error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, Error.Wrap(err)
-	}
-	errutil.SetContextSource(data)
-
+func Parse(path string, data []byte) (root *ast.Root, err error) {
 	scanner, err := NewScanner(path, data)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseRoot(scanner)
-}
-
-func Parse(data []byte) (root *ast.Root, err error) {
-	errutil.SetContextSource(data)
-
-	scanner, err := NewScanner("", data)
 	if err != nil {
 		return nil, err
 	}

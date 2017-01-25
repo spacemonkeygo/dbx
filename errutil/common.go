@@ -45,20 +45,12 @@ func GetErrorPosition(err error) *scanner.Position {
 	return nil
 }
 
-// this is a giant hack to avoid threading through the source information
-// everywhere.
-var contextSource []byte
-
-func SetContextSource(source []byte) {
-	contextSource = source
-}
-
-func GetContext(err error) string {
-	if contextSource == nil {
+func GetContext(src []byte, err error) string {
+	if src == nil {
 		return ""
 	}
 	if pos := GetErrorPosition(err); pos != nil {
-		return generateContext(contextSource, *pos)
+		return generateContext(src, *pos)
 	}
 	return ""
 }

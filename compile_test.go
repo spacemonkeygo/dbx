@@ -26,8 +26,8 @@ func TestCompilation(t *testing.T) {
 
 	for _, fileinfo := range fileinfos {
 		tw.Run(fileinfo.Name(), func(t *testing.T) {
-			testFile(testutil.Wrap(t),
-				filepath.Join("testdata", fileinfo.Name()))
+			path := filepath.Join("testdata", fileinfo.Name())
+			testFile(testutil.Wrap(t), path)
 		})
 	}
 }

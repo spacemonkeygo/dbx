@@ -16,41 +16,13 @@ package syntax
 
 import (
 	"bytes"
-	"io/ioutil"
 	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 )
 
-func FormatFile(path string) (formatted []byte, err error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, Error.Wrap(err)
-	}
-	errutil.SetContextSource(data)
-
+func Format(path string, data []byte) (formatted []byte, err error) {
 	scanner, err := NewScanner(path, data)
-	if err != nil {
-		return nil, err
-	}
-
-	root, err := scanRoot(scanner)
-	if err != nil {
-		return nil, err
-	}
-
-	formatted, err = formatRoot(root)
-	if err != nil {
-		return nil, err
-	}
-
-	return formatted, nil
-}
-
-func Format(data []byte) (formatted []byte, err error) {
-	errutil.SetContextSource(data)
-
-	scanner, err := NewScanner("", data)
 	if err != nil {
 		return nil, err
 	}

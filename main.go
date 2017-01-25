@@ -37,13 +37,15 @@ import (
 // dbx golang (-p package) (-d dialect) DBXFILE OUTDIR
 // dbx schema (-d dialect) DBXFILE OUTDIR
 
+var loadedData []byte
+
 func main() {
 	die := func(err error) {
 		if err != nil {
 			// if the error came from errutil, don't bother with the dbx prefix
 			err_string := strings.TrimPrefix(errors.GetMessage(err), "dbx: ")
 			fmt.Fprintln(os.Stderr, err_string)
-			if context := errutil.GetContext(err); context != "" {
+			if context := errutil.GetContext(loadedData, err); context != "" {
 				fmt.Fprintln(os.Stderr)
 				fmt.Fprintln(os.Stderr, "context:")
 				fmt.Fprintln(os.Stderr, context)
@@ -159,7 +161,9 @@ func formatCmd() (err error) {
 	if err != nil {
 		return err
 	}
-	formatted, err := syntax.Format(data)
+	loadedData = data
+
+	formatted, err := syntax.Format("", data)
 	if err != nil {
 		return err
 	}
@@ -174,15 +178,23 @@ func renderSchema(dialect sql.Dialect, root *ir.Root) []byte {
 }
 
 func parseDBX(in string) (*ir.Root, error) {
-	ast_root, err := syntax.ParseFile(in)
+	data, err := ioutil.ReadFile(in)
 	if err != nil {
 		return nil, err
 	}
+	loadedData = data
+
+	ast_root, err := syntax.Parse(in, data)
+	if err != nil {
+		return nil, err
+	}
+
 	root, err := xform.Transform(ast_root)
 	if err != nil {
 		return nil, err
 	}
 	root.SetDefaults()
+
 	return root, nil
 }
 
