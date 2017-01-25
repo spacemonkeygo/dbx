@@ -1,0 +1,7 @@
+model foo (
+	key pk
+
+	field pk serial64
+	field data float
+	field data64 float64
+)

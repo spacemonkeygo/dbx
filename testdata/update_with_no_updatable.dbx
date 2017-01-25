@@ -1,0 +1,10 @@
+// this file is broken, but just wanna get the float64 test in first
+//test:fail
+
+model foo (
+	key pk
+
+	field pk serial64
+)
+
+update foo ( where foo.pk = ? )

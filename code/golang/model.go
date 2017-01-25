@@ -144,6 +144,12 @@ func fieldType(field *ir.Field) string {
 		} else {
 			return "bool"
 		}
+	case consts.FloatField, consts.Float64Field:
+		if field.Nullable {
+			return "sql.NullFloat64"
+		} else {
+			return "float64"
+		}
 	}
 	panic(fmt.Sprintf("unhandled field type %q (nullable=%t)",
 		field.Type, field.Nullable))

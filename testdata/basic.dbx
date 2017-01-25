@@ -1,0 +1,11 @@
+model foo (
+	key pk
+
+	field pk serial64
+	field data text (updatable)
+)
+
+create foo ()
+read ( select foo )
+update foo ( where foo.pk = ? )
+delete foo ( where foo.pk = ? )
