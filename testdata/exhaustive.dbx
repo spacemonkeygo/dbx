@@ -1,0 +1,175 @@
+// this file attempts to be exhaustive in patty features just to give a good
+// spot check that we didn't ruin everything.
+
+model a (
+	key    pk
+	unique id
+	unique name
+
+	field pk    serial64
+	field ctime timestamp ( autoinsert )
+	field mtime timestamp ( autoinsert, autoupdate )
+	field id    text
+	field name  text
+)
+
+model b (
+	key    pk
+	unique id
+
+	field pk   serial64
+	field id   text
+	field data text     ( updatable )
+)
+
+model c (
+	key    pk
+	unique id
+
+	field pk   serial64
+	field id   text
+	field b_pk b.pk     cascade
+)
+
+model d (
+	key    pk
+	unique id
+	unique a_id alias
+
+	field pk    serial64
+	field id    text
+	field alias text              ( nullable, updatable )
+	field e_id  e.id     restrict
+	field a_id  a.id     cascade
+)
+
+model a_b (
+	key   b_pk a_pk
+	field b_pk b.pk cascade
+	field a_pk a.pk cascade
+)
+
+model e (
+	key    pk
+	unique id
+
+	field pk   serial64
+	field id   text
+	field a_id a.id     cascade
+)
+
+create e ( )
+
+read (
+	select e
+	where  e.id   =   ?
+	where  e.a_id =   ?
+	view   all    has
+)
+
+read (
+	select e
+	where  e.a_id = ?
+	view   paged
+)
+
+delete e (
+	where e.id   = ?
+	where e.a_id = ?
+)
+
+create d ( )
+
+read (
+	select d
+	where  d.id = ?
+)
+
+read (
+	select d
+	where  d.id   = ?
+	where  d.a_id = ?
+)
+
+read (
+	select d
+	where  d.alias = ?
+	where  d.a_id  = ?
+)
+
+read (
+	select d
+	where  d.a_id = ?
+	view   paged
+)
+
+update d (
+	where d.id   = ?
+	where d.a_id = ?
+)
+
+delete d (
+	where d.id   = ?
+	where d.a_id = ?
+)
+
+create a ( )
+
+read (
+	select a
+	where  a.pk = ?
+)
+
+read (
+	select a
+	join   a.pk     = a_b.a_pk
+	join   a_b.b_pk = b.pk
+	where  a.id     = ?
+	where  b.id     = ?
+)
+
+read (
+	select a
+	join   a.pk     = a_b.a_pk
+	join   a_b.b_pk = b.pk
+	where  a.name   = ?
+	where  b.id     = ?
+)
+
+read (
+	select a
+	join   a.pk     = a_b.a_pk
+	join   a_b.b_pk = b.pk
+	where  b.id     = ?
+	view   paged
+)
+
+create a_b ( )
+
+create c ( )
+
+read (
+	select c
+	where  c.id = ?
+)
+
+create b ( )
+
+read (
+	select b
+	where  b.pk = ?
+)
+
+read (
+	select b
+	where  b.data = ?
+)
+
+read (
+	select b
+)
+
+update b (
+	where b.id = ?
+)
+

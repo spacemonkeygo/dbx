@@ -26,6 +26,16 @@ type Struct struct {
 	Fields []Field
 }
 
+func (s *Struct) FieldVars() (vars []*Var) {
+	for _, field := range s.Fields {
+		vars = append(vars, &Var{
+			Name: field.Name,
+			Type: field.Type,
+		})
+	}
+	return vars
+}
+
 type Field struct {
 	Name string
 	Type string
@@ -44,7 +54,7 @@ func FieldFromSelectable(selectable ir.Selectable) Field {
 		field.Name = inflect.Camelize(obj.Name)
 		field.Type = field.Name
 	case *ir.Field:
-		field.Name = inflect.Camelize(obj.Model.Name) +
+		field.Name = inflect.Camelize(obj.Model.Name) + "_" +
 			inflect.Camelize(obj.Name)
 		field.Type = fieldType(obj)
 	default:

@@ -42,6 +42,9 @@ func VarsFromSelectables(selectables []ir.Selectable) (vars []*Var) {
 
 func VarFromModel(model *ir.Model) *Var {
 	fields := VarsFromFields(model.Fields)
+	for _, field := range fields {
+		field.Name = inflect.Camelize(field.Name)
+	}
 	return StructVar(model.Name, structName(model), fields)
 }
 
@@ -191,7 +194,7 @@ func (v *Var) Flatten() (flattened []*Var) {
 	for _, field := range v.Fields {
 		field_vars := field.Flatten()
 		for _, field_var := range field_vars {
-			field_var.Name = v.Name + "." + inflect.Camelize(field_var.Name)
+			field_var.Name = v.Name + "." + field_var.Name
 		}
 		flattened = append(flattened, field_vars...)
 	}
