@@ -1,5 +1,6 @@
 {{- define "signature" -}}
-Get{{ .Suffix }}({{ ctxparam .Args }}) (rows {{ sliceof .Row }}, err error)
+Get{{ .Suffix }}({{ ctxparam .Args }}) (
+	rows {{ sliceof .Row }}, err error)
 {{- end -}}
 
 {{- define "body" }}{

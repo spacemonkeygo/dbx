@@ -1,5 +1,7 @@
 {{- define "signature" -}}
-getLast{{ .Return.Type }}(ctx context.Context, pk int64) ({{ param .Return }}, err error)
+getLast{{ .Return.Type }}(ctx context.Context,
+	pk int64) (
+	{{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{

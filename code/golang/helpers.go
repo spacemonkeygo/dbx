@@ -39,7 +39,7 @@ func paramFn(intf interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.Join(vs, ", "), nil
+	return strings.Join(vs, ",\n"), nil
 }
 
 func argFn(intf interface{}) (string, error) {
@@ -112,7 +112,7 @@ func ctxparamFn(intf interface{}) (string, error) {
 	if param == "" {
 		return "ctx context.Context", nil
 	}
-	return "ctx context.Context, " + param, nil
+	return "ctx context.Context,\n" + param, nil
 }
 
 func commaFn(in string) string {

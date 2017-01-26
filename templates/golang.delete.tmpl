@@ -1,5 +1,6 @@
 {{- define "signature" -}}
-Delete{{ .Suffix }}({{ ctxparam .Args }}) (deleted bool, err error)
+Delete{{ .Suffix }}({{ ctxparam .Args }}) (
+	deleted bool, err error)
 {{- end -}}
 
 {{- define "body" -}}{

@@ -1,5 +1,6 @@
 {{- define "signature" -}}
-Delete{{ .Suffix }}({{ ctxparam .Args }}) (count int64, err error)
+Delete{{ .Suffix }}({{ ctxparam .Args }}) (
+	count int64, err error)
 {{- end -}}
 
 {{- define "body" -}}{

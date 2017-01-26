@@ -1,5 +1,7 @@
 {{- define "signature" -}}
-Update{{ .Suffix }}({{ ctxparam .Args }}, update {{ .Struct.UpdateStructName }}) ({{ param .Return }}, err error)
+Update{{ .Suffix }}({{ ctxparam .Args }},
+	update {{ .Struct.UpdateStructName }}) (
+	{{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "body" -}}{
