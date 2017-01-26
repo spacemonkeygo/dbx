@@ -23,11 +23,11 @@ import (
 )
 
 type Get struct {
-	Suffix  string
-	Row     *Var
-	Args    []*Var
-	SQL     string
-	PagedOn string
+	Suffix string
+	Row    *Var
+	Args   []*Var
+	LastPk *Var
+	SQL    string
 }
 
 func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
@@ -51,13 +51,9 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	}
 
 	if ir_read.View == ir.Paged {
-		paged_on := ModelFieldFromIR(ir_read.From.BasicPrimaryKey()).Name
-		if len(ir_read.Selectables) >= 2 {
-			field := FieldFromSelectable(ir_read.From)
-			get.PagedOn = field.Name + "." + paged_on
-		} else {
-			get.PagedOn = paged_on
-		}
+		pk_var := VarFromSelectable(ir_read.From.BasicPrimaryKey())
+		pk_var.Name = "__" + pk_var.Name
+		get.LastPk = pk_var
 	}
 
 	return get

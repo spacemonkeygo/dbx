@@ -16,9 +16,10 @@ Get{{ .Suffix }}({{ ctxparam .Args }}, ctoken string, limit int) (rows {{ sliceo
 	}
 	defer __rows.Close()
 
+	{{ initnew .LastPk }}
 	for __rows.Next() {
 		{{ initnew .Row }}
-		err = __rows.Scan({{ addrof (flatten .Row) }})
+		err = __rows.Scan({{ addrof (flatten .Row) | comma }}{{ addrof .LastPk }})
 		if err != nil {
 			return nil, "", WrapErr(err)
 		}
@@ -30,7 +31,7 @@ Get{{ .Suffix }}({{ ctxparam .Args }}, ctoken string, limit int) (rows {{ sliceo
 
 	if limit > 0 {
 		if len(rows) == limit {
-			ctokenout = fmt.Sprint(rows[limit-1].{{ .PagedOn }})
+			ctokenout = fmt.Sprint({{ arg .LastPk }})
 		}
 	} else {
 		ctokenout = ctoken

@@ -105,6 +105,7 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 			Fields: []string{pk.ColumnRef()},
 		}
 		sel.Limit = "?"
+		sel.Fields = append(sel.Fields, pk.SelectRefs()...)
 	case ir.Has:
 		sel.Has = true
 		sel.Fields = hasFields
