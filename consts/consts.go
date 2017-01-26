@@ -14,6 +14,8 @@
 
 package consts
 
+import "fmt"
+
 type JoinType int
 
 const (
@@ -31,6 +33,27 @@ const (
 	NE   Operator = "!="
 	Like Operator = "like"
 )
+
+func (o Operator) Suffix() string {
+	switch o {
+	case LT:
+		return "less"
+	case LE:
+		return "less_or_equal"
+	case GT:
+		return "greater"
+	case GE:
+		return "greater_or_equal"
+	case EQ:
+		return ""
+	case NE:
+		return "not"
+	case Like:
+		return "like"
+	default:
+		panic(fmt.Sprintf("unhandled operation %q", o))
+	}
+}
 
 type FieldType int
 

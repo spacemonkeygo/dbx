@@ -116,6 +116,20 @@ func ArgFromField(field *ir.Field) *Var {
 	}
 }
 
+func ArgFromWhere(where *ir.Where) *Var {
+	name := where.Left.UnderRef()
+	if suffix := where.Op.Suffix(); suffix != "" {
+		name += "_" + suffix
+	}
+
+	// we don't set ZeroVal or InitVal because these args should only be used
+	// as incoming arguments to function calls.
+	return &Var{
+		Name: name,
+		Type: ModelFieldFromIR(where.Left).StructName(),
+	}
+}
+
 func StructVar(name string, typ string, vars []*Var) *Var {
 	return &Var{
 		Name:    name,

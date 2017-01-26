@@ -15,11 +15,9 @@
 package ir
 
 import (
-	"fmt"
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
-	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 )
 
 func (root *Root) SetDefaults() {
@@ -161,22 +159,8 @@ func whereSuffix(wheres []*Where, full bool) (parts []string) {
 			parts = append(parts, where.Left.Model.Name)
 		}
 		parts = append(parts, where.Left.Name)
-		switch where.Op {
-		case consts.LT:
-			parts = append(parts, "less")
-		case consts.LE:
-			parts = append(parts, "less_or_equal")
-		case consts.GT:
-			parts = append(parts, "greater")
-		case consts.GE:
-			parts = append(parts, "greater_or_equal")
-		case consts.EQ:
-		case consts.NE:
-			parts = append(parts, "not")
-		case consts.Like:
-			parts = append(parts, "like")
-		default:
-			panic(fmt.Sprintf("unhandled operation %q", where.Op))
+		if suffix := where.Op.Suffix(); suffix != "" {
+			parts = append(parts, suffix)
 		}
 	}
 	return parts

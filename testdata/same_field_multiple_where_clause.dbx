@@ -1,0 +1,10 @@
+model foo (
+	key pk
+	field pk serial64
+)
+
+read (
+	select foo
+	where foo.pk > ?
+	where foo.pk < ?
+)
