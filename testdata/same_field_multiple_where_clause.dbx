@@ -8,3 +8,13 @@ read (
 	where foo.pk > ?
 	where foo.pk < ?
 )
+
+update foo (
+	where foo.pk < ?
+	where foo.pk = ?
+)
+
+delete foo (
+	where foo.pk < ?
+	where foo.pk = ?
+)
