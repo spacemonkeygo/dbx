@@ -52,6 +52,13 @@ func previouslyDefined(pos scanner.Position, kind string,
 	where scanner.Position) error {
 
 	return errutil.New(pos,
-		"%s already defined. previous definiton at %s",
+		"%s already defined. previous definition at %s",
+		kind, where)
+}
+
+func duplicateQuery(pos scanner.Position, kind string,
+	where scanner.Position) error {
+	return errutil.New(pos,
+		"%s: duplicate %s (first defined at %s)",
 		kind, where)
 }

@@ -15,6 +15,9 @@
 package xform
 
 import (
+	"fmt"
+
+	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -26,12 +29,25 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 
 	model.Name = ast_model.Name.Value
 	model.Table = ast_model.Table.Get()
+	if model.Table == "" {
+		model.Table = inflect.Pluralize(model.Name)
+	}
 
+	column_names := map[string]*ast.Field{}
 	for _, ast_field := range ast_model.Fields {
 		field_entry := model_entry.GetField(ast_field.Name.Value)
 		if err := transformField(lookup, field_entry); err != nil {
 			return err
 		}
+
+		field := field_entry.field
+
+		if existing := column_names[field.Column]; existing != nil {
+			return errutil.New(ast_field.Pos,
+				"%s: column %q already used by field %q at %s",
+				field.Column, existing.Name.Get(), existing.Pos)
+		}
+		column_names[field.Column] = ast_field
 	}
 
 	if ast_model.PrimaryKey == nil || len(ast_model.PrimaryKey.Refs) == 0 {
@@ -68,11 +84,6 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 	for _, ast_index := range ast_model.Indexes {
 		// BUG(jeff): we can only have one index without a name specified when
 		// really we want to pick a name for them that won't collide.
-		if existing, ok := index_names[ast_index.Name.Get()]; ok {
-			return previouslyDefined(ast_index.Pos, "index", existing.Pos)
-		}
-		index_names[ast_index.Name.Get()] = ast_index
-
 		if ast_index.Fields == nil || len(ast_index.Fields.Refs) < 1 {
 			return errutil.New(ast_index.Pos,
 				"index %q has no fields defined",
@@ -84,12 +95,26 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 		if err != nil {
 			return err
 		}
-		model.Indexes = append(model.Indexes, &ir.Index{
+
+		index := &ir.Index{
 			Name:   ast_index.Name.Get(),
 			Model:  fields[0].Model,
 			Fields: fields,
 			Unique: ast_index.Unique.Get(),
-		})
+		}
+
+		if index.Name == "" {
+			index.Name = DefaultIndexName(index)
+		}
+
+		if existing, ok := index_names[index.Name]; ok {
+			return previouslyDefined(ast_index.Pos,
+				fmt.Sprintf("index (%s)", index.Name),
+				existing.Pos)
+		}
+		index_names[index.Name] = ast_index
+
+		model.Indexes = append(model.Indexes, index)
 	}
 
 	return nil

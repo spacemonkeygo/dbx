@@ -189,13 +189,7 @@ func parseDBX(in string) (*ir.Root, error) {
 		return nil, err
 	}
 
-	root, err := xform.Transform(ast_root)
-	if err != nil {
-		return nil, err
-	}
-	root.SetDefaults()
-
-	return root, nil
+	return xform.Transform(ast_root)
 }
 
 func getLoader(dir string) tmplutil.Loader {

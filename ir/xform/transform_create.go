@@ -27,8 +27,11 @@ func transformCreate(lookup *lookup, ast_cre *ast.Create) (
 		return nil, err
 	}
 
-	return &ir.Create{
+	cre = &ir.Create{
 		Model: model,
 		Raw:   ast_cre.Raw.Get(),
-	}, nil
+	}
+	cre.Suffix = DefaultCreateSuffix(cre)
+
+	return cre, nil
 }

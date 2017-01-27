@@ -70,6 +70,10 @@ func transformField(lookup *lookup, field_entry *fieldEntry) (err error) {
 			"length must be on a text field")
 	}
 
+	if field.Column == "" {
+		field.Column = field.Name
+	}
+
 	return nil
 }
 

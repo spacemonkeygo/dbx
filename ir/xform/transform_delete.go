@@ -105,5 +105,7 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		})
 	}
 
+	del.Suffix = DefaultDeleteSuffix(del)
+
 	return del, nil
 }

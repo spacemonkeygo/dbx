@@ -16,6 +16,7 @@ package xform
 
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -37,12 +38,23 @@ func transformModels(lookup *lookup, ast_models []*ast.Model) (
 	}
 
 	// step 2. resolve all of the other fields on the models and Fields
-	// including references between them.
+	// including references between them. also check for duplicate table names.
+	table_names := map[string]*ast.Model{}
 	for _, ast_model := range ast_models {
 		model_entry := lookup.GetModel(ast_model.Name.Value)
 		if err := transformModel(lookup, model_entry); err != nil {
 			return nil, err
 		}
+
+		model := model_entry.model
+
+		if existing := table_names[model.Table]; existing != nil {
+			return nil, errutil.New(ast_model.Pos,
+				"%s: table %q already used by model %q (%s)",
+				model.Table, existing.Name.Get(), existing.Pos)
+		}
+		table_names[model.Table] = ast_model
+
 		models = append(models, model_entry.model)
 	}
 

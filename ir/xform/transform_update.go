@@ -110,5 +110,7 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 			"updates for more than one row are unsupported")
 	}
 
+	upd.Suffix = DefaultUpdateSuffix(upd)
+
 	return upd, nil
 }

@@ -236,5 +236,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		addView(ir.Paged)
 	}
 
+	for _, read := range reads {
+		read.Suffix = DefaultReadSuffix(read)
+	}
+
 	return reads, nil
 }

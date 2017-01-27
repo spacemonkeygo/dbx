@@ -12,83 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ir
+package xform
 
 import (
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
-func (root *Root) SetDefaults() {
-	for _, model := range root.Models {
-		model.SetDefaults()
-	}
-	for _, cre := range root.Creates {
-		cre.SetDefaults()
-	}
-	for _, read := range root.Reads {
-		read.SetDefaults()
-	}
-	for _, upd := range root.Updates {
-		upd.SetDefaults()
-	}
-	for _, del := range root.Deletes {
-		del.SetDefaults()
-	}
-}
-
-func (model *Model) SetDefaults() {
-	if model.Table == "" {
-		model.Table = inflect.Pluralize(model.Name)
-	}
-
-	for _, field := range model.Fields {
-		field.SetDefaults()
-	}
-
-	for _, index := range model.Indexes {
-		index.SetDefaults()
-	}
-}
-
-func (field *Field) SetDefaults() {
-	if field.Column == "" {
-		field.Column = field.Name
-	}
-}
-
-func (index *Index) SetDefaults() {
-	if index.Name == "" {
-		index.Name = DefaultIndexName(index)
-	}
-}
-
-func (cre *Create) SetDefaults() {
-	if cre.Suffix == "" {
-		cre.Suffix = DefaultCreateSuffix(cre)
-	}
-}
-
-func (read *Read) SetDefaults() {
-	if read.Suffix == "" {
-		read.Suffix = DefaultReadSuffix(read)
-	}
-}
-
-func (upd *Update) SetDefaults() {
-	if upd.Suffix == "" {
-		upd.Suffix = DefaultUpdateSuffix(upd)
-	}
-}
-
-func (del *Delete) SetDefaults() {
-	if del.Suffix == "" {
-		del.Suffix = DefaultDeleteSuffix(del)
-	}
-}
-
-func DefaultIndexName(i *Index) string {
+func DefaultIndexName(i *ir.Index) string {
 	parts := []string{i.Model.Table}
 	for _, field := range i.Fields {
 		parts = append(parts, field.Column)
@@ -100,7 +33,7 @@ func DefaultIndexName(i *Index) string {
 	return strings.Join(parts, "_")
 }
 
-func DefaultCreateSuffix(cre *Create) string {
+func DefaultCreateSuffix(cre *ir.Create) string {
 	var parts []string
 	if cre.Raw {
 		parts = append(parts, "raw")
@@ -109,7 +42,7 @@ func DefaultCreateSuffix(cre *Create) string {
 	return strings.Join(parts, "_")
 }
 
-func DefaultReadSuffix(read *Read) string {
+func DefaultReadSuffix(read *ir.Read) string {
 	var parts []string
 	for _, selectable := range read.Selectables {
 		part := selectable.UnderRef()
@@ -120,30 +53,30 @@ func DefaultReadSuffix(read *Read) string {
 	}
 	parts = append(parts, whereSuffix(read.Where, len(read.Joins) > 0)...)
 	switch read.View {
-	case All, Count, Has:
-	case LimitOffset:
+	case ir.All, ir.Count, ir.Has:
+	case ir.LimitOffset:
 		parts = append(parts, "with", "limit", "offset")
-	case Paged:
+	case ir.Paged:
 		parts = append(parts, "paged")
 	}
 	return strings.Join(parts, "_")
 }
 
-func DefaultUpdateSuffix(upd *Update) string {
+func DefaultUpdateSuffix(upd *ir.Update) string {
 	var parts []string
 	parts = append(parts, upd.Model.Name)
 	parts = append(parts, whereSuffix(upd.Where, len(upd.Joins) > 0)...)
 	return strings.Join(parts, "_")
 }
 
-func DefaultDeleteSuffix(del *Delete) string {
+func DefaultDeleteSuffix(del *ir.Delete) string {
 	var parts []string
 	parts = append(parts, del.Model.Name)
 	parts = append(parts, whereSuffix(del.Where, len(del.Joins) > 0)...)
 	return strings.Join(parts, "_")
 }
 
-func whereSuffix(wheres []*Where, full bool) (parts []string) {
+func whereSuffix(wheres []*ir.Where, full bool) (parts []string) {
 	if len(wheres) == 0 {
 		return nil
 	}
