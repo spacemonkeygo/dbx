@@ -40,14 +40,14 @@ func Open(driver, source string) (db *DB, err error) {
 	}
 	defer func(sql_db *sql.DB) {
 		if err != nil {
-			sql_db.Close()		
+			sql_db.Close()
 		}
 	}(sql_db)
 
 	if err := sql_db.Ping(); err != nil {
 		return nil, WrapErr(err)
 	}
-	
+
 	var impl dbMethods
 	switch driver {
 {{- range .Dialects }}
@@ -100,9 +100,9 @@ func (tx *Tx) Rollback() (err error) {
 
 {{- range .Dialects }}
 
-{{ $dbtype := .Name | printf "%sDB" }}
-{{ $txtype := .Name | printf "%sTx" }}
-{{ $impltype := .Name | printf "%sImpl" }}
+{{- $dbtype := .Name | printf "%sDB" -}}
+{{- $txtype := .Name | printf "%sTx" -}}
+{{- $impltype := .Name | printf "%sImpl" }}
 
 type {{ $impltype }} struct {
 	driver driver
@@ -154,7 +154,9 @@ func {{ .Name }}LogStmt(stmt string, args ...interface{}) {
 {{- end }}
 
 {{ range .Structs }}
-{{ $struct := .Name }}
+{{- $struct := .Name -}}
+{{- $createstruct := .CreateStructName -}}
+{{- $updatestruct := .UpdateStructName }}
 
 type {{ $struct }} struct {
 {{- range .Fields }}
@@ -164,18 +166,31 @@ type {{ $struct }} struct {
 
 {{- if .OptionalInsertFields }}
 
-type {{ .CreateStructName }} struct {
+type {{ $createstruct }} struct {
 {{- range .OptionalInsertFields }}
 	{{ .Name }} *{{ .StructName }}
 {{- end }}
 }
+
+{{- range .OptionalInsertFields }}
+func (u *{{ $createstruct }}) Set{{ .Name }}(v {{ .Type }}) {
+	u.{{ .Name }} = {{ $struct }}_{{ .Name }}(v).Ref()
+}
+{{ end -}}
+
 {{- end }}
 
-type {{ .UpdateStructName }} struct {
+type {{ $updatestruct }} struct {
 {{- range .UpdatableFields }}
 	{{ .Name }} *{{ .StructName }}
 {{- end }}
 }
+
+{{- range .UpdatableFields }}
+func (u *{{ $updatestruct }}) Set{{ .Name }}(v {{ .Type }}) {
+	u.{{ .Name }} = {{ $struct }}_{{ .Name }}(v).Ref()
+}
+{{ end -}}
 
 {{- range .Fields }}
 {{- $fstruct := .StructName }}
@@ -183,7 +198,7 @@ type {{ .UpdateStructName }} struct {
 type {{ $fstruct }} struct { v {{ .Type }} }
 func {{ $struct }}_{{ .Name }}(v {{ .Type }}) {{ $fstruct }} { return {{ $fstruct }}{v: v} }
 func (u {{ $fstruct }}) columnName() string { return "{{ .Column }}" }
-func (u *{{ $fstruct }}) value() interface{} { 
+func (u *{{ $fstruct }}) value() interface{} {
 	if u == nil {
 		return nil
 	}
