@@ -14,11 +14,17 @@
 
 package ir
 
+import "fmt"
+
 type Delete struct {
 	Suffix string
 	Model  *Model
 	Joins  []*Join
 	Where  []*Where
+}
+
+func (r *Delete) Signature() string {
+	return fmt.Sprintf("DELETE(%s)", r.Suffix)
 }
 
 func (d *Delete) One() bool {

@@ -60,5 +60,5 @@ func duplicateQuery(pos scanner.Position, kind string,
 	where scanner.Position) error {
 	return errutil.New(pos,
 		"%s: duplicate %s (first defined at %s)",
-		kind, where)
+		pos, kind, where)
 }

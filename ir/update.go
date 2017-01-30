@@ -14,11 +14,17 @@
 
 package ir
 
+import "fmt"
+
 type Update struct {
 	Suffix string
 	Model  *Model
 	Joins  []*Join
 	Where  []*Where
+}
+
+func (r *Update) Signature() string {
+	return fmt.Sprintf("UPDATE(%s)", r.Suffix)
 }
 
 func (upd *Update) AutoUpdatableFields() (fields []*Field) {

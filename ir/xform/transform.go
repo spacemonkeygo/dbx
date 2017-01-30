@@ -32,22 +32,22 @@ func Transform(ast_root *ast.Root) (root *ir.Root, err error) {
 		Models: models,
 	}
 
-	create_suffixes := map[string]*ast.Create{}
+	create_signatures := map[string]*ast.Create{}
 	for _, ast_cre := range ast_root.Creates {
 		cre, err := transformCreate(lookup, ast_cre)
 		if err != nil {
 			return nil, err
 		}
 
-		if existing := create_suffixes[cre.Suffix]; existing != nil {
+		if existing := create_signatures[cre.Signature()]; existing != nil {
 			return nil, duplicateQuery(ast_cre.Pos, "create", existing.Pos)
 		}
-		create_suffixes[cre.Suffix] = ast_cre
+		create_signatures[cre.Signature()] = ast_cre
 
 		root.Creates = append(root.Creates, cre)
 	}
 
-	read_suffixes := map[string]*ast.Read{}
+	read_signatures := map[string]*ast.Read{}
 	for _, ast_read := range ast_root.Reads {
 		reads, err := transformRead(lookup, ast_read)
 		if err != nil {
@@ -55,41 +55,41 @@ func Transform(ast_root *ast.Root) (root *ir.Root, err error) {
 		}
 
 		for _, read := range reads {
-			if existing := read_suffixes[read.Suffix]; existing != nil {
+			if existing := read_signatures[read.Signature()]; existing != nil {
 				return nil, duplicateQuery(ast_read.Pos, "read", existing.Pos)
 			}
-			read_suffixes[read.Suffix] = ast_read
+			read_signatures[read.Signature()] = ast_read
 		}
 
 		root.Reads = append(root.Reads, reads...)
 	}
 
-	update_suffixes := map[string]*ast.Update{}
+	update_signatures := map[string]*ast.Update{}
 	for _, ast_upd := range ast_root.Updates {
 		upd, err := transformUpdate(lookup, ast_upd)
 		if err != nil {
 			return nil, err
 		}
 
-		if existing := update_suffixes[upd.Suffix]; existing != nil {
+		if existing := update_signatures[upd.Signature()]; existing != nil {
 			return nil, duplicateQuery(ast_upd.Pos, "update", existing.Pos)
 		}
-		update_suffixes[upd.Suffix] = ast_upd
+		update_signatures[upd.Signature()] = ast_upd
 
 		root.Updates = append(root.Updates, upd)
 	}
 
-	delete_suffixes := map[string]*ast.Delete{}
+	delete_signatures := map[string]*ast.Delete{}
 	for _, ast_del := range ast_root.Deletes {
 		del, err := transformDelete(lookup, ast_del)
 		if err != nil {
 			return nil, err
 		}
 
-		if existing := delete_suffixes[del.Suffix]; existing != nil {
+		if existing := delete_signatures[del.Signature()]; existing != nil {
 			return nil, duplicateQuery(ast_del.Pos, "delete", existing.Pos)
 		}
-		delete_suffixes[del.Suffix] = ast_del
+		delete_signatures[del.Signature()] = ast_del
 
 		root.Deletes = append(root.Deletes, del)
 	}

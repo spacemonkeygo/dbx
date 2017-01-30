@@ -14,7 +14,11 @@
 
 package ir
 
-import "gopkg.in/spacemonkeygo/dbx.v1/consts"
+import (
+	"fmt"
+
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
+)
 
 type Selectable interface {
 	SelectRefs() []string
@@ -31,6 +35,10 @@ type Read struct {
 	Where       []*Where
 	OrderBy     *OrderBy
 	View        View
+}
+
+func (r *Read) Signature() string {
+	return fmt.Sprintf("READ(%s,%s)", r.Suffix, r.View)
 }
 
 func (r *Read) One() bool {

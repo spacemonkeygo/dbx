@@ -14,10 +14,16 @@
 
 package ir
 
+import "fmt"
+
 type Create struct {
 	Suffix string
 	Model  *Model
 	Raw    bool
+}
+
+func (cre *Create) Signature() string {
+	return fmt.Sprintf("CREATE(%s)", cre.Suffix)
 }
 
 func (cre *Create) Fields() (fields []*Field) {
