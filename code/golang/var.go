@@ -76,6 +76,8 @@ func VarFromField(field *ir.Field) *Var {
 		v.ZeroVal = `sql.NullInt64{}`
 	case "sql.NullString":
 		v.ZeroVal = `sql.NullString{}`
+	case "sql.NullFloat64":
+		v.ZeroVal = `sql.NullFloat64{}`
 	case "bool":
 		v.ZeroVal = "false"
 	case "time.Time":

@@ -4,4 +4,6 @@ model foo (
 	field pk serial64
 	field data float
 	field data64 float64
+	field nullable_data float (nullable)
+	field nullable_data64 float64 (nullable)
 )
