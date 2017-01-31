@@ -22,13 +22,12 @@ import (
 
 type Selectable interface {
 	SelectRefs() []string
-	UnderRef() string
 	ModelOf() *Model
 	selectable()
 }
 
 type Read struct {
-	Suffix      string
+	Suffix      []string
 	Selectables []Selectable
 	From        *Model
 	Joins       []*Join
@@ -38,10 +37,10 @@ type Read struct {
 }
 
 func (r *Read) Signature() string {
-	return fmt.Sprintf("READ(%s,%s)", r.Suffix, r.View)
+	return fmt.Sprintf("READ(%q,%q)", r.Suffix, r.View)
 }
 
-func (r *Read) One() bool {
+func (r *Read) Distinct() bool {
 	var targets []*Model
 	for _, selectable := range r.Selectables {
 		targets = append(targets, selectable.ModelOf())

@@ -32,7 +32,7 @@ type Get struct {
 
 func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	get := &Get{
-		Suffix: inflect.Camelize(ir_read.Suffix),
+		Suffix: convertSuffix(ir_read.Suffix),
 		SQL:    sql.RenderSelect(dialect, ir_read),
 	}
 

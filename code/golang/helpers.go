@@ -144,3 +144,11 @@ func structName(m *ir.Model) string {
 func fieldName(f *ir.Field) string {
 	return inflect.Camelize(f.Name)
 }
+
+func convertSuffix(suffix []string) string {
+	parts := make([]string, 0, len(suffix))
+	for _, part := range suffix {
+		parts = append(parts, inflect.Camelize(part))
+	}
+	return "_" + strings.Join(parts, "_")
+}

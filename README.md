@@ -113,7 +113,7 @@ can add one of each operation for the `user` model based on the primary key:
 create user ( )
 update user ( where user.pk = ? )
 delete user ( where user.pk = ? )
-read        (
+read one (
 	select user
 	where  user.pk = ?
 )
@@ -123,11 +123,12 @@ Regenerating the Go code will expand our database interface:
 
 ```
 type TXMethods interface {
-	CreateUser(ctx context.Context, user_id User_IdField, user_name User_NameField) (user *User, err error)
 	DeleteAll(ctx context.Context) (count int64, err error)
-	DeleteUserByPk(ctx context.Context, user_pk User_PkField) (deleted bool, err error)
-	GetUserByPk(ctx context.Context, user_pk User_PkField) (user *User, err error)
-	UpdateUserByPk(ctx context.Context, user_pk User_PkField, update UpdateUser) (user *User, err error)
+
+	Create_User(ctx context.Context, user_id User_Id_Field, user_name User_Name_Field) (user *User, err error)
+	Delete_User_By_Pk(ctx context.Context, user_pk User_Pk_Field) (deleted bool, err error)
+	Get_User_By_Pk(ctx context.Context, user_pk User_Pk_Field) (user *User, err error)
+	Update_User_By_Pk(ctx context.Context, user_pk User_Pk_Field, update UpdateUser) (user *User, err error)
 }
 ```
 
@@ -138,7 +139,7 @@ any of those errors at compile time.
 For example, to create a user, we could write
 
 ```
-db.CreateUser(ctx,
+db.Create_User(ctx,
 		User_Id("some unique id i just generated"),
 		User_Name("Donny B. Xavier"))
 ```
@@ -163,7 +164,7 @@ func createUser(ctx context.Context, db *DB) (user *User, err error) {
 		}
 	}()
 
-	return tx.CreateUser(ctx, 
+	return tx.Create_User(ctx, 
 		User_Id("some unique id i just generated"), 
 		User_Name("Donny B. Xavier"))
 }
@@ -197,7 +198,7 @@ Then `createUser` can be succinctly written
 ```
 func createUser(ctx context.Context, db *DB) (user *User, err error) {
 	err = db.WithTx(func(ctx context.Context, tx *Tx) error) {
-		user, err = tx.CreateUser(ctx,
+		user, err = tx.Create_User(ctx,
 			User_Id("some unique id i just generated"),
 			User_Name("Donny B. Xavier"))
 		return err
@@ -364,8 +365,27 @@ create <model> (
 
 ### Read
 
+
+`<views>` is a list of views that describe what kind of reads to generate and
+is constrained by whether or not a read is distinct. a read is said to be
+distinct if the where clauses and join conditions identify a unique result.
+
+the following views are defined for all reads:
+* `count` - returns the number of results
+* `has` - returns if there are results or not
+* `first` - returns the first result or nothing
+
+the following views are only defined for non-distinct reads:
+* `all` - returns all results
+* `limitoffset` - returns a limited number of results starting at an offset
+* `paged` - returns limited number of results paged by a forward iterator
+
+the following views are only defined for distinct reads:
+* `scalar` - returns a single result or nothing
+* `one` - returns a single result or fails
+
 ```
-read (
+read <views> (
 	// select describes what values will be returned from the read. you can
 	// specify either models or just a field of a model, like "user" or
 	// "project.id"
@@ -381,13 +401,6 @@ read (
 	// model into scope for the selects, and the joins must be in a consistent
 	// order.
 	join <model.field> = <model.field>
-	
-	// view describes what kind of reads to generate: get all of the rows, page
-	// the results, a count, etc. it can contain any of "all", "paged",
-	// "count", "has", or "limitoffset" and by default is "all". if the where
-	// clauses and join conditions can be determined to have a unique result,
-	// only "all" is valid and will just return that value.
-	view <views>
 	
 	// orderby controls the order the rows are returned. direction has to be
 	// either "asc" or "desc".

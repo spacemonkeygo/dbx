@@ -204,8 +204,8 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 
 	if view.All.Get() {
 		// template is already sufficient for "all"
-		if tmpl.One() {
-			return nil, errutil.New(view.LimitOffset.Pos,
+		if tmpl.Distinct() {
+			return nil, errutil.New(view.All.Pos,
 				"cannot limit/offset unique select")
 		}
 		addView(ir.All)
@@ -217,13 +217,17 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		addView(ir.Has)
 	}
 	if view.LimitOffset.Get() {
-		if tmpl.One() {
+		if tmpl.Distinct() {
 			return nil, errutil.New(view.LimitOffset.Pos,
-				"cannot use limitoffset view with constrained read")
+				"cannot use limitoffset view with distinct read")
 		}
 		addView(ir.LimitOffset)
 	}
 	if view.Paged.Get() {
+		if tmpl.Distinct() {
+			return nil, errutil.New(view.LimitOffset.Pos,
+				"cannot use paged view with distinct read")
+		}
 		if tmpl.OrderBy != nil {
 			return nil, errutil.New(view.Paged.Pos,
 				"cannot page on model %q with order by",
@@ -237,16 +241,16 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		addView(ir.Paged)
 	}
 	if view.Scalar.Get() {
-		if !tmpl.One() {
-			return nil, errutil.New(view.LimitOffset.Pos,
-				"cannot use scalar view with unconstrained read")
+		if !tmpl.Distinct() {
+			return nil, errutil.New(view.Scalar.Pos,
+				"cannot use scalar view with a non-distinct read")
 		}
 		addView(ir.Scalar)
 	}
 	if view.One.Get() {
-		if !tmpl.One() {
-			return nil, errutil.New(view.LimitOffset.Pos,
-				"cannot use one view with unconstrained read")
+		if !tmpl.Distinct() {
+			return nil, errutil.New(view.One.Pos,
+				"cannot use one view with non-distinct read")
 		}
 		addView(ir.One)
 	}

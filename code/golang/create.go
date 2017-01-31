@@ -17,7 +17,6 @@ package golang
 import (
 	"fmt"
 
-	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
@@ -30,14 +29,16 @@ type Create struct {
 	SQL               string
 	SupportsReturning bool
 	NeedsNow          bool
+	Raw               bool
 }
 
 func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
 	ins := &Create{
-		Suffix:            inflect.Camelize(ir_cre.Suffix),
+		Suffix:            convertSuffix(ir_cre.Suffix),
 		Return:            VarFromModel(ir_cre.Model),
 		SQL:               sql.RenderInsert(dialect, ir_cre),
 		SupportsReturning: dialect.Features().Returning,
+		Raw:               ir_cre.Raw,
 	}
 
 	args := map[string]*Var{}

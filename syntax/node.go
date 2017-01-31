@@ -402,15 +402,18 @@ func (t *tupleNode) consumeAnyToken(cases tokenCases) error {
 }
 
 func (t *tupleNode) consumeTokensUntilList(cases tokenCases) error {
+	if len(t.value) == 0 {
+		return errutil.New(t.getPos(), "expected a token. found nothing")
+	}
 	for {
+		if err := t.consumeAnyToken(cases); err != nil {
+			return err
+		}
 		if len(t.value) == 0 {
 			return errutil.New(t.getPos(), "expected a list. found nothing")
 		}
 		if isList(t.value[0]) {
 			break
-		}
-		if err := t.consumeAnyToken(cases); err != nil {
-			return err
 		}
 	}
 	return nil

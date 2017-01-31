@@ -15,9 +15,9 @@
 package xform
 
 import (
+	"fmt"
 	"strings"
 
-	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -33,40 +33,41 @@ func DefaultIndexName(i *ir.Index) string {
 	return strings.Join(parts, "_")
 }
 
-func DefaultCreateSuffix(cre *ir.Create) string {
+func DefaultCreateSuffix(cre *ir.Create) []string {
 	var parts []string
-	if cre.Raw {
-		parts = append(parts, "raw")
-	}
 	parts = append(parts, cre.Model.Name)
-	return strings.Join(parts, "_")
+	return parts
 }
 
-func DefaultReadSuffix(read *ir.Read) string {
+func DefaultReadSuffix(read *ir.Read) []string {
 	var parts []string
 	for _, selectable := range read.Selectables {
-		part := selectable.UnderRef()
-		if !read.One() {
-			part = inflect.Pluralize(part)
+		switch obj := selectable.(type) {
+		case *ir.Model:
+			parts = append(parts, obj.Name)
+		case *ir.Field:
+			parts = append(parts, obj.Model.Name)
+			parts = append(parts, obj.Name)
+		default:
+			panic(fmt.Sprintf("unhandled selectable %T", selectable))
 		}
-		parts = append(parts, part)
 	}
 	parts = append(parts, whereSuffix(read.Where, len(read.Joins) > 0)...)
-	return strings.Join(parts, "_")
+	return parts
 }
 
-func DefaultUpdateSuffix(upd *ir.Update) string {
+func DefaultUpdateSuffix(upd *ir.Update) []string {
 	var parts []string
 	parts = append(parts, upd.Model.Name)
 	parts = append(parts, whereSuffix(upd.Where, len(upd.Joins) > 0)...)
-	return strings.Join(parts, "_")
+	return parts
 }
 
-func DefaultDeleteSuffix(del *ir.Delete) string {
+func DefaultDeleteSuffix(del *ir.Delete) []string {
 	var parts []string
 	parts = append(parts, del.Model.Name)
 	parts = append(parts, whereSuffix(del.Where, len(del.Joins) > 0)...)
-	return strings.Join(parts, "_")
+	return parts
 }
 
 func whereSuffix(wheres []*ir.Where, full bool) (parts []string) {

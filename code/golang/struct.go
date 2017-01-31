@@ -56,7 +56,7 @@ func FieldFromSelectable(selectable ir.Selectable) Field {
 	case *ir.Field:
 		field.Name = inflect.Camelize(obj.Model.Name) + "_" +
 			inflect.Camelize(obj.Name)
-		field.Type = fieldType(obj)
+		field.Type = ModelFieldFromIR(obj).StructName()
 	default:
 		panic(fmt.Sprintf("unhandled selectable type %T", obj))
 	}

@@ -30,7 +30,7 @@ Update{{ .Suffix }}({{ ctxparam .Args }},
 	_ = addArgument
 
 	{{ range .Struct.UpdatableFields }}
-	if update.{{ .Name }} != nil {
+	if update.{{ .Name }}._set {
 		addArgument("{{ .Column }}")
 		values = append(values, update.{{ .Name }}.value())
 	}

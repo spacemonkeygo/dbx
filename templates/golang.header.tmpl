@@ -6,6 +6,7 @@ package {{ .Package }}
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 	"strconv"
@@ -27,6 +28,11 @@ type driver interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
 }
+
+var (
+	notAPointer = errors.New("destination not a pointer")
+	lossyConversion = errors.New("lossy conversion")
+)
 
 type DB struct {
 	*sql.DB
@@ -73,7 +79,7 @@ func (obj *DB) Close() (err error) {
 	return WrapErr(obj.DB.Close())
 }
 
-func (obj *DB) Open() (*Tx, error) {
+func (obj *DB) Open(ctx context.Context) (*Tx, error) {
 	tx, err := obj.DB.Begin()
 	if err != nil {
 		return nil, WrapErr(err)
@@ -85,16 +91,40 @@ func (obj *DB) Open() (*Tx, error) {
 	}, nil
 }
 
+func DeleteAll(ctx context.Context, db *DB) (int64, error) {
+	tx, err := db.Open(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		if err == nil {
+			err = WrapErr(tx.Commit())
+			return
+		}
+
+		if err_rollback := tx.Rollback(); err_rollback != nil {
+			if Logger != nil {
+				Logger("delete-all: rollback failed: %v", WrapErr(err_rollback))
+			}
+		}
+	}()
+	return tx.deleteAll(ctx)
+}
+
 type Tx struct {
 	tx *sql.Tx
 	txMethods
 }
 
-func (tx *Tx) Commit() (err error) {
+type dialectTx struct {
+	tx *sql.Tx
+}
+
+func (tx *dialectTx) Commit() (err error) {
 	return WrapErr(tx.tx.Commit())
 }
 
-func (tx *Tx) Rollback() (err error) {
+func (tx *dialectTx) Rollback() (err error) {
 	return WrapErr(tx.tx.Rollback())
 }
 
@@ -132,7 +162,7 @@ func (obj *{{ $dbtype }}) Schema() string {
 
 func (obj *{{ $dbtype }}) wrapTx(tx *sql.Tx) txMethods {
 	return &{{ $txtype }}{
-		tx: tx,
+		dialectTx: dialectTx{tx: tx},
 		{{ $impltype }}: &{{ $impltype }}{
 			driver: tx,
 		},
@@ -140,7 +170,7 @@ func (obj *{{ $dbtype }}) wrapTx(tx *sql.Tx) txMethods {
 }
 
 type {{ $txtype }} struct {
-	tx *sql.Tx
+	dialectTx
 	*{{ $impltype }}
 }
 
@@ -164,47 +194,59 @@ type {{ $struct }} struct {
 {{- end }}
 }
 
+func ({{ $struct }}) _Table() string { return "{{ .Table }}" }
+
 {{- if .OptionalInsertFields }}
 
 type {{ $createstruct }} struct {
 {{- range .OptionalInsertFields }}
-	{{ .Name }} *{{ .StructName }}
+	{{ .Name }} {{ .StructName }}
 {{- end }}
 }
-
-{{- range .OptionalInsertFields }}
-func (u *{{ $createstruct }}) Set{{ .Name }}(v {{ .Type }}) {
-	u.{{ .Name }} = {{ $struct }}_{{ .Name }}(v).Ref()
-}
-{{ end -}}
 
 {{- end }}
 
 type {{ $updatestruct }} struct {
 {{- range .UpdatableFields }}
-	{{ .Name }} *{{ .StructName }}
+	{{ .Name }} {{ .StructName }}
 {{- end }}
 }
-
-{{- range .UpdatableFields }}
-func (u *{{ $updatestruct }}) Set{{ .Name }}(v {{ .Type }}) {
-	u.{{ .Name }} = {{ $struct }}_{{ .Name }}(v).Ref()
-}
-{{ end -}}
 
 {{- range .Fields }}
 {{- $fstruct := .StructName }}
+{{- $ctor := printf "%s_%s" .ModelName .Name }}
 
-type {{ $fstruct }} struct { v {{ .Type }} }
-func {{ $struct }}_{{ .Name }}(v {{ .Type }}) {{ $fstruct }} { return {{ $fstruct }}{v: v} }
-func (u {{ $fstruct }}) columnName() string { return "{{ .Column }}" }
-func (u *{{ $fstruct }}) value() interface{} {
-	if u == nil {
-		return nil
-	}
-	return u.v
+type {{ $fstruct }} struct {
+	_set bool
+	_value {{ .Type }}
 }
-func (u {{ $fstruct }}) Ref() *{{ $fstruct }} { return &u }
+
+func {{ $ctor }}(v {{ .CtorValue }}) {{ $fstruct }} {
+{{- if .MutateFn }}
+	v = {{ .MutateFn }}(v)
+{{- end }}
+	return {{ $fstruct }}{ _set: true, _value: {{ if .TakeAddr }}&{{ end }}v }
+}
+{{ if .Nullable }}
+func {{ $ctor }}_Raw(v {{ .Type }}) {{ $fstruct }} {
+	if v == nil {
+		return {{ $ctor }}_Null()
+	}
+	return {{ $ctor }}({{ if .TakeAddr }}*{{ end }}v)
+}
+
+func {{ $ctor }}_Null() {{ $fstruct }} {
+	return {{ $fstruct }}{ _set: true }
+}
+{{ end }}
+
+func (f {{ $fstruct }}) value() interface{} { if !f._set { return nil }; return f._value }
+
+func ({{ $fstruct }}) _Column() string { return "{{ .Column }}" }
 
 {{- end -}}
 {{- end }}
+
+func toUTC(t time.Time) time.Time {
+	return t.UTC()
+}

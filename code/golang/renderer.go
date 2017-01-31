@@ -372,7 +372,7 @@ func (r *Renderer) renderDelete(w io.Writer, ir_del *ir.Delete,
 	dialect sql.Dialect) error {
 
 	del := DeleteFromIR(ir_del, dialect)
-	if ir_del.One() {
+	if ir_del.Distinct() {
 		return r.renderFunc(r.del, w, del, dialect)
 	} else {
 		return r.renderFunc(r.del_all, w, del, dialect)
@@ -383,10 +383,13 @@ func (r *Renderer) renderDeleteWorld(w io.Writer, ir_models []*ir.Model,
 	dialect sql.Dialect) error {
 
 	type deleteWorld struct {
-		SQLs []string
+		Dialect string
+		SQLs    []string
 	}
 
-	var del deleteWorld
+	del := deleteWorld{
+		Dialect: dialect.Name(),
+	}
 	for i := len(ir_models) - 1; i >= 0; i-- {
 		del.SQLs = append(del.SQLs, sql.RenderDelete(dialect, &ir.Delete{
 			Model: ir_models[i],

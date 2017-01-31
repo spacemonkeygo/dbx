@@ -15,7 +15,6 @@
 package golang
 
 import (
-	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
@@ -29,11 +28,11 @@ type Delete struct {
 
 func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
 	del := &Delete{
-		Suffix: inflect.Camelize(ir_del.Suffix),
+		Suffix: convertSuffix(ir_del.Suffix),
 		SQL:    sql.RenderDelete(dialect, ir_del),
 	}
 
-	if ir_del.One() {
+	if ir_del.Distinct() {
 		del.Result = &Var{
 			Name: "deleted",
 			Type: "bool",

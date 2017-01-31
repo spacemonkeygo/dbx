@@ -49,57 +49,12 @@ func VarFromModel(model *ir.Model) *Var {
 }
 
 func VarFromField(field *ir.Field) *Var {
-	v := &Var{
-		Name: field.Name,
-		Type: fieldType(field),
+	return &Var{
+		Name:    field.Name,
+		Type:    valueType(field.Type, field.Nullable),
+		ZeroVal: zeroVal(field.Type, field.Nullable),
+		InitVal: initVal(field.Type, field.Nullable),
 	}
-
-	// zero val
-	switch v.Type {
-	case "int":
-		v.ZeroVal = "0"
-	case "int64":
-		v.ZeroVal = "int64(0)"
-	case "uint":
-		v.ZeroVal = "uint(0)"
-	case "uint64":
-		v.ZeroVal = "uint64(0)"
-	case "float":
-		v.ZeroVal = "float32(0)"
-	case "float64":
-		v.ZeroVal = "float64(0)"
-	case "string":
-		v.ZeroVal = `""`
-	case "sql.NullBool":
-		v.ZeroVal = `sql.NullBool{}`
-	case "sql.NullInt64":
-		v.ZeroVal = `sql.NullInt64{}`
-	case "sql.NullString":
-		v.ZeroVal = `sql.NullString{}`
-	case "sql.NullFloat64":
-		v.ZeroVal = `sql.NullFloat64{}`
-	case "bool":
-		v.ZeroVal = "false"
-	case "time.Time":
-		v.ZeroVal = "time.Time{}"
-	case "*time.Time":
-		v.ZeroVal = "nil"
-	case "[]byte":
-		v.ZeroVal = "nil"
-	default:
-		panic(fmt.Sprintf("unhandled var type %q", v.Type))
-	}
-
-	// init val
-	switch v.Type {
-	case "time.Time":
-		v.InitVal = "__now"
-	case "*time.Time":
-		v.InitVal = "&__now"
-	default:
-		v.InitVal = v.ZeroVal
-	}
-	return v
 }
 
 func VarsFromFields(fields []*ir.Field) (vars []*Var) {
@@ -159,19 +114,11 @@ func (v *Var) Arg() string {
 }
 
 func (v *Var) Init() string {
-	return fmt.Sprintf("%s = %s", v.Name, v.initVal())
+	return fmt.Sprintf("%s = %s", v.Name, v.InitVal)
 }
 
 func (v *Var) InitNew() string {
-	return fmt.Sprintf("%s := %s", v.Name, v.initVal())
-}
-
-func (v *Var) initVal() string {
-	val := v.InitVal
-	if val == "" {
-		val = v.ZeroVal
-	}
-	return val
+	return fmt.Sprintf("%s := %s", v.Name, v.InitVal)
 }
 
 func (v *Var) Zero() string {

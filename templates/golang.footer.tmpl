@@ -1,17 +1,25 @@
-
-type TXMethods interface {
+type Methods interface {
 {{- range .Funcs }}
 	{{ . }}
 {{ end }}
 }
 
+type TxMethods interface {
+	Methods
+
+	Commit() error
+	Rollback() error
+}
+
 type txMethods interface {
-	TXMethods
+	TxMethods
+
+	deleteAll(ctx context.Context) (int64, error)
 }
 
 type DBMethods interface {
 	Schema() string
-	TXMethods
+	Methods
 }
 
 type dbMethods interface {

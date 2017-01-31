@@ -17,13 +17,17 @@ package ir
 import "fmt"
 
 type Create struct {
-	Suffix string
+	Suffix []string
 	Model  *Model
 	Raw    bool
 }
 
 func (cre *Create) Signature() string {
-	return fmt.Sprintf("CREATE(%s)", cre.Suffix)
+	if cre.Raw {
+		return fmt.Sprintf("CREATERAW(%q)", cre.Suffix)
+	} else {
+		return fmt.Sprintf("CREATE(%q)", cre.Suffix)
+	}
 }
 
 func (cre *Create) Fields() (fields []*Field) {

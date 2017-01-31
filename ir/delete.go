@@ -17,16 +17,16 @@ package ir
 import "fmt"
 
 type Delete struct {
-	Suffix string
+	Suffix []string
 	Model  *Model
 	Joins  []*Join
 	Where  []*Where
 }
 
 func (r *Delete) Signature() string {
-	return fmt.Sprintf("DELETE(%s)", r.Suffix)
+	return fmt.Sprintf("DELETE(%q)", r.Suffix)
 }
 
-func (d *Delete) One() bool {
+func (d *Delete) Distinct() bool {
 	return queryUnique([]*Model{d.Model}, d.Joins, d.Where)
 }
