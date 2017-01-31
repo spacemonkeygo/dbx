@@ -6,6 +6,6 @@ model foo (
 	field two int
 )
 
-read (
+read all (
 	select foo.one foo.two
 )

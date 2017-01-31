@@ -73,6 +73,11 @@ func stringNodes(values []node, join string) string {
 	return strings.Join(strs, join)
 }
 
+func isList(n node) bool {
+	_, ok := n.(*listNode)
+	return ok
+}
+
 func expectList(n node) (*listNode, error) {
 	list, ok := n.(*listNode)
 	if !ok {
@@ -394,6 +399,21 @@ func (t *tupleNode) consumeAnyToken(cases tokenCases) error {
 		}
 	}
 	return expectedKeyword(token.pos, token.text, cases.idents()...)
+}
+
+func (t *tupleNode) consumeTokensUntilList(cases tokenCases) error {
+	for {
+		if len(t.value) == 0 {
+			return errutil.New(t.getPos(), "expected a list. found nothing")
+		}
+		if isList(t.value[0]) {
+			break
+		}
+		if err := t.consumeAnyToken(cases); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (t *tupleNode) consumeDottedIdents() (

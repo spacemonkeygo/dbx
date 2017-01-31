@@ -198,11 +198,16 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	addView := func(v ir.View) {
 		read_copy := *tmpl
 		read_copy.View = v
+		read_copy.Suffix = DefaultReadSuffix(&read_copy)
 		reads = append(reads, &read_copy)
 	}
 
 	if view.All.Get() {
 		// template is already sufficient for "all"
+		if tmpl.One() {
+			return nil, errutil.New(view.LimitOffset.Pos,
+				"cannot limit/offset unique select")
+		}
 		addView(ir.All)
 	}
 	if view.Count.Get() {
@@ -214,7 +219,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	if view.LimitOffset.Get() {
 		if tmpl.One() {
 			return nil, errutil.New(view.LimitOffset.Pos,
-				"cannot limit/offset unique select")
+				"cannot use limitoffset view with constrained read")
 		}
 		addView(ir.LimitOffset)
 	}
@@ -229,15 +234,24 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 				"cannot page on model %q with composite primary key",
 				tmpl.From.Name)
 		}
-		if tmpl.One() {
-			return nil, errutil.New(view.Paged.Pos,
-				"cannot page unique select")
-		}
 		addView(ir.Paged)
 	}
-
-	for _, read := range reads {
-		read.Suffix = DefaultReadSuffix(read)
+	if view.Scalar.Get() {
+		if !tmpl.One() {
+			return nil, errutil.New(view.LimitOffset.Pos,
+				"cannot use scalar view with unconstrained read")
+		}
+		addView(ir.Scalar)
+	}
+	if view.One.Get() {
+		if !tmpl.One() {
+			return nil, errutil.New(view.LimitOffset.Pos,
+				"cannot use one view with unconstrained read")
+		}
+		addView(ir.One)
+	}
+	if view.First.Get() {
+		addView(ir.First)
 	}
 
 	return reads, nil

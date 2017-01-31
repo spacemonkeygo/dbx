@@ -9,9 +9,6 @@ Get{{ .Suffix }}({{ ctxparam .Args }}) (
 
 	{{ init .Row }}
 	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Row) }})
-	if err == sql.ErrNoRows {
-		return {{ zero .Row }}, nil
-	}
 	if err != nil {
 		return {{ zero .Row }}, WrapErr(err)
 	}

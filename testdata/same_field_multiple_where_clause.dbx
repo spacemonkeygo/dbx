@@ -3,7 +3,7 @@ model foo (
 	field pk serial64
 )
 
-read (
+read all (
 	select foo
 	where foo.pk > ?
 	where foo.pk < ?

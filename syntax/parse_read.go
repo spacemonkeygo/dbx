@@ -20,6 +20,12 @@ func parseRead(node *tupleNode) (*ast.Read, error) {
 	read := new(ast.Read)
 	read.Pos = node.getPos()
 
+	view, err := parseView(node)
+	if err != nil {
+		return nil, err
+	}
+	read.View = view
+
 	list_token, err := node.consumeList()
 	if err != nil {
 		return nil, err
@@ -55,20 +61,6 @@ func parseRead(node *tupleNode) (*ast.Read, error) {
 				return err
 			}
 			read.Joins = append(read.Joins, join)
-
-			return nil
-		},
-		"view": func(node *tupleNode) error {
-			if read.View != nil {
-				return previouslyDefined(node.getPos(), "read", "view",
-					read.View.Pos)
-			}
-
-			view, err := parseView(node)
-			if err != nil {
-				return err
-			}
-			read.View = view
 
 			return nil
 		},

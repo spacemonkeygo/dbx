@@ -49,14 +49,17 @@ func (r *Read) One() bool {
 	return queryUnique(distinctModels(targets), r.Joins, r.Where)
 }
 
-type View int
+type View string
 
 const (
-	All View = iota
-	LimitOffset
-	Paged
-	Count
-	Has
+	All         View = "all"
+	LimitOffset View = "limitoffset"
+	Paged       View = "paged"
+	Count       View = "count"
+	Has         View = "has"
+	Scalar      View = "scalar"
+	One         View = "one"
+	First       View = "first"
 )
 
 type Join struct {

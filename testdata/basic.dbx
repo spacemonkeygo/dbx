@@ -6,6 +6,6 @@ model foo (
 )
 
 create foo ()
-read ( select foo )
+read all ( select foo )
 update foo ( where foo.pk = ? )
 delete foo ( where foo.pk = ? )

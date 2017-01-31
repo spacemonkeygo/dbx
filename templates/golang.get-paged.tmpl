@@ -1,6 +1,6 @@
 {{- define "signature" -}}
-Get{{ .Suffix }}({{ ctxparam .Args }},
-	ctoken string, limit int) (
+Paged{{ .Suffix }}({{ ctxparam .Args }},
+	limit int, ctoken string) (
 	rows {{ sliceof .Row }}, ctokenout string, err error)
 {{- end -}}
 

@@ -65,6 +65,7 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 			Selectables: []ir.Selectable{ir_upd.Model},
 			Joins:       ir_upd.Joins,
 			Where:       ir_upd.Where,
+			View:        ir.All,
 		})
 	}
 

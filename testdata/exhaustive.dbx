@@ -60,17 +60,15 @@ model e (
 
 create e ( )
 
-read (
+read one has (
 	select e
 	where  e.id   =   ?
 	where  e.a_id =   ?
-	view   all    has
 )
 
-read (
+read paged (
 	select e
 	where  e.a_id = ?
-	view   paged
 )
 
 delete e (
@@ -80,27 +78,26 @@ delete e (
 
 create d ( )
 
-read (
+read one (
 	select d
 	where  d.id = ?
 )
 
-read (
+read one (
 	select d
 	where  d.id   = ?
 	where  d.a_id = ?
 )
 
-read (
+read one (
 	select d
 	where  d.alias = ?
 	where  d.a_id  = ?
 )
 
-read (
+read paged (
 	select d
 	where  d.a_id = ?
-	view   paged
 )
 
 update d (
@@ -115,12 +112,12 @@ delete d (
 
 create a ( )
 
-read (
+read one (
 	select a
 	where  a.pk = ?
 )
 
-read (
+read one (
 	select a
 	join   a.pk     = a_b.a_pk
 	join   a_b.b_pk = b.pk
@@ -128,7 +125,7 @@ read (
 	where  b.id     = ?
 )
 
-read (
+read one (
 	select a
 	join   a.pk     = a_b.a_pk
 	join   a_b.b_pk = b.pk
@@ -136,36 +133,35 @@ read (
 	where  b.id     = ?
 )
 
-read (
+read paged (
 	select a
 	join   a.pk     = a_b.a_pk
 	join   a_b.b_pk = b.pk
 	where  b.id     = ?
-	view   paged
 )
 
 create a_b ( )
 
 create c ( )
 
-read (
+read one (
 	select c
 	where  c.id = ?
 )
 
 create b ( )
 
-read (
+read one (
 	select b
 	where  b.pk = ?
 )
 
-read (
+read all (
 	select b
 	where  b.data = ?
 )
 
-read (
+read all (
 	select b
 )
 

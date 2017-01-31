@@ -43,12 +43,14 @@ type Renderer struct {
 	footer          *template.Template
 	misc            *template.Template
 	cre             *template.Template
-	get             *template.Template
 	get_all         *template.Template
 	get_has         *template.Template
 	get_count       *template.Template
 	get_limitoffset *template.Template
 	get_paged       *template.Template
+	get_scalar      *template.Template
+	get_one         *template.Template
+	get_first       *template.Template
 	upd             *template.Template
 	del             *template.Template
 	del_all         *template.Template
@@ -102,11 +104,6 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
-	r.get, err = loader.Load("golang.get.tmpl", funcs)
-	if err != nil {
-		return nil, err
-	}
-
 	r.get_all, err = loader.Load("golang.get-all.tmpl", funcs)
 	if err != nil {
 		return nil, err
@@ -128,6 +125,21 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	r.get_limitoffset, err = loader.Load("golang.get-limitoffset.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.get_scalar, err = loader.Load("golang.get-scalar.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.get_one, err = loader.Load("golang.get-one.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.get_first, err = loader.Load("golang.get-first.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
@@ -308,14 +320,8 @@ func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,
 	get := GetFromIR(ir_read, dialect)
 	switch ir_read.View {
 	case ir.All:
-		if ir_read.One() {
-			if err := r.renderFunc(r.get, w, get, dialect); err != nil {
-				return err
-			}
-		} else {
-			if err := r.renderFunc(r.get_all, w, get, dialect); err != nil {
-				return err
-			}
+		if err := r.renderFunc(r.get_all, w, get, dialect); err != nil {
+			return err
 		}
 	case ir.LimitOffset:
 		if err := r.renderFunc(r.get_limitoffset, w, get, dialect); err != nil {
@@ -331,6 +337,18 @@ func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,
 		}
 	case ir.Has:
 		if err := r.renderFunc(r.get_has, w, get, dialect); err != nil {
+			return err
+		}
+	case ir.Scalar:
+		if err := r.renderFunc(r.get_scalar, w, get, dialect); err != nil {
+			return err
+		}
+	case ir.One:
+		if err := r.renderFunc(r.get_one, w, get, dialect); err != nil {
+			return err
+		}
+	case ir.First:
+		if err := r.renderFunc(r.get_first, w, get, dialect); err != nil {
 			return err
 		}
 	default:

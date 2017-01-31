@@ -1,0 +1,20 @@
+{{- define "signature" -}}
+Find{{ .Suffix }}({{ ctxparam .Args }}) (
+	{{ param .Row }}, err error)
+{{- end -}}
+
+{{- define "body" }}{
+	const __stmt={{ printf "%q" .SQL }}
+	obj.logStmt(__stmt, {{ fieldvalue .Args }})
+
+	{{ init .Row }}
+	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Row) }})
+	if err == sql.ErrNoRows {
+		return {{ zero .Row }}, nil
+	}
+	if err != nil {
+		return {{ zero .Row }}, WrapErr(err)
+	}
+	return {{ arg .Row }}, nil
+}
+{{ end -}}

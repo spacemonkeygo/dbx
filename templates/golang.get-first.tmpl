@@ -1,6 +1,6 @@
 {{- define "signature" -}}
-All{{ .Suffix }}({{ ctxparam .Args }}) (
-	rows {{ sliceof .Row }}, err error)
+First{{ .Suffix }}({{ ctxparam .Args }}) (
+	{{ param .Row }}, err error)
 {{- end -}}
 
 {{- define "body" }}{
@@ -13,17 +13,19 @@ All{{ .Suffix }}({{ ctxparam .Args }}) (
 	}
 	defer __rows.Close()
 
-	for __rows.Next() {
-		{{ initnew .Row }}
-		err = __rows.Scan({{ addrof (flatten .Row) }})
-		if err != nil {
+	if !__rows.Next() {
+		if err := __rows.Err(); err != nil {
 			return nil, WrapErr(err)
 		}
-		rows = append(rows, {{ arg .Row }})
+		return nil, nil
 	}
-	if err := __rows.Err(); err != nil {
+
+	{{ init .Row }}
+	err = __rows.Scan({{ addrof (flatten .Row) }})
+	if err != nil {
 		return nil, WrapErr(err)
 	}
-	return rows, nil
+
+	return {{ arg .Row }}, nil
 }
 {{ end -}}

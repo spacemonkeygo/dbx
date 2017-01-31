@@ -4,7 +4,6 @@ model foo (
 	field pk serial64
 )
 
-read (
+read paged (
 	select foo.pk
-	view paged
 )

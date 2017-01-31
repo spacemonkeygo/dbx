@@ -91,7 +91,7 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 	}
 
 	switch ir_read.View {
-	case ir.All:
+	case ir.All, ir.One, ir.Scalar:
 	case ir.LimitOffset:
 		sel.Limit = "?"
 		sel.Offset = "?"
@@ -113,6 +113,9 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 	case ir.Count:
 		sel.Fields = countFields
 		sel.OrderBy = nil
+	case ir.First:
+		sel.Limit = "1"
+		sel.Offset = "0"
 	default:
 		panic(fmt.Sprintf("unsupported select view %s", ir_read.View))
 	}

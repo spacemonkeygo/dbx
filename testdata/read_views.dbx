@@ -1,0 +1,14 @@
+model foo (
+	key id
+
+	field id serial64
+)
+
+read all limitoffset paged has count(
+	select foo
+)
+
+read scalar one first has count(
+	select foo
+	where foo.id = ?
+)

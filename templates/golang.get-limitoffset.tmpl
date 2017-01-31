@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-Get{{ .Suffix }}({{ ctxparam .Args}},
+Limited{{ .Suffix }}({{ ctxparam .Args}},
 	limit int, offset int64) (
 	rows {{ sliceof .Row }}, err error)
 {{- end -}}

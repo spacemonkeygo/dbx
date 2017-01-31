@@ -201,6 +201,9 @@ type View struct {
 	Paged       *Bool
 	Count       *Bool
 	Has         *Bool
+	Scalar      *Bool
+	One         *Bool
+	First       *Bool
 }
 
 type FieldRefs struct {
