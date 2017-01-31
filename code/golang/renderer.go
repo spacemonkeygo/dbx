@@ -35,7 +35,8 @@ var (
 )
 
 type Options struct {
-	Package string
+	Package     string
+	SkipDrivers bool
 }
 
 type Renderer struct {
@@ -292,10 +293,12 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 			return Error.New("unsupported dialect %q", dialect.Name())
 		}
 
-		params.ExtraImports = append(params.ExtraImports, headerImport{
-			As:      "_",
-			Package: driver,
-		})
+		if !r.options.SkipDrivers {
+			params.ExtraImports = append(params.ExtraImports, headerImport{
+				As:      "_",
+				Package: driver,
+			})
+		}
 
 		params.Dialects = append(params.Dialects, headerDialect{
 			Name:       dialect.Name(),

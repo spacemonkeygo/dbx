@@ -63,13 +63,15 @@ func main() {
 			"SQL dialects (defaults to postgres)")
 		templatedir_opt := cmd.StringOpt("t templates", "",
 			"override the template directory")
+		skipdrivers_opt := cmd.BoolOpt("s skip_drivers", false,
+			"if passed, generated code will not import go drivers")
 		dbxfile_arg := cmd.StringArg("DBXFILE", "",
 			"path to dbx file")
 		outdir_arg := cmd.StringArg("OUTDIR", "",
 			"output directory")
 		cmd.Action = func() {
 			die(golangCmd(*package_opt, *dialects_opt, *templatedir_opt,
-				*dbxfile_arg, *outdir_arg))
+				*skipdrivers_opt, *dbxfile_arg, *outdir_arg))
 		}
 	})
 
@@ -92,8 +94,8 @@ func main() {
 	die(app.Run(os.Args))
 }
 
-func golangCmd(pkg string, dialects_opt []string, template_dir, dbxfile,
-	outdir string) (err error) {
+func golangCmd(pkg string, dialects_opt []string, template_dir string,
+	skip_drivers bool, dbxfile, outdir string) (err error) {
 
 	if pkg == "" {
 		base := filepath.Base(dbxfile)
@@ -115,7 +117,8 @@ func golangCmd(pkg string, dialects_opt []string, template_dir, dbxfile,
 	loader := getLoader(template_dir)
 
 	renderer, err := golang.New(loader, &golang.Options{
-		Package: pkg,
+		Package:     pkg,
+		SkipDrivers: skip_drivers,
 	})
 	if err != nil {
 		return err
