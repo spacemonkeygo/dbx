@@ -10,18 +10,101 @@ import (
 	"fmt"
 	"time"
 	"strconv"
+	"strings"
 
 {{- range .ExtraImports }}
-	{{ .As }} "{{ .Package }}"
+	{{ . }}
 {{- end }}
 )
 
 // Prevent conditional imports from causing build failures
 var _ = strconv.Itoa
+var _ = strings.LastIndex
+var _ = fmt.Sprint
 
-var WrapErr = func(err error) error {return err}
-var Logger func(format string, args ...interface{})
-var Now = time.Now
+var (
+	WrapErr = func(err *Error) error {return err}
+	Now		= time.Now
+	Logger func(format string, args ...interface{})
+
+	errTooManyRows = errors.New("too many rows")
+	errUnsupportedDriver = errors.New("unsupported driver")
+	errEmptyUpdate = errors.New("empty update")
+)
+
+type ErrorCode int
+
+const (
+	ErrorCode_Unknown ErrorCode = iota
+	ErrorCode_UnsupportedDriver
+	ErrorCode_NoRows
+	ErrorCode_TxDone
+	ErrorCode_TooManyRows
+	ErrorCode_ConstraintViolation
+	ErrorCode_EmptyUpdate
+)
+
+type Error struct {
+	Err error
+	Code ErrorCode
+	Driver string
+	Constraint string
+}
+
+func (e *Error) Error() string {
+	return e.Err.Error()
+}
+
+func wrapErr(e *Error) error {
+	if WrapErr == nil {
+		return e
+	}
+	return WrapErr(e)
+}
+
+func makeErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	e := &Error{Err: err}
+	switch err {
+	case sql.ErrNoRows:
+		e.Code = ErrorCode_NoRows
+	case sql.ErrTxDone:
+		e.Code = ErrorCode_TxDone
+	}
+	return wrapErr(e)
+}
+
+func unsupportedDriver(driver string) error {
+	return wrapErr(&Error{
+		Err: errUnsupportedDriver,
+		Code: ErrorCode_UnsupportedDriver,
+		Driver: driver,
+	})
+}
+
+func emptyUpdate() error {
+	return wrapErr(&Error{
+		Err: errEmptyUpdate,
+		Code: ErrorCode_EmptyUpdate,
+	})
+}
+
+func tooManyRows() error {
+	return wrapErr(&Error{
+		Err: errTooManyRows,
+		Code: ErrorCode_TooManyRows,
+	})
+}
+
+func constraintViolation(err error, constraint string) error {
+	return wrapErr(&Error{
+		Err: err,
+		Code: ErrorCode_ConstraintViolation,
+		Constraint: constraint,
+	})
+}
 
 type driver interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
@@ -42,7 +125,7 @@ type DB struct {
 func Open(driver, source string) (db *DB, err error) {
 	sql_db, err := sql.Open(driver, source)
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, makeErr(err)
 	}
 	defer func(sql_db *sql.DB) {
 		if err != nil {
@@ -51,7 +134,7 @@ func Open(driver, source string) (db *DB, err error) {
 	}(sql_db)
 
 	if err := sql_db.Ping(); err != nil {
-		return nil, WrapErr(err)
+		return nil, makeErr(err)
 	}
 
 	var impl dbMethods
@@ -61,12 +144,12 @@ func Open(driver, source string) (db *DB, err error) {
 		impl = new{{ .Name }}(sql_db)
 {{- range .ExecOnOpen }}
 		if _,  err := sql_db.Exec({{ printf "%q" . }}); err != nil {
-			return nil, WrapErr(err)
+			return nil, impl.makeErr(err)
 		}
 {{- end }}
 {{- end }}
 	default:
-		return nil, WrapErr(fmt.Errorf("unsupported driver %s", driver))
+		return nil, unsupportedDriver(driver)
 	}
 
 	return &DB{
@@ -76,13 +159,13 @@ func Open(driver, source string) (db *DB, err error) {
 }
 
 func (obj *DB) Close() (err error) {
-	return WrapErr(obj.DB.Close())
+	return obj.makeErr(obj.DB.Close())
 }
 
 func (obj *DB) Open(ctx context.Context) (*Tx, error) {
 	tx, err := obj.DB.Begin()
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 
 	return &Tx{
@@ -98,13 +181,13 @@ func DeleteAll(ctx context.Context, db *DB) (int64, error) {
 	}
 	defer func() {
 		if err == nil {
-			err = WrapErr(tx.Commit())
+			err = db.makeErr(tx.Commit())
 			return
 		}
 
 		if err_rollback := tx.Rollback(); err_rollback != nil {
 			if Logger != nil {
-				Logger("delete-all: rollback failed: %v", WrapErr(err_rollback))
+				Logger("delete-all: rollback failed: %v", db.makeErr(err_rollback))
 			}
 		}
 	}()
@@ -121,11 +204,11 @@ type dialectTx struct {
 }
 
 func (tx *dialectTx) Commit() (err error) {
-	return WrapErr(tx.tx.Commit())
+	return makeErr(tx.tx.Commit())
 }
 
 func (tx *dialectTx) Rollback() (err error) {
-	return WrapErr(tx.tx.Rollback())
+	return makeErr(tx.tx.Rollback())
 }
 
 {{- range .Dialects }}
@@ -140,6 +223,14 @@ type {{ $impltype }} struct {
 
 func (obj *{{ $impltype }}) logStmt(stmt string, args... interface{}) {
 	{{ .Name }}LogStmt(stmt, args...)
+}
+
+func (obj *{{ $impltype }}) makeErr(err error) error {
+	 constraint, ok := obj.isConstraintError(err)
+	 if ok {
+		 return constraintViolation(err, constraint)
+	 }
+	 return makeErr(err)
 }
 
 type {{ $dbtype }} struct {

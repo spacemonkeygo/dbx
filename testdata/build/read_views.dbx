@@ -4,7 +4,7 @@ model foo (
 	field id serial64
 )
 
-read all limitoffset paged has count(
+read all limitoffset paged has count scalar one (
 	select foo
 )
 

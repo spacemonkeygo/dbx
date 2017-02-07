@@ -9,12 +9,12 @@ Delete{{ .Suffix }}({{ ctxparam .Args }}) (
 
 	__res, err := obj.driver.Exec(__stmt, {{ fieldvalue .Args }})
 	if err != nil {
-		return 0, WrapErr(err)
+		return 0, obj.makeErr(err)
 	}
 
 	count, err = __res.RowsAffected()
 	if err != nil {
-		return 0, WrapErr(err)
+		return 0, obj.makeErr(err)
 	}
 
 	return count, nil

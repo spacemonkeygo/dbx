@@ -9,7 +9,7 @@ Has{{ .Suffix }}({{ ctxparam .Args }}) (
 
 	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan(&has)
 	if err != nil {
-		return false, WrapErr(err)
+		return false, obj.makeErr(err)
 	}
 	return has, nil
 }

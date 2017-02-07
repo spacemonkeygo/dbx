@@ -46,7 +46,7 @@ Update{{ .Suffix }}({{ ctxparam .Args }},
 
 	{{ if not .AutoFields }}
 	if len(qs) == 0 {
-		return nil, WrapErr(fmt.Errorf("need to update at least one field"))
+		return nil, emptyUpdate()
 	}
 	{{ end }}
 
@@ -64,12 +64,12 @@ Update{{ .Suffix }}({{ ctxparam .Args }},
 		return nil, nil
 	}
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	{{ else -}}
 	_, err = obj.driver.Exec(__stmt, values...)
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	const __get_stmt={{ printf "%q" .GetSQL }}
 	obj.logStmt("(IMPLIED) " + __get_stmt, {{ fieldvalue .Args }})
@@ -79,7 +79,7 @@ Update{{ .Suffix }}({{ ctxparam .Args }},
 		return nil, nil
 	}
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	{{ end -}}
 	return {{ arg .Return }}, nil

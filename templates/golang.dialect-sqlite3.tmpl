@@ -1,0 +1,20 @@
+{{- define "import" }}
+	"github.com/mattn/go-sqlite3"
+{{ end -}}
+
+{{- define "is-constraint-error" }}
+func (impl {{ .Receiver }}) isConstraintError(err error) (
+	constraint string, ok bool) {
+	if e, ok := err.(sqlite3.Error); ok {
+			if e.Code == sqlite3.ErrConstraint {
+				msg := err.Error()
+				colon := strings.LastIndex(msg, ":")
+				if colon != -1 {
+					return strings.TrimSpace(msg[colon:]), true
+				}
+				return "", true
+			}
+	}
+	return "", false
+}
+{{ end -}}

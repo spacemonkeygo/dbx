@@ -203,7 +203,6 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	}
 
 	if view.All.Get() {
-		// template is already sufficient for "all"
 		if tmpl.Distinct() {
 			return nil, errutil.New(view.All.Pos,
 				"cannot limit/offset unique select")
@@ -241,17 +240,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		addView(ir.Paged)
 	}
 	if view.Scalar.Get() {
-		if !tmpl.Distinct() {
-			return nil, errutil.New(view.Scalar.Pos,
-				"cannot use scalar view with a non-distinct read")
-		}
 		addView(ir.Scalar)
 	}
 	if view.One.Get() {
-		if !tmpl.Distinct() {
-			return nil, errutil.New(view.One.Pos,
-				"cannot use one view with non-distinct read")
-		}
 		addView(ir.One)
 	}
 	if view.First.Get() {

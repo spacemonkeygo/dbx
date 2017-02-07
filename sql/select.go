@@ -16,6 +16,7 @@ package sql
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -91,7 +92,11 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 	}
 
 	switch ir_read.View {
-	case ir.All, ir.One, ir.Scalar:
+	case ir.All:
+	case ir.One, ir.Scalar:
+		if !ir_read.Distinct() {
+			sel.Limit = "2"
+		}
 	case ir.LimitOffset:
 		sel.Limit = "?"
 		sel.Offset = "?"
@@ -132,7 +137,7 @@ type Where struct {
 func WhereFromIR(ir_where *ir.Where) Where {
 	where := Where{
 		Left: ir_where.Left.ColumnRef(),
-		Op:   string(ir_where.Op),
+		Op:   strings.ToUpper(string(ir_where.Op)),
 	}
 	if ir_where.Right != nil {
 		where.Right = ir_where.Right.ColumnRef()

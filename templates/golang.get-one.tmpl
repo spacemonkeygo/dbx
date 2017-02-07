@@ -10,7 +10,7 @@ Get{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ init .Row }}
 	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Row) }})
 	if err != nil {
-		return {{ zero .Row }}, WrapErr(err)
+		return {{ zero .Row }}, obj.makeErr(err)
 	}
 	return {{ arg .Row }}, nil
 }

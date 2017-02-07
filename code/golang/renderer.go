@@ -16,6 +16,7 @@ package golang
 
 import (
 	"bytes"
+	"fmt"
 	"go/format"
 	"io"
 	"regexp"
@@ -35,11 +36,11 @@ var (
 )
 
 type Options struct {
-	Package     string
-	SkipDrivers bool
+	Package string
 }
 
 type Renderer struct {
+	loader          tmplutil.Loader
 	header          *template.Template
 	footer          *template.Template
 	misc            *template.Template
@@ -50,7 +51,9 @@ type Renderer struct {
 	get_limitoffset *template.Template
 	get_paged       *template.Template
 	get_scalar      *template.Template
+	get_scalar_all  *template.Template
 	get_one         *template.Template
+	get_one_all     *template.Template
 	get_first       *template.Template
 	upd             *template.Template
 	del             *template.Template
@@ -67,6 +70,7 @@ func New(loader tmplutil.Loader, options *Options) (
 	r *Renderer, err error) {
 
 	r = &Renderer{
+		loader:     loader,
 		options:    *options,
 		signatures: map[string]bool{},
 	}
@@ -135,7 +139,17 @@ func New(loader tmplutil.Loader, options *Options) (
 		return nil, err
 	}
 
+	r.get_scalar_all, err = loader.Load("golang.get-scalar-all.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
 	r.get_one, err = loader.Load("golang.get-one.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.get_one_all, err = loader.Load("golang.get-one-all.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
@@ -183,10 +197,10 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 
 	// Render any result structs for multi-field reads
 	for _, read := range root.Reads {
-		if len(read.Selectables) < 2 {
+		if read.View == ir.Count || read.View == ir.Has {
 			continue
 		}
-		if read.View == ir.Count || read.View == ir.Has {
+		if model := read.SelectedModel(); model != nil {
 			continue
 		}
 		s := ResultStructFromRead(read)
@@ -236,6 +250,10 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 			}
 		}
 
+		if err = r.renderDialectFuncs(&buf, dialect); err != nil {
+			return nil, err
+		}
+
 		if err := r.renderDeleteWorld(&buf, root.Models, dialect); err != nil {
 			return nil, err
 		}
@@ -257,11 +275,6 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	dialects []sql.Dialect) error {
 
-	type headerImport struct {
-		As      string
-		Package string
-	}
-
 	type headerDialect struct {
 		Name       string
 		SchemaSQL  string
@@ -270,7 +283,7 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 
 	type headerParams struct {
 		Package      string
-		ExtraImports []headerImport
+		ExtraImports []string
 		Dialects     []headerDialect
 		Structs      []*ModelStruct
 	}
@@ -283,23 +296,18 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	for _, dialect := range dialects {
 		dialect_schema := sql.RenderSchema(dialect, root)
 
-		var driver string
-		switch dialect.Name() {
-		case "postgres":
-			driver = "github.com/lib/pq"
-		case "sqlite3":
-			driver = "github.com/mattn/go-sqlite3"
-		default:
-			return Error.New("unsupported dialect %q", dialect.Name())
+		dialect_tmpl, err := r.loadDialect(dialect)
+		if err != nil {
+			return err
 		}
 
-		if !r.options.SkipDrivers {
-			params.ExtraImports = append(params.ExtraImports, headerImport{
-				As:      "_",
-				Package: driver,
-			})
+		dialect_import, err := tmplutil.RenderString(dialect_tmpl, "import",
+			nil)
+		if err != nil {
+			return err
 		}
 
+		params.ExtraImports = append(params.ExtraImports, dialect_import)
 		params.Dialects = append(params.Dialects, headerDialect{
 			Name:       dialect.Name(),
 			SchemaSQL:  dialect_schema,
@@ -321,44 +329,38 @@ func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,
 	dialect sql.Dialect) error {
 
 	get := GetFromIR(ir_read, dialect)
+
+	var tmpl *template.Template
 	switch ir_read.View {
 	case ir.All:
-		if err := r.renderFunc(r.get_all, w, get, dialect); err != nil {
-			return err
-		}
+		tmpl = r.get_all
 	case ir.LimitOffset:
-		if err := r.renderFunc(r.get_limitoffset, w, get, dialect); err != nil {
-			return err
-		}
+		tmpl = r.get_limitoffset
 	case ir.Paged:
-		if err := r.renderFunc(r.get_paged, w, get, dialect); err != nil {
-			return err
-		}
+		tmpl = r.get_paged
 	case ir.Count:
-		if err := r.renderFunc(r.get_count, w, get, dialect); err != nil {
-			return err
-		}
+		tmpl = r.get_count
 	case ir.Has:
-		if err := r.renderFunc(r.get_has, w, get, dialect); err != nil {
-			return err
-		}
+		tmpl = r.get_has
 	case ir.Scalar:
-		if err := r.renderFunc(r.get_scalar, w, get, dialect); err != nil {
-			return err
+		if ir_read.Distinct() {
+			tmpl = r.get_scalar
+		} else {
+			tmpl = r.get_scalar_all
 		}
 	case ir.One:
-		if err := r.renderFunc(r.get_one, w, get, dialect); err != nil {
-			return err
+		if ir_read.Distinct() {
+			tmpl = r.get_one
+		} else {
+			tmpl = r.get_one_all
 		}
 	case ir.First:
-		if err := r.renderFunc(r.get_first, w, get, dialect); err != nil {
-			return err
-		}
+		tmpl = r.get_first
 	default:
-		return Error.New("unhandled read view %s", ir_read.View)
+		panic(fmt.Sprintf("unhandled read view %s", ir_read.View))
 	}
 
-	return nil
+	return r.renderFunc(tmpl, w, get, dialect)
 }
 
 func (r *Renderer) renderUpdate(w io.Writer, ir_upd *ir.Update,
@@ -473,4 +475,30 @@ func (r *Renderer) renderFooter(w io.Writer) error {
 	return tmplutil.Render(r.footer, w, "", map[string]interface{}{
 		"Funcs": funcs,
 	})
+}
+
+func (r *Renderer) renderDialectFuncs(w io.Writer, dialect sql.Dialect) (
+	err error) {
+
+	type dialectFunc struct {
+		Receiver string
+	}
+
+	dialect_func := dialectFunc{
+		Receiver: fmt.Sprintf("%sImpl", dialect.Name()),
+	}
+
+	tmpl, err := r.loadDialect(dialect)
+	if err != nil {
+		return err
+	}
+
+	return tmplutil.Render(tmpl, w, "is-constraint-error", dialect_func)
+}
+
+func (r *Renderer) loadDialect(dialect sql.Dialect) (
+	*template.Template, error) {
+
+	return r.loader.Load(
+		fmt.Sprintf("golang.dialect-%s.tmpl", dialect.Name()), nil)
 }

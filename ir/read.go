@@ -48,6 +48,17 @@ func (r *Read) Distinct() bool {
 	return queryUnique(distinctModels(targets), r.Joins, r.Where)
 }
 
+// SelectedModel returns the single model being selected or nil if there are
+// more than one selectable or the selectable is a field.
+func (r *Read) SelectedModel() *Model {
+	if len(r.Selectables) == 1 {
+		if model, ok := r.Selectables[0].(*Model); ok {
+			return model
+		}
+	}
+	return nil
+}
+
 type View string
 
 const (

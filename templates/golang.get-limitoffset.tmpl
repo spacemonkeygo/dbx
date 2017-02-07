@@ -10,7 +10,7 @@ Limited{{ .Suffix }}({{ ctxparam .Args}},
 
 	__rows, err := obj.driver.Query(__stmt, {{ fieldvalue .Args | comma }}limit, offset)
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	defer __rows.Close()
 
@@ -18,12 +18,12 @@ Limited{{ .Suffix }}({{ ctxparam .Args}},
 		{{ initnew .Row }}
 		err = __rows.Scan({{ addrof (flatten .Row) }})
 		if err != nil {
-			return nil, WrapErr(err)
+			return nil, obj.makeErr(err)
 		}
 		rows = append(rows, {{ arg .Row }})
 	}
 	if err := __rows.Err(); err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	return rows, nil
 }

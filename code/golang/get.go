@@ -42,13 +42,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 		}
 	}
 
-	if len(ir_read.Selectables) == 1 {
-		vars := VarsFromSelectables(ir_read.Selectables)
-		get.Row = vars[0]
-	} else {
-		result := ResultStructFromRead(ir_read)
-		get.Row = StructVar("row", result.Name, result.FieldVars())
-	}
+	get.Row = GetRowFromIR(ir_read)
 
 	if ir_read.View == ir.Paged {
 		pk_var := VarFromSelectable(ir_read.From.BasicPrimaryKey())
@@ -57,6 +51,15 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	}
 
 	return get
+}
+
+func GetRowFromIR(ir_read *ir.Read) *Var {
+	if model := ir_read.SelectedModel(); model != nil {
+		return VarFromSelectable(model)
+	}
+
+	s := ResultStructFromRead(ir_read)
+	return StructVar("row", s.Name, s.FieldVars())
 }
 
 func ResultStructFromRead(ir_read *ir.Read) *Struct {

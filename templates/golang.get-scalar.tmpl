@@ -13,7 +13,7 @@ Find{{ .Suffix }}({{ ctxparam .Args }}) (
 		return {{ zero .Row }}, nil
 	}
 	if err != nil {
-		return {{ zero .Row }}, WrapErr(err)
+		return {{ zero .Row }}, obj.makeErr(err)
 	}
 	return {{ arg .Row }}, nil
 }

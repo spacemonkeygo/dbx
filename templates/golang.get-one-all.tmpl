@@ -1,5 +1,5 @@
 {{- define "signature" -}}
-First{{ .Suffix }}({{ ctxparam .Args }}) (
+Get{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Row }}, err error)
 {{- end -}}
 
@@ -17,12 +17,20 @@ First{{ .Suffix }}({{ ctxparam .Args }}) (
 		if err := __rows.Err(); err != nil {
 			return nil, obj.makeErr(err)
 		}
-		return nil, nil
+		return nil, makeErr(sql.ErrNoRows)
 	}
 
 	{{ init .Row }}
 	err = __rows.Scan({{ addrof (flatten .Row) }})
 	if err != nil {
+		return nil, obj.makeErr(err)
+	}
+
+	if __rows.Next() {
+		return nil, tooManyRows()
+	}
+
+	if err := __rows.Err(); err != nil {
 		return nil, obj.makeErr(err)
 	}
 

@@ -9,12 +9,12 @@ deleteAll(ctx context.Context) (count int64, err error)
 {{- range .SQLs }}
 	__res, err = obj.driver.Exec({{ printf "%q" . }})
 	if err != nil {
-		return 0, WrapErr(err)
+		return 0, obj.makeErr(err)
 	}
 
 	__count, err = __res.RowsAffected()
 	if err != nil {
-		return 0, WrapErr(err)
+		return 0, obj.makeErr(err)
 	}
 	count += __count
 {{- end }}

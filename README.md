@@ -371,18 +371,18 @@ is constrained by whether or not a read is distinct. a read is said to be
 distinct if the where clauses and join conditions identify a unique result.
 
 the following views are defined for all reads:
-* `count` - returns the number of results
-* `has` - returns if there are results or not
-* `first` - returns the first result or nothing
+* `count`  - returns the number of results
+* `has`    - returns if there are results or not
+* `first`  - returns the first result or nothing
+* `scalar` - returns a single result, nothing, or fails if there is more than
+		     one result
+* `one`    - returns a single result or fails if there are no results or more
+             than one result
 
 the following views are only defined for non-distinct reads:
 * `all` - returns all results
 * `limitoffset` - returns a limited number of results starting at an offset
 * `paged` - returns limited number of results paged by a forward iterator
-
-the following views are only defined for distinct reads:
-* `scalar` - returns a single result or nothing
-* `one` - returns a single result or fails
 
 ```
 read <views> (

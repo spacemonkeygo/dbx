@@ -16,17 +16,17 @@ Create{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ init .Return }}
 	err = obj.driver.QueryRow(__stmt, {{ arg .Fields }}).Scan({{ addrof (flatten .Return) }})
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	return {{ arg .Return }}, nil
 	{{ else -}}
 	__res, err := obj.driver.Exec(__stmt, {{ arg .Fields}})
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	__pk, err := __res.LastInsertId()
 	if err != nil {
-		return nil, WrapErr(err)
+		return nil, obj.makeErr(err)
 	}
 	return obj.getLast{{ .Return.Type }}(ctx, __pk)
 	{{ end -}}

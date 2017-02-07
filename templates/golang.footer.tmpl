@@ -15,6 +15,7 @@ type txMethods interface {
 	TxMethods
 
 	deleteAll(ctx context.Context) (int64, error)
+	makeErr(err error) error
 }
 
 type DBMethods interface {
@@ -26,4 +27,5 @@ type dbMethods interface {
 	DBMethods
 
 	wrapTx(tx *sql.Tx) txMethods
+	makeErr(err error) error
 }

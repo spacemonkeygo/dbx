@@ -11,7 +11,7 @@ getLast{{ .Return.Type }}(ctx context.Context,
 	{{ init .Return }}
 	err = obj.driver.QueryRow(__stmt, pk).Scan({{ addrof (flatten .Return) }})
 	if err != nil {
-		return {{ zero .Return }}, WrapErr(err)
+		return {{ zero .Return }}, obj.makeErr(err)
 	}
 	return {{ arg .Return }}, nil
 }
