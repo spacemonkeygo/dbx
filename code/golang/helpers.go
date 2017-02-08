@@ -115,6 +115,17 @@ func ctxparamFn(intf interface{}) (string, error) {
 	return "ctx context.Context,\n" + param, nil
 }
 
+func ctxargFn(intf interface{}) (string, error) {
+	arg, err := argFn(intf)
+	if err != nil {
+		return "", err
+	}
+	if arg == "" {
+		return "ctx", nil
+	}
+	return "ctx, " + arg, nil
+}
+
 func commaFn(in string) string {
 	if in == "" {
 		return ""

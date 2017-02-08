@@ -3,6 +3,10 @@ Delete{{ .Suffix }}({{ ctxparam .Args }}) (
 	count int64, err error)
 {{- end -}}
 
+{{- define "invoke" -}}
+Delete{{ .Suffix }}({{ ctxarg .Args }})
+{{ end -}}
+
 {{- define "body" -}}{
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})

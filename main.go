@@ -63,13 +63,15 @@ func main() {
 			"SQL dialects (defaults to postgres)")
 		templatedir_opt := cmd.StringOpt("t templates", "",
 			"override the template directory")
+		skip_rx_opt := cmd.BoolOpt("skip_rx", false,
+			"do not generate Rx support")
 		dbxfile_arg := cmd.StringArg("DBXFILE", "",
 			"path to dbx file")
 		outdir_arg := cmd.StringArg("OUTDIR", "",
 			"output directory")
 		cmd.Action = func() {
 			die(golangCmd(*package_opt, *dialects_opt, *templatedir_opt,
-				*dbxfile_arg, *outdir_arg))
+				*skip_rx_opt, *dbxfile_arg, *outdir_arg))
 		}
 	})
 
@@ -93,7 +95,7 @@ func main() {
 }
 
 func golangCmd(pkg string, dialects_opt []string, template_dir string,
-	dbxfile, outdir string) (err error) {
+	skip_rx bool, dbxfile, outdir string) (err error) {
 
 	if pkg == "" {
 		base := filepath.Base(dbxfile)
@@ -116,6 +118,7 @@ func golangCmd(pkg string, dialects_opt []string, template_dir string,
 
 	renderer, err := golang.New(loader, &golang.Options{
 		Package: pkg,
+		SkipRx:  skip_rx,
 	})
 	if err != nil {
 		return err

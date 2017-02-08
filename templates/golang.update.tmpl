@@ -4,6 +4,10 @@ Update{{ .Suffix }}({{ ctxparam .Args }},
 	{{ param .Return }}, err error)
 {{- end -}}
 
+{{- define "invoke" -}}
+Update{{ .Suffix }}({{ ctxarg .Args }}, update)
+{{- end -}}
+
 {{- define "body" -}}{
 	const __stmt_prefix={{ printf "%q" .SQLPrefix }}
 	const __stmt_suffix={{ printf "%q" .SQLSuffix }}

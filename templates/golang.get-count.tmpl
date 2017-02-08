@@ -3,6 +3,10 @@ Count{{ .Suffix }}({{ ctxparam .Args }}) (
 	count int64, err error)
 {{- end -}}
 
+{{- define "invoke" -}}
+Count{{ .Suffix }}({{ ctxarg .Args }})
+{{- end -}}
+
 {{- define "body" }}{
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})

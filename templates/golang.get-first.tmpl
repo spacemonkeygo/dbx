@@ -3,6 +3,10 @@ First{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Row }}, err error)
 {{- end -}}
 
+{{- define "invoke" -}}
+First{{ .Suffix }}({{ ctxarg .Args }})
+{{- end -}}
+
 {{- define "body" }}{
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})

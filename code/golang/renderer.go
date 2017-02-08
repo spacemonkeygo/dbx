@@ -35,8 +35,14 @@ var (
 	reCollapseSpace = regexp.MustCompile(`\s+`)
 )
 
+type publicMethod struct {
+	Signature string
+	Invoke    string
+}
+
 type Options struct {
 	Package string
+	SkipRx  bool
 }
 
 type Renderer struct {
@@ -60,7 +66,7 @@ type Renderer struct {
 	del_all         *template.Template
 	del_world       *template.Template
 	get_last        *template.Template
-	signatures      map[string]bool
+	methods         map[string]publicMethod
 	options         Options
 }
 
@@ -70,9 +76,9 @@ func New(loader tmplutil.Loader, options *Options) (
 	r *Renderer, err error) {
 
 	r = &Renderer{
-		loader:     loader,
-		options:    *options,
-		signatures: map[string]bool{},
+		loader:  loader,
+		options: *options,
+		methods: map[string]publicMethod{},
 	}
 
 	r.header, err = loader.Load("golang.header.tmpl", nil)
@@ -102,6 +108,7 @@ func New(loader tmplutil.Loader, options *Options) (
 		"fieldvalue": fieldvalueFn,
 		"comma":      commaFn,
 		"ctxparam":   ctxparamFn,
+		"ctxarg":     ctxargFn,
 	}
 
 	r.cre, err = loader.Load("golang.create.tmpl", funcs)
@@ -291,11 +298,13 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 		ExtraImports []string
 		Dialects     []headerDialect
 		Structs      []*ModelStruct
+		SkipRx       bool
 	}
 
 	params := headerParams{
 		Package: r.options.Package,
 		Structs: ModelStructsFromIR(root.Models),
+		SkipRx:  r.options.SkipRx,
 	}
 
 	for _, dialect := range dialects {
@@ -415,6 +424,20 @@ func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,
 		return err
 	}
 
+	method := publicMethod{
+		Signature: signature.String(),
+	}
+
+	if isExported(method.Signature) {
+		var invoke bytes.Buffer
+		err = tmplutil.Render(tmpl, &invoke, "invoke", data)
+		if err != nil {
+			return err
+		}
+		method.Invoke = invoke.String()
+		r.methods[method.Signature] = method
+	}
+
 	var body bytes.Buffer
 	err = tmplutil.Render(tmpl, &body, "body", data)
 	if err != nil {
@@ -429,17 +452,13 @@ func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,
 
 	decl := funcDecl{
 		ReceiverBase: dialect.Name(),
-		Signature:    signature.String(),
+		Signature:    method.Signature,
 		Body:         body.String(),
 	}
 
 	err = tmplutil.Render(r.misc, w, "decl", decl)
 	if err != nil {
 		return err
-	}
-
-	if isExported(decl.Signature) {
-		r.signatures[decl.Signature] = true
 	}
 
 	return nil
@@ -471,15 +490,26 @@ func (r *Renderer) renderGetLast(w io.Writer, model *ir.Model,
 }
 
 func (r *Renderer) renderFooter(w io.Writer) error {
-	var funcs []string
-	for k := range r.signatures {
-		funcs = append(funcs, k)
+	var keys []string
+	for key := range r.methods {
+		keys = append(keys, key)
 	}
-	sort.Sort(sort.StringSlice(funcs))
+	sort.Sort(sort.StringSlice(keys))
 
-	return tmplutil.Render(r.footer, w, "", map[string]interface{}{
-		"Funcs": funcs,
-	})
+	type footerData struct {
+		Methods []publicMethod
+		SkipRx  bool
+	}
+
+	data := footerData{
+		SkipRx: r.options.SkipRx,
+	}
+
+	for _, key := range keys {
+		data.Methods = append(data.Methods, r.methods[key])
+	}
+
+	return tmplutil.Render(r.footer, w, "", data)
 }
 
 func (r *Renderer) renderDialectFuncs(w io.Writer, dialect sql.Dialect) (

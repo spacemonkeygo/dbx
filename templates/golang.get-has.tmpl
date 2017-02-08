@@ -3,6 +3,10 @@ Has{{ .Suffix }}({{ ctxparam .Args }}) (
 	has bool, err error)
 {{- end -}}
 
+{{- define "invoke" -}}
+Has{{ .Suffix }}({{ ctxarg .Args }})
+{{- end -}}
+
 {{- define "body" }}{
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})

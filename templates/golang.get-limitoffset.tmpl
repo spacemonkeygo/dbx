@@ -4,6 +4,11 @@ Limited{{ .Suffix }}({{ ctxparam .Args}},
 	rows {{ sliceof .Row }}, err error)
 {{- end -}}
 
+
+{{- define "invoke" -}}
+Limited{{ .Suffix }}({{ ctxarg .Args}}, limit, offset)
+{{- end -}}
+
 {{- define "body" }}{
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args | comma }}limit, offset)

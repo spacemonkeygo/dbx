@@ -4,6 +4,10 @@ Paged{{ .Suffix }}({{ ctxparam .Args }},
 	rows {{ sliceof .Row }}, ctokenout string, err error)
 {{- end -}}
 
+{{- define "invoke" -}}
+Paged{{ .Suffix }}({{ ctxarg .Args }}, limit, ctoken)
+{{- end -}}
+
 {{- define "body" }}{
 	if ctoken == "" {
 		ctoken = "0"

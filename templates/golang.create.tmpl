@@ -3,6 +3,10 @@ Create{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Return }}, err error)
 {{- end -}}
 
+{{- define "invoke" -}}
+Create{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxarg .Args }})
+{{ end -}}
+
 {{- define "body" -}}{
 	{{- if .NeedsNow }}
 	__now := Now().UTC()

@@ -1,6 +1,47 @@
+{{ if not .SkipRx }}
+type Rx struct {
+	db *DB
+	tx *Tx
+}
+
+func (rx *Rx) getTx(ctx context.Context) (tx *Tx, err error) {
+	if rx.tx == nil {
+		if rx.tx, err = rx.db.Open(ctx); err != nil {
+			return nil, err
+		}
+	}
+	return rx.tx, nil
+}
+
+func (rx *Rx) Commit() (err error) {
+	if rx.tx != nil {
+		err = rx.tx.Commit()
+		rx.tx = nil
+	}
+	return err
+}
+
+func (rx *Rx) Rollback() (err error) {
+	if rx.tx != nil {
+		err = rx.tx.Rollback()
+		rx.tx = nil
+	}
+	return err
+}
+{{ range .Methods }}
+func (rx *Rx) {{ .Signature }} {
+	var tx *Tx
+	if tx, err = rx.getTx(ctx); err != nil {
+		return 
+	}
+	return tx.{{ .Invoke }}
+}
+{{ end }}
+{{ end }}
+
 type Methods interface {
-{{- range .Funcs }}
-	{{ . }}
+{{- range .Methods }}
+	{{ .Signature }}
 {{ end }}
 }
 
