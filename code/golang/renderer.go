@@ -196,6 +196,7 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 	}
 
 	// Render any result structs for multi-field reads
+	result_structs := map[string]bool{}
 	for _, read := range root.Reads {
 		if read.View == ir.Count || read.View == ir.Has {
 			continue
@@ -204,6 +205,10 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 			continue
 		}
 		s := ResultStructFromRead(read)
+		if result_structs[s.Name] {
+			continue
+		}
+		result_structs[s.Name] = true
 		if err := r.renderStruct(&buf, s); err != nil {
 			return nil, err
 		}
