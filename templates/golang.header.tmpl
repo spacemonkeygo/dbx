@@ -173,7 +173,7 @@ func (obj *DB) Open(ctx context.Context) (*Tx, error) {
 		txMethods: obj.wrapTx(tx),
 	}, nil
 }
-{{ if not .SkipRx }}
+{{ if .SupportRx }}
 func (obj *DB) NewRx() *Rx {
 	return &Rx{db: obj}
 }

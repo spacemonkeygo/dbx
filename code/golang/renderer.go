@@ -41,8 +41,8 @@ type publicMethod struct {
 }
 
 type Options struct {
-	Package string
-	SkipRx  bool
+	Package   string
+	SupportRx bool
 }
 
 type Renderer struct {
@@ -298,13 +298,13 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 		ExtraImports []string
 		Dialects     []headerDialect
 		Structs      []*ModelStruct
-		SkipRx       bool
+		SupportRx    bool
 	}
 
 	params := headerParams{
-		Package: r.options.Package,
-		Structs: ModelStructsFromIR(root.Models),
-		SkipRx:  r.options.SkipRx,
+		Package:   r.options.Package,
+		Structs:   ModelStructsFromIR(root.Models),
+		SupportRx: r.options.SupportRx,
 	}
 
 	for _, dialect := range dialects {
@@ -497,12 +497,12 @@ func (r *Renderer) renderFooter(w io.Writer) error {
 	sort.Sort(sort.StringSlice(keys))
 
 	type footerData struct {
-		Methods []publicMethod
-		SkipRx  bool
+		SupportRx bool
+		Methods   []publicMethod
 	}
 
 	data := footerData{
-		SkipRx: r.options.SkipRx,
+		SupportRx: r.options.SupportRx,
 	}
 
 	for _, key := range keys {
