@@ -47,15 +47,19 @@ type Tag struct {
 	Value string
 }
 
-func FieldFromSelectable(selectable ir.Selectable) Field {
+func FieldFromSelectable(selectable ir.Selectable, full_name bool) Field {
 	field := Field{}
 	switch obj := selectable.(type) {
 	case *ir.Model:
 		field.Name = inflect.Camelize(obj.Name)
 		field.Type = field.Name
 	case *ir.Field:
-		field.Name = inflect.Camelize(obj.Model.Name) + "_" +
-			inflect.Camelize(obj.Name)
+		if full_name {
+			field.Name = inflect.Camelize(obj.Model.Name) + "_" +
+				inflect.Camelize(obj.Name)
+		} else {
+			field.Name = inflect.Camelize(obj.Name)
+		}
 		field.Type = valueType(obj.Type, obj.Nullable)
 	default:
 		panic(fmt.Sprintf("unhandled selectable type %T", obj))
@@ -64,8 +68,17 @@ func FieldFromSelectable(selectable ir.Selectable) Field {
 }
 
 func FieldsFromSelectables(selectables []ir.Selectable) (fields []Field) {
+	// count the number of models being selected
+	nmodels := 0
 	for _, selectable := range selectables {
-		fields = append(fields, FieldFromSelectable(selectable))
+		if _, ok := selectable.(*ir.Model); ok {
+			nmodels++
+		}
+	}
+
+	for _, selectable := range selectables {
+		field := FieldFromSelectable(selectable, nmodels > 1)
+		fields = append(fields, field)
 	}
 	return fields
 }
