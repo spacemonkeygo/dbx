@@ -8,9 +8,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
+	"reflect"
 	"strconv"
 	"strings"
+	"time"
+	"unicode"
 
 {{- range .ExtraImports }}
 	{{ . }}
@@ -31,6 +33,12 @@ var (
 	errUnsupportedDriver = errors.New("unsupported driver")
 	errEmptyUpdate = errors.New("empty update")
 )
+
+func logError(format string, args ...interface{}) {
+	if Logger != nil {
+		Logger(format, args...)
+	}
+}
 
 type ErrorCode int
 
@@ -190,9 +198,7 @@ func DeleteAll(ctx context.Context, db *DB) (int64, error) {
 		}
 
 		if err_rollback := tx.Rollback(); err_rollback != nil {
-			if Logger != nil {
-				Logger("delete-all: rollback failed: %v", db.makeErr(err_rollback))
-			}
+			logError("delete-all: rollback failed: %v", db.makeErr(err_rollback))
 		}
 	}()
 	return tx.deleteAll(ctx)
@@ -272,11 +278,50 @@ type {{ $txtype }} struct {
 func {{ .Name }}LogStmt(stmt string, args ...interface{}) {
 	// TODO: render placeholders
 	if Logger != nil {
-		Logger("sql:\n%s\nargs:\n%q", stmt, args)
+		out := fmt.Sprintf("stmt: %s\nargs: %v\n", stmt, pretty(args))
+		Logger(out)
 	}
 }
 
 {{- end }}
+
+type pretty []interface{}
+
+func (p pretty) Format(f fmt.State, c rune) {
+	fmt.Fprint(f, "[")
+nextval:
+	for i, val := range p {
+		if i > 0 {
+			fmt.Fprint(f, ", ")
+		}
+		rv := reflect.ValueOf(val)
+		if rv.Kind() == reflect.Ptr {
+			if rv.IsNil() {
+				fmt.Fprint(f, "NULL")
+				continue
+			} 
+			val = rv.Elem().Interface()
+		}
+		switch v := val.(type) {
+		case string:
+			fmt.Fprintf(f, "%q", v)
+		case time.Time:
+			fmt.Fprintf(f, "%s", v.Format(time.RFC3339Nano))
+		case []byte:
+			for _, b := range v {
+				if !unicode.IsPrint(rune(b)) {
+					fmt.Fprintf(f, "%#x", v)
+					continue nextval
+				}
+			}
+			fmt.Fprintf(f, "%q", v)
+		default:
+			fmt.Fprintf(f, "%v", v)
+		}
+	}
+	fmt.Fprint(f, "]")
+}
+
 
 {{ range .Structs }}
 {{- $struct := .Name -}}
