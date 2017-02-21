@@ -52,7 +52,22 @@ func DefaultReadSuffix(read *ir.Read) []string {
 			panic(fmt.Sprintf("unhandled selectable %T", selectable))
 		}
 	}
-	parts = append(parts, whereSuffix(read.Where, len(read.Joins) > 0)...)
+	full := len(read.Joins) > 0
+	parts = append(parts, whereSuffix(read.Where, full)...)
+	if read.OrderBy != nil {
+		parts = append(parts, "order_by")
+		if read.OrderBy.Descending {
+			parts = append(parts, "desc")
+		} else {
+			parts = append(parts, "asc")
+		}
+		for _, field := range read.OrderBy.Fields {
+			if full {
+				parts = append(parts, field.Model.Name)
+			}
+			parts = append(parts, field.Name)
+		}
+	}
 	return parts
 }
 
