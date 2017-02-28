@@ -52,6 +52,6 @@ func (t *T) AssertError(err error, msg string) {
 	}
 	if !strings.Contains(err.Error(), msg) {
 		t.dumpContext()
-		t.Fatalf("expected an error containing %q. got %v", err)
+		t.Fatalf("expected an error containing %q. got %v", msg, err)
 	}
 }
