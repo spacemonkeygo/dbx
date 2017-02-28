@@ -177,7 +177,7 @@ func JoinsFromIR(ir_joins []*ir.Join) (joins []Join) {
 		switch ir_join.Type {
 		case consts.InnerJoin:
 		default:
-			panic(fmt.Sprintf("unhandled join type %d", join.Type))
+			panic(fmt.Sprintf("unhandled join type %q", join.Type))
 		}
 		joins = append(joins, join)
 	}
