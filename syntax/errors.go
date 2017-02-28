@@ -44,6 +44,6 @@ func previouslyDefined(pos scanner.Position, kind, field string,
 	where scanner.Position) error {
 
 	return errutil.New(pos,
-		"%s already defined on %s. previous definiton at %s",
+		"%s already defined on %s. previous definition at %s",
 		field, kind, where)
 }
