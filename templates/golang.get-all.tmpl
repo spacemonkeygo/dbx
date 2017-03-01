@@ -1,10 +1,10 @@
 {{- define "signature" -}}
-All{{ .Suffix }}({{ ctxparam .Args }}) (
+All_{{ .Suffix }}({{ ctxparam .Args }}) (
 	rows {{ sliceof .Row }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-All{{ .Suffix }}({{ ctxarg .Args }})
+All_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
 {{- define "body" }}{

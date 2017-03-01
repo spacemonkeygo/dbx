@@ -1,12 +1,12 @@
 {{- define "signature" -}}
-Limited{{ .Suffix }}({{ ctxparam .Args}},
+Limited_{{ .Suffix }}({{ ctxparam .Args}},
 	limit int, offset int64) (
 	rows {{ sliceof .Row }}, err error)
 {{- end -}}
 
 
 {{- define "invoke" -}}
-Limited{{ .Suffix }}({{ ctxarg .Args}}, limit, offset)
+Limited_{{ .Suffix }}({{ ctxarg .Args}}, limit, offset)
 {{- end -}}
 
 {{- define "body" }}{

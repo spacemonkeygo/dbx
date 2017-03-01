@@ -161,5 +161,5 @@ func convertSuffix(suffix []string) string {
 	for _, part := range suffix {
 		parts = append(parts, inflect.Camelize(part))
 	}
-	return "_" + strings.Join(parts, "_")
+	return strings.Join(parts, "_")
 }

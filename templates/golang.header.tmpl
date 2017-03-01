@@ -57,6 +57,7 @@ type Error struct {
 	Code ErrorCode
 	Driver string
 	Constraint string
+	QuerySuffix string
 }
 
 func (e *Error) Error() string {
@@ -99,10 +100,11 @@ func emptyUpdate() error {
 	})
 }
 
-func tooManyRows() error {
+func tooManyRows(query_suffix string) error {
 	return wrapErr(&Error{
 		Err: errTooManyRows,
 		Code: ErrorCode_TooManyRows,
+		QuerySuffix: query_suffix,
 	})
 }
 

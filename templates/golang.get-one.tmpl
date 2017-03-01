@@ -1,10 +1,10 @@
 {{- define "signature" -}}
-Get{{ .Suffix }}({{ ctxparam .Args }}) (
+Get_{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Row }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Get{{ .Suffix }}({{ ctxarg .Args }})
+Get_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
 {{- define "body" }}{

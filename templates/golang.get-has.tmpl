@@ -1,10 +1,10 @@
 {{- define "signature" -}}
-Has{{ .Suffix }}({{ ctxparam .Args }}) (
+Has_{{ .Suffix }}({{ ctxparam .Args }}) (
 	has bool, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Has{{ .Suffix }}({{ ctxarg .Args }})
+Has_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
 {{- define "body" }}{

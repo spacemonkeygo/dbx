@@ -1,10 +1,10 @@
 {{- define "signature" -}}
-Find{{ .Suffix }}({{ ctxparam .Args }}) (
+Find_{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Row }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Find{{ .Suffix }}({{ ctxarg .Args }})
+Find_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
 {{- define "body" }}{
@@ -31,7 +31,7 @@ Find{{ .Suffix }}({{ ctxarg .Args }})
 	}
 
 	if __rows.Next() {
-		return nil, tooManyRows()
+		return nil, tooManyRows({{ printf "%q" .Suffix }})
 	}
 
 	if err := __rows.Err(); err != nil {

@@ -1,11 +1,11 @@
 {{- define "signature" -}}
-Paged{{ .Suffix }}({{ ctxparam .Args }},
+Paged_{{ .Suffix }}({{ ctxparam .Args }},
 	limit int, ctoken string) (
 	rows {{ sliceof .Row }}, ctokenout string, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Paged{{ .Suffix }}({{ ctxarg .Args }}, limit, ctoken)
+Paged_{{ .Suffix }}({{ ctxarg .Args }}, limit, ctoken)
 {{- end -}}
 
 {{- define "body" }}{

@@ -1,10 +1,10 @@
 {{- define "signature" -}}
-Find{{ .Suffix }}({{ ctxparam .Args }}) (
+Find_{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Row }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Find{{ .Suffix }}({{ ctxarg .Args }})
+Find_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
 {{- define "body" }}{

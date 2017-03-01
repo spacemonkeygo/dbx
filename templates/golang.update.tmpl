@@ -1,11 +1,11 @@
 {{- define "signature" -}}
-Update{{ .Suffix }}({{ ctxparam .Args }},
+Update_{{ .Suffix }}({{ ctxparam .Args }},
 	update {{ .Struct.UpdateStructName }}) (
 	{{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Update{{ .Suffix }}({{ ctxarg .Args }}, update)
+Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 {{- end -}}
 
 {{- define "body" -}}{

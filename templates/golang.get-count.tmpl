@@ -1,10 +1,10 @@
 {{- define "signature" -}}
-Count{{ .Suffix }}({{ ctxparam .Args }}) (
+Count_{{ .Suffix }}({{ ctxparam .Args }}) (
 	count int64, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Count{{ .Suffix }}({{ ctxarg .Args }})
+Count_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
 {{- define "body" }}{
