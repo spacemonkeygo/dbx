@@ -21,7 +21,11 @@ const (
 	UPDATE {{ .Table }} SET`
 	updateTmplSuffix = `
 	{{ if .Where }} WHERE {{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }} {{- end -}}
-	{{ if .Returning }} RETURNING *{{ end }}`
+	{{- if .Returning }} RETURNING
+	{{- range $i, $col := .Returning }}
+		{{- if $i }},{{ end }} {{ $col }}
+	{{- end }}
+	{{- end }}`
 )
 
 func RenderUpdate(dialect Dialect, ir_upd *ir.Update) (prefix, suffix string) {
@@ -34,15 +38,20 @@ func RenderUpdate(dialect Dialect, ir_upd *ir.Update) (prefix, suffix string) {
 type Update struct {
 	Table     string
 	Where     []Where
-	Returning bool
+	Returning []string
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect Dialect) *Update {
+	var returning []string
+	if dialect.Features().Returning {
+		returning = ir_upd.Model.SelectRefs()
+	}
+
 	if len(ir_upd.Joins) == 0 {
 		return &Update{
 			Table:     ir_upd.Model.Table,
 			Where:     WheresFromIR(ir_upd.Where),
-			Returning: dialect.Features().Returning,
+			Returning: returning,
 		}
 	}
 
@@ -57,7 +66,7 @@ func UpdateFromIR(ir_upd *ir.Update, dialect Dialect) *Update {
 
 	return &Update{
 		Table:     ir_upd.Model.Table,
-		Returning: dialect.Features().Returning,
+		Returning: returning,
 		Where: []Where{{
 			Left:  pk_column,
 			Op:    "IN",

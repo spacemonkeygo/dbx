@@ -28,7 +28,11 @@ const insertTmpl = `INSERT INTO {{ .Table -}}
 	{{- else }}
 		DEFAULT VALUES
 	{{- end -}}
-	{{ if .Returning }} RETURNING *{{ end }}`
+	{{- if .Returning }} RETURNING
+	{{- range $i, $col := .Returning }}
+		{{- if $i }},{{ end }} {{ $col }}
+	{{- end }}
+	{{- end }}`
 
 func RenderInsert(dialect Dialect, cre *ir.Create) string {
 	return render(dialect, insertTmpl, InsertFromIR(cre, dialect))
@@ -37,13 +41,15 @@ func RenderInsert(dialect Dialect, cre *ir.Create) string {
 type Insert struct {
 	Table     string
 	Columns   []string
-	Returning bool
+	Returning []string
 }
 
 func InsertFromIR(ir_cre *ir.Create, dialect Dialect) *Insert {
 	ins := &Insert{
-		Table:     ir_cre.Model.Table,
-		Returning: dialect.Features().Returning,
+		Table: ir_cre.Model.Table,
+	}
+	if dialect.Features().Returning {
+		ins.Returning = ir_cre.Model.SelectRefs()
 	}
 	for _, field := range ir_cre.Fields() {
 		if field == ir_cre.Model.BasicPrimaryKey() && !ir_cre.Raw {
