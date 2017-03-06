@@ -7,7 +7,7 @@ Create_{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxparam .Args }}) (
 Create_{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxarg .Args }})
 {{ end -}}
 
-{{- define "body" -}}{
+{{- define "body" -}}
 	{{- if .NeedsNow }}
 	__now := Now().UTC()
 	{{ end -}}
@@ -34,5 +34,4 @@ Create_{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxarg .Args }})
 	}
 	return obj.getLast{{ .Return.Type }}(ctx, __pk)
 	{{ end -}}
-}
 {{ end -}}

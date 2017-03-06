@@ -7,7 +7,7 @@ Get_{{ .Suffix }}({{ ctxparam .Args }}) (
 Get_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
-{{- define "body" }}{
+{{- define "body" }}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
@@ -17,5 +17,4 @@ Get_{{ .Suffix }}({{ ctxarg .Args }})
 		return {{ zero .Row }}, obj.makeErr(err)
 	}
 	return {{ arg .Row }}, nil
-}
 {{ end -}}

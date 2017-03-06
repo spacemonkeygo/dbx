@@ -1,0 +1,5 @@
+{{- define "decl" }}
+func (obj *{{ .ReceiverBase }}Impl) {{ .Signature }} {
+{{ .Body }}
+}
+{{ end -}}

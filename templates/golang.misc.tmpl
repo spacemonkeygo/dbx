@@ -1,7 +1,3 @@
-{{- define "decl" }}
-func (obj *{{ .ReceiverBase }}Impl) {{ .Signature }} {{ .Body }}
-{{ end -}}
-
 {{- define "struct" }}
 type {{ .Name }} struct {
 {{ range .Fields }}

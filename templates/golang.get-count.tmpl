@@ -7,7 +7,7 @@ Count_{{ .Suffix }}({{ ctxparam .Args }}) (
 Count_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
-{{- define "body" }}{
+{{- define "body" }}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
@@ -17,5 +17,4 @@ Count_{{ .Suffix }}({{ ctxarg .Args }})
 	}
 
 	return count, nil
-}
 {{ end -}}

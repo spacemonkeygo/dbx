@@ -7,7 +7,7 @@ All_{{ .Suffix }}({{ ctxparam .Args }}) (
 All_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
-{{- define "body" }}{
+{{- define "body" }}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
@@ -29,5 +29,4 @@ All_{{ .Suffix }}({{ ctxarg .Args }})
 		return nil, obj.makeErr(err)
 	}
 	return rows, nil
-}
 {{ end -}}

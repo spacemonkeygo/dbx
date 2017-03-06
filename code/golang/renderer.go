@@ -50,6 +50,7 @@ type Renderer struct {
 	header          *template.Template
 	footer          *template.Template
 	misc            *template.Template
+	decl            *template.Template
 	cre             *template.Template
 	get_all         *template.Template
 	get_has         *template.Template
@@ -92,6 +93,11 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	r.misc, err = loader.Load("golang.misc.tmpl", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	r.decl, err = loader.Load("golang.decl.tmpl", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +467,7 @@ func (r *Renderer) renderFunc(tmpl *template.Template, w io.Writer,
 		Body:         body.String(),
 	}
 
-	err = tmplutil.Render(r.misc, w, "decl", decl)
+	err = tmplutil.Render(r.decl, w, "decl", decl)
 	if err != nil {
 		return err
 	}

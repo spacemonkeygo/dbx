@@ -9,7 +9,7 @@ Limited_{{ .Suffix }}({{ ctxparam .Args}},
 Limited_{{ .Suffix }}({{ ctxarg .Args}}, limit, offset)
 {{- end -}}
 
-{{- define "body" }}{
+{{- define "body" }}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args | comma }}limit, offset)
 
@@ -31,5 +31,4 @@ Limited_{{ .Suffix }}({{ ctxarg .Args}}, limit, offset)
 		return nil, obj.makeErr(err)
 	}
 	return rows, nil
-}
 {{ end -}}

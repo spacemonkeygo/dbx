@@ -7,7 +7,7 @@ Has_{{ .Suffix }}({{ ctxparam .Args }}) (
 Has_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
-{{- define "body" }}{
+{{- define "body" }}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
@@ -16,5 +16,4 @@ Has_{{ .Suffix }}({{ ctxarg .Args }})
 		return false, obj.makeErr(err)
 	}
 	return has, nil
-}
 {{ end -}}

@@ -196,10 +196,11 @@ func parseDBX(in string) (*ir.Root, error) {
 }
 
 func getLoader(dir string) tmplutil.Loader {
+	loader := tmplutil.BinLoader(templates.Asset)
 	if dir != "" {
-		return tmplutil.DirLoader(dir)
+		return tmplutil.DirLoader(dir, loader)
 	}
-	return tmplutil.BinLoader(templates.Asset)
+	return loader
 }
 
 func createDialects(which []string) (out []sql.Dialect, err error) {

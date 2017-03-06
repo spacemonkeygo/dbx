@@ -16,6 +16,7 @@ package tmplutil
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"text/template"
 
@@ -35,13 +36,26 @@ func (fn LoaderFunc) Load(name string, funcs template.FuncMap) (
 	return fn(name, funcs)
 }
 
-type DirLoader string
+type dirLoader struct {
+	dir      string
+	fallback Loader
+}
 
-func (d DirLoader) Load(name string, funcs template.FuncMap) (
+func DirLoader(dir string, fallback Loader) Loader {
+	return dirLoader{
+		dir:      dir,
+		fallback: fallback,
+	}
+}
+
+func (d dirLoader) Load(name string, funcs template.FuncMap) (
 	*template.Template, error) {
 
-	data, err := ioutil.ReadFile(filepath.Join(string(d), name))
+	data, err := ioutil.ReadFile(filepath.Join(d.dir, name))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return d.fallback.Load(name, funcs)
+		}
 		return nil, Error.Wrap(err)
 	}
 	return loadTemplate(name, data, funcs)

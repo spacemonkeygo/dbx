@@ -4,7 +4,7 @@ getLast{{ .Return.Type }}(ctx context.Context,
 	{{ param .Return }}, err error)
 {{- end -}}
 
-{{- define "body" -}}{
+{{- define "body" -}}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, pk)
 
@@ -14,5 +14,4 @@ getLast{{ .Return.Type }}(ctx context.Context,
 		return {{ zero .Return }}, obj.makeErr(err)
 	}
 	return {{ arg .Return }}, nil
-}
 {{ end -}}

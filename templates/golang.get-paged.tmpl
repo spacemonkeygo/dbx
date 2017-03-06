@@ -8,7 +8,7 @@ Paged_{{ .Suffix }}({{ ctxparam .Args }},
 Paged_{{ .Suffix }}({{ ctxarg .Args }}, limit, ctoken)
 {{- end -}}
 
-{{- define "body" }}{
+{{- define "body" }}
 	if ctoken == "" {
 		ctoken = "0"
 	}
@@ -44,5 +44,4 @@ Paged_{{ .Suffix }}({{ ctxarg .Args }}, limit, ctoken)
 	}
 
 	return rows, ctokenout, nil
-}
 {{ end -}}

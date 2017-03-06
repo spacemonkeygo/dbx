@@ -8,7 +8,7 @@ Update_{{ .Suffix }}({{ ctxparam .Args }},
 Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 {{- end -}}
 
-{{- define "body" -}}{
+{{- define "body" -}}
 	const __stmt_prefix={{ printf "%q" .SQLPrefix }}
 	const __stmt_suffix={{ printf "%q" .SQLSuffix }}
 
@@ -87,5 +87,4 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 	}
 	{{ end -}}
 	return {{ arg .Return }}, nil
-}
 {{- end -}}

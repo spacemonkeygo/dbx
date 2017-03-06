@@ -7,7 +7,7 @@ First_{{ .Suffix }}({{ ctxparam .Args }}) (
 First_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
-{{- define "body" }}{
+{{- define "body" }}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
@@ -31,5 +31,4 @@ First_{{ .Suffix }}({{ ctxarg .Args }})
 	}
 
 	return {{ arg .Row }}, nil
-}
 {{ end -}}

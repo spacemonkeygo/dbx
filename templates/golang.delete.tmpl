@@ -7,7 +7,7 @@ Delete_{{ .Suffix }}({{ ctxparam .Args }}) (
 Delete_{{ .Suffix }}({{ ctxarg .Args }})
 {{- end -}}
 
-{{- define "body" -}}{
+{{- define "body" -}}
 	const __stmt={{ printf "%q" .SQL }}
 	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
@@ -22,5 +22,4 @@ Delete_{{ .Suffix }}({{ ctxarg .Args }})
 	}
 
 	return __count > 0, nil
-}
 {{ end -}}
