@@ -1,0 +1,34 @@
+model foo (
+	key id
+
+	field id serial64
+)
+
+create foo (
+	suffix create suffix
+)
+
+read all limitoffset paged has count scalar one (
+	suffix read suffix
+	select foo
+)
+
+read scalar one first has count (
+	suffix other_read suffix
+	select foo
+
+	where foo.id = ?
+)
+
+update foo (
+	suffix update suffix
+
+	where foo.id = ?
+)
+
+delete foo (
+	suffix delete suffix
+
+	where foo.id = ?
+)
+

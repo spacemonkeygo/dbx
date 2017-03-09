@@ -20,7 +20,7 @@ import (
 )
 
 func parseRelation(node *tupleNode, field *ast.Field) error {
-	err := node.consumeAnyToken(tokenCases{
+	err := node.consumeTokenNamed(tokenCases{
 		{Ident, "setnull"}: func(token *tokenNode) error {
 			field.RelationKind = relationKindFromValue(token, consts.SetNull)
 			return nil

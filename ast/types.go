@@ -75,6 +75,11 @@ func (i *Int) Get() int {
 	return i.Value
 }
 
+type Suffix struct {
+	Pos   scanner.Position
+	Parts []*String
+}
+
 type Field struct {
 	Pos  scanner.Position
 	Name *String
@@ -172,26 +177,30 @@ type Read struct {
 	Where   []*Where
 	OrderBy *OrderBy
 	View    *View
+	Suffix  *Suffix
 }
 
 type Delete struct {
-	Pos   scanner.Position
-	Model *ModelRef
-	Joins []*Join
-	Where []*Where
+	Pos    scanner.Position
+	Model  *ModelRef
+	Joins  []*Join
+	Where  []*Where
+	Suffix *Suffix
 }
 
 type Update struct {
-	Pos   scanner.Position
-	Model *ModelRef
-	Joins []*Join
-	Where []*Where
+	Pos    scanner.Position
+	Model  *ModelRef
+	Joins  []*Join
+	Where  []*Where
+	Suffix *Suffix
 }
 
 type Create struct {
-	Pos   scanner.Position
-	Model *ModelRef
-	Raw   *Bool
+	Pos    scanner.Position
+	Model  *ModelRef
+	Raw    *Bool
+	Suffix *Suffix
 }
 
 type View struct {

@@ -29,7 +29,7 @@ func parseWhere(node *tupleNode) (*ast.Where, error) {
 	}
 	where.Left = left_field_ref
 
-	err = node.consumeAnyToken(tokenCases{
+	err = node.consumeTokenNamed(tokenCases{
 		Exclamation.tokenCase(): func(token *tokenNode) error {
 			_, err := node.consumeToken(Equal)
 			if err != nil {

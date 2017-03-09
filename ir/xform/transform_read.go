@@ -23,7 +23,9 @@ import (
 func transformRead(lookup *lookup, ast_read *ast.Read) (
 	reads []*ir.Read, err error) {
 
-	tmpl := new(ir.Read)
+	tmpl := &ir.Read{
+		Suffix: transformSuffix(ast_read.Suffix),
+	}
 
 	if ast_read.Select == nil || len(ast_read.Select.Refs) == 0 {
 		return nil, errutil.New(ast_read.Pos, "no fields defined to select")
@@ -198,7 +200,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	addView := func(v ir.View) {
 		read_copy := *tmpl
 		read_copy.View = v
-		read_copy.Suffix = DefaultReadSuffix(&read_copy)
+		if read_copy.Suffix == nil {
+			read_copy.Suffix = DefaultReadSuffix(&read_copy)
+		}
 		reads = append(reads, &read_copy)
 	}
 

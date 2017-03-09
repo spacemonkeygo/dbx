@@ -20,7 +20,7 @@ func parseView(node *tupleNode) (*ast.View, error) {
 	view := new(ast.View)
 	view.Pos = node.getPos()
 
-	err := node.consumeTokensUntilList(tokenCases{
+	err := node.consumeTokensNamedUntilList(tokenCases{
 		{Ident, "all"}:   tokenFlagField("view", "all", &view.All),
 		{Ident, "paged"}: tokenFlagField("view", "paged", &view.Paged),
 		{Ident, "count"}: tokenFlagField("view", "count", &view.Count),

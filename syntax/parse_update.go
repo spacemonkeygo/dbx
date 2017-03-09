@@ -50,6 +50,20 @@ func parseUpdate(node *tupleNode) (*ast.Update, error) {
 
 			return nil
 		},
+		"suffix": func(node *tupleNode) error {
+			if upd.Suffix != nil {
+				return previouslyDefined(node.getPos(), "update", "suffix",
+					upd.Suffix.Pos)
+			}
+
+			suffix, err := parseSuffix(node)
+			if err != nil {
+				return err
+			}
+			upd.Suffix = suffix
+
+			return nil
+		},
 	})
 	if err != nil {
 		return nil, err

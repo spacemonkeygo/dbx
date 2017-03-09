@@ -304,6 +304,18 @@ func (t *tupleNode) consumeToken(kinds ...Token) (*tokenNode, error) {
 	return token, nil
 }
 
+func (t *tupleNode) consumeTokens(kinds ...Token) ([]*tokenNode, error) {
+	var out []*tokenNode
+	for len(t.value) > 0 {
+		token, err := t.consumeToken(kinds...)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, token)
+	}
+	return out, nil
+}
+
 func (t *tupleNode) consumeIfToken(kinds ...Token) *tokenNode {
 	if len(t.value) == 0 {
 		return nil
@@ -379,16 +391,16 @@ func (t tokenCases) idents() []string {
 	return out
 }
 
-func (t *tupleNode) consumeAnyTokens(cases tokenCases) error {
+func (t *tupleNode) consumeTokensNamed(cases tokenCases) error {
 	for len(t.value) > 0 {
-		if err := t.consumeAnyToken(cases); err != nil {
+		if err := t.consumeTokenNamed(cases); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (t *tupleNode) consumeAnyToken(cases tokenCases) error {
+func (t *tupleNode) consumeTokenNamed(cases tokenCases) error {
 	token, err := t.consumeToken()
 	if err != nil {
 		return err
@@ -401,12 +413,12 @@ func (t *tupleNode) consumeAnyToken(cases tokenCases) error {
 	return expectedKeyword(token.pos, token.text, cases.idents()...)
 }
 
-func (t *tupleNode) consumeTokensUntilList(cases tokenCases) error {
+func (t *tupleNode) consumeTokensNamedUntilList(cases tokenCases) error {
 	if len(t.value) == 0 {
 		return errutil.New(t.getPos(), "expected a token. found nothing")
 	}
 	for {
-		if err := t.consumeAnyToken(cases); err != nil {
+		if err := t.consumeTokenNamed(cases); err != nil {
 			return err
 		}
 		if len(t.value) == 0 {

@@ -34,7 +34,8 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 	}
 
 	upd = &ir.Update{
-		Model: model,
+		Model:  model,
+		Suffix: transformSuffix(ast_upd.Suffix),
 	}
 
 	// Figure out set of models that are included in the update.
@@ -110,7 +111,9 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 			"updates for more than one row are unsupported")
 	}
 
-	upd.Suffix = DefaultUpdateSuffix(upd)
+	if upd.Suffix == nil {
+		upd.Suffix = DefaultUpdateSuffix(upd)
+	}
 
 	return upd, nil
 }

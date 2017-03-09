@@ -20,7 +20,7 @@ func parseOrderBy(node *tupleNode) (*ast.OrderBy, error) {
 	order_by := new(ast.OrderBy)
 	order_by.Pos = node.getPos()
 
-	err := node.consumeAnyToken(tokenCases{
+	err := node.consumeTokenNamed(tokenCases{
 		{Ident, "asc"}: func(token *tokenNode) error { return nil },
 		{Ident, "desc"}: func(token *tokenNode) error {
 			order_by.Descending = boolFromValue(token, true)

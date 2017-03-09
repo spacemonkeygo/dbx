@@ -50,6 +50,20 @@ func parseDelete(node *tupleNode) (*ast.Delete, error) {
 
 			return nil
 		},
+		"suffix": func(node *tupleNode) error {
+			if del.Suffix != nil {
+				return previouslyDefined(node.getPos(), "delete", "suffix",
+					del.Suffix.Pos)
+			}
+
+			suffix, err := parseSuffix(node)
+			if err != nil {
+				return err
+			}
+			del.Suffix = suffix
+
+			return nil
+		},
 	})
 	if err != nil {
 		return nil, err

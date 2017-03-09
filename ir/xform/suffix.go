@@ -14,27 +14,15 @@
 
 package xform
 
-import (
-	"gopkg.in/spacemonkeygo/dbx.v1/ast"
-	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-)
+import "gopkg.in/spacemonkeygo/dbx.v1/ast"
 
-func transformCreate(lookup *lookup, ast_cre *ast.Create) (
-	cre *ir.Create, err error) {
-
-	model, err := lookup.FindModel(ast_cre.Model)
-	if err != nil {
-		return nil, err
+func transformSuffix(suffix *ast.Suffix) []string {
+	var parts []string
+	if suffix == nil {
+		return parts
 	}
-
-	cre = &ir.Create{
-		Model:  model,
-		Raw:    ast_cre.Raw.Get(),
-		Suffix: transformSuffix(ast_cre.Suffix),
+	for _, part := range suffix.Parts {
+		parts = append(parts, part.Value)
 	}
-	if cre.Suffix == nil {
-		cre.Suffix = DefaultCreateSuffix(cre)
-	}
-
-	return cre, nil
+	return parts
 }

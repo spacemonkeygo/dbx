@@ -34,7 +34,8 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 	}
 
 	del = &ir.Delete{
-		Model: model,
+		Model:  model,
+		Suffix: transformSuffix(ast_del.Suffix),
 	}
 
 	// Figure out set of models that are included in the delete.
@@ -105,7 +106,9 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		})
 	}
 
-	del.Suffix = DefaultDeleteSuffix(del)
+	if del.Suffix == nil {
+		del.Suffix = DefaultDeleteSuffix(del)
+	}
 
 	return del, nil
 }

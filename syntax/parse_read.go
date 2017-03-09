@@ -78,6 +78,20 @@ func parseRead(node *tupleNode) (*ast.Read, error) {
 
 			return nil
 		},
+		"suffix": func(node *tupleNode) error {
+			if read.Suffix != nil {
+				return previouslyDefined(node.getPos(), "read", "suffix",
+					read.Suffix.Pos)
+			}
+
+			suffix, err := parseSuffix(node)
+			if err != nil {
+				return err
+			}
+			read.Suffix = suffix
+
+			return nil
+		},
 	})
 	if err != nil {
 		return nil, err
