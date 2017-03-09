@@ -41,8 +41,9 @@ type publicMethod struct {
 }
 
 type Options struct {
-	Package   string
-	SupportRx bool
+	Package         string
+	SupportRx       bool
+	SupportUserdata bool
 }
 
 type Renderer struct {
@@ -309,13 +310,13 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 		ExtraImports []string
 		Dialects     []headerDialect
 		Structs      []*ModelStruct
-		SupportRx    bool
+		Options      Options
 	}
 
 	params := headerParams{
-		Package:   r.options.Package,
-		Structs:   ModelStructsFromIR(root.Models),
-		SupportRx: r.options.SupportRx,
+		Package: r.options.Package,
+		Structs: ModelStructsFromIR(root.Models),
+		Options: r.options,
 	}
 
 	for _, dialect := range dialects {

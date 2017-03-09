@@ -53,26 +53,33 @@ func testFile(t *testutil.T, file string) {
 		t.Logf("using dialects: %q", dialects)
 	}
 
-	err = golangCmd("", dialects, "", false, file, dir)
-	t.AssertNoError(err)
-
-	go_file := filepath.Join(dir, filepath.Base(file)+".go")
-	go_source, err := ioutil.ReadFile(go_file)
-	t.AssertNoError(err)
-	t.Context("go", linedSource(go_source))
-
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, go_file, go_source, parser.AllErrors)
-	t.AssertNoError(err)
-
-	config := types.Config{
-		Importer: importer.Default(),
-	}
-	_, err = config.Check(dir, fset, []*ast.File{f}, nil)
-
-	if d.has("fail") {
-		t.AssertError(err, d.get("fail"))
-	} else {
+	runBuild := func(rx, userdata bool) {
+		err = golangCmd("", dialects, "", rx, userdata, file, dir)
 		t.AssertNoError(err)
+
+		go_file := filepath.Join(dir, filepath.Base(file)+".go")
+		go_source, err := ioutil.ReadFile(go_file)
+		t.AssertNoError(err)
+		t.Context("go", linedSource(go_source))
+
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, go_file, go_source, parser.AllErrors)
+		t.AssertNoError(err)
+
+		config := types.Config{
+			Importer: importer.Default(),
+		}
+		_, err = config.Check(dir, fset, []*ast.File{f}, nil)
+
+		if d.has("fail") {
+			t.AssertError(err, d.get("fail"))
+		} else {
+			t.AssertNoError(err)
+		}
 	}
+
+	runBuild(false, false)
+	runBuild(false, true)
+	runBuild(true, false)
+	runBuild(true, true)
 }
