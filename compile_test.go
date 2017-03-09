@@ -53,7 +53,7 @@ func testFile(t *testutil.T, file string) {
 		t.Logf("using dialects: %q", dialects)
 	}
 
-	err = golangCmd("", dialects, "", file, dir)
+	err = golangCmd("", dialects, "", false, file, dir)
 	t.AssertNoError(err)
 
 	go_file := filepath.Join(dir, filepath.Base(file)+".go")
