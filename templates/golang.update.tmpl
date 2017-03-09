@@ -41,7 +41,7 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 	{{ end }}
 
 	{{- if .NeedsNow }}
-	__now := Now().UTC()
+	__now := obj.db.Hooks.Now().UTC()
 	{{ end -}}
 	{{ range .AutoFields }}
 	addArgument("{{ .Name }}")

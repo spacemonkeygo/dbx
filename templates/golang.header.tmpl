@@ -26,7 +26,6 @@ var _ = fmt.Sprint
 
 var (
 	WrapErr = func(err *Error) error {return err}
-	Now		= time.Now
 	Logger func(format string, args ...interface{})
 
 	errTooManyRows = errors.New("too many rows")
@@ -130,6 +129,10 @@ var (
 type DB struct {
 	*sql.DB
 	dbMethods
+
+	Hooks struct {
+		Now func() time.Time
+	}
 }
 
 func Open(driver, source string) (db *DB, err error) {
@@ -147,14 +150,18 @@ func Open(driver, source string) (db *DB, err error) {
 		return nil, makeErr(err)
 	}
 
-	var impl dbMethods
+	db = &DB{
+		DB: sql_db,
+	}
+	db.Hooks.Now = time.Now
+
 	switch driver {
 {{- range .Dialects }}
 	case {{ .Name | printf "%q" }}:
-		impl = new{{ .Name }}(sql_db)
+		db.dbMethods = new{{ .Name }}(db)
 {{- range .ExecOnOpen }}
 		if _,  err := sql_db.Exec({{ printf "%q" . }}); err != nil {
-			return nil, impl.makeErr(err)
+			return nil, db.makeErr(err)
 		}
 {{- end }}
 {{- end }}
@@ -162,10 +169,7 @@ func Open(driver, source string) (db *DB, err error) {
 		return nil, unsupportedDriver(driver)
 	}
 
-	return &DB{
-		DB: sql_db,
-		dbMethods: impl,
-	}, nil
+	return db, nil
 }
 
 func (obj *DB) Close() (err error) {
@@ -230,6 +234,7 @@ func (tx *dialectTx) Rollback() (err error) {
 {{- $impltype := .Name | printf "%sImpl" }}
 
 type {{ $impltype }} struct {
+	db     *DB
 	driver driver
 }
 
@@ -238,23 +243,24 @@ func (obj *{{ $impltype }}) logStmt(stmt string, args... interface{}) {
 }
 
 func (obj *{{ $impltype }}) makeErr(err error) error {
-	 constraint, ok := obj.isConstraintError(err)
-	 if ok {
-		 return constraintViolation(err, constraint)
-	 }
-	 return makeErr(err)
+	constraint, ok := obj.isConstraintError(err)
+	if ok {
+		return constraintViolation(err, constraint)
+	}
+	return makeErr(err)
 }
 
 type {{ $dbtype }} struct {
-	db *sql.DB
+	db *DB
 	*{{ $impltype }}
 }
 
-func new{{ .Name }}(db *sql.DB) *{{ $dbtype }} {
+func new{{ .Name }}(db *DB) *{{ $dbtype }} {
 	return &{{ $dbtype }}{
 		db: db,
 		{{ $impltype }}: &{{ $impltype }}{
-			driver: db,
+			db:     db,
+			driver: db.DB,
 		},
 	}
 }
@@ -267,6 +273,7 @@ func (obj *{{ $dbtype }}) wrapTx(tx *sql.Tx) txMethods {
 	return &{{ $txtype }}{
 		dialectTx: dialectTx{tx: tx},
 		{{ $impltype }}: &{{ $impltype }}{
+			db:     obj.db,
 			driver: tx,
 		},
 	}

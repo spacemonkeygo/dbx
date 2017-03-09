@@ -9,7 +9,7 @@ Create_{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxarg .Args }})
 
 {{- define "body" -}}
 	{{- if .NeedsNow }}
-	__now := Now().UTC()
+	__now := obj.db.Hooks.Now().UTC()
 	{{ end -}}
 	{{ initnew .Fields }}
 

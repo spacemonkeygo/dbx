@@ -5,6 +5,10 @@ model a (
 	key    pk
 	unique id
 	unique name
+	index  (
+		fields ctime mtime
+		unique
+	)
 
 	field pk    serial64
 	field ctime timestamp ( autoinsert )
