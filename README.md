@@ -360,6 +360,9 @@ A foreign key can have these attributes
 create <model> (
 	// raw will cause the generation of a "raw" create that exposes every field
 	raw
+	
+	// suffix will cause the generated create method to have the desired value
+	suffix <parts>
 )
 ```
 
@@ -405,30 +408,35 @@ read <views> (
 	// orderby controls the order the rows are returned. direction has to be
 	// either "asc" or "desc".
 	orderby <direction> <model.field>
+	
+	// suffix will cause the generated read methods to have the desired value
+	suffix <parts>
 )
 ```
 
 ### Update
 
-See the documentation on Read for information about where and join. Update is
-required to have enough information in the where and join clauses for dbx to
-determine that it will be updating a single row.
+See the documentation on Read for information about where join, and suffix.
+Update is required to have enough information in the where and join clauses
+for dbx to determine that it will be updating a single row.
 
 ```
 update <model> (
 	where <model.field> <op> <model.field or "?">
-	join <model.field> = <model.field>	
+	join <model.field> = <model.field>
+	suffix <parts>
 )
 ```
 
 ### Delete
 
-See the documentation on Read for information about where and join.
+See the documentation on Read for information about where, join and suffix.
 
 ```
 delete <model> (
 	where <model.field> <op> <model.field or "?">
-	join <model.field> = <model.field>	
+	join <model.field> = <model.field>
+	suffix <parts>
 )
 ```
 
