@@ -16,7 +16,6 @@ package sql
 
 import (
 	"fmt"
-	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -82,13 +81,7 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 	}
 
 	if ir_read.OrderBy != nil {
-		order_by := &OrderBy{
-			Descending: ir_read.OrderBy.Descending,
-		}
-		for _, ir_field := range ir_read.OrderBy.Fields {
-			order_by.Fields = append(order_by.Fields, ir_field.ColumnRef())
-		}
-		sel.OrderBy = order_by
+		sel.OrderBy = OrderByFromIR(ir_read.OrderBy)
 	}
 
 	switch ir_read.View {
@@ -126,60 +119,4 @@ func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
 	}
 
 	return sel
-}
-
-type Where struct {
-	Left  string
-	Op    string
-	Right string
-}
-
-func WhereFromIR(ir_where *ir.Where) Where {
-	where := Where{
-		Left: ir_where.Left.ColumnRef(),
-		Op:   strings.ToUpper(string(ir_where.Op)),
-	}
-	if ir_where.Right != nil {
-		where.Right = ir_where.Right.ColumnRef()
-	} else {
-		where.Right = "?"
-	}
-	return where
-}
-
-func WheresFromIR(ir_wheres []*ir.Where) (wheres []Where) {
-	wheres = make([]Where, 0, len(ir_wheres))
-	for _, ir_where := range ir_wheres {
-		wheres = append(wheres, WhereFromIR(ir_where))
-	}
-	return wheres
-}
-
-type OrderBy struct {
-	Fields     []string
-	Descending bool
-}
-
-type Join struct {
-	Type  string
-	Table string
-	Left  string
-	Right string
-}
-
-func JoinsFromIR(ir_joins []*ir.Join) (joins []Join) {
-	for _, ir_join := range ir_joins {
-		join := Join{
-			Table: ir_join.Right.Model.Table,
-			Left:  ir_join.Left.ColumnRef(),
-			Right: ir_join.Right.ColumnRef(),
-		}
-		switch ir_join.Type {
-		case consts.InnerJoin:
-		default:
-			panic(fmt.Sprintf("unhandled join type %q", join.Type))
-		}
-		joins = append(joins, join)
-	}
-	return joins
 }
