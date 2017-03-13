@@ -24,9 +24,9 @@ func TestCompilation(t *testing.T) {
 	tw.AssertNoError(err)
 
 	for _, fileinfo := range fileinfos {
-		tw.Run(fileinfo.Name(), func(t *testing.T) {
+		tw.Run(fileinfo.Name(), func(tw *testutil.T) {
 			path := filepath.Join(data_dir, fileinfo.Name())
-			testFile(testutil.Wrap(t), path)
+			testFile(tw, path)
 		})
 	}
 }

@@ -55,3 +55,7 @@ func (t *T) AssertError(err error, msg string) {
 		t.Fatalf("expected an error containing %q. got %v", msg, err)
 	}
 }
+
+func (t *T) Run(name string, f func(*T)) bool {
+	return t.T.Run(name, func(t *testing.T) { f(Wrap(t)) })
+}
