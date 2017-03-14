@@ -37,12 +37,13 @@ func testDialectsRebind(tw *testutil.T, dialect Dialect,
 
 func TestDialects(t *testing.T) {
 	tw := testutil.Wrap(t)
-	tw.Run("postgres", testDialectsPostgres)
-	tw.Run("sqlite3", testDialectsSQLite3)
+	tw.Parallel()
+	tw.Runp("postgres", testDialectsPostgres)
+	tw.Runp("sqlite3", testDialectsSQLite3)
 }
 
 func testDialectsPostgres(tw *testutil.T) {
-	tw.Run("rebind", testDialectsPostgresRebind)
+	tw.Runp("rebind", testDialectsPostgresRebind)
 }
 
 func testDialectsPostgresRebind(tw *testutil.T) {
@@ -54,7 +55,7 @@ func testDialectsPostgresRebind(tw *testutil.T) {
 }
 
 func testDialectsSQLite3(tw *testutil.T) {
-	tw.Run("rebind", testDialectsSQLite3Rebind)
+	tw.Runp("rebind", testDialectsSQLite3Rebind)
 }
 
 func testDialectsSQLite3Rebind(tw *testutil.T) {

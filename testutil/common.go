@@ -59,3 +59,7 @@ func (t *T) AssertError(err error, msg string) {
 func (t *T) Run(name string, f func(*T)) bool {
 	return t.T.Run(name, func(t *testing.T) { f(Wrap(t)) })
 }
+
+func (t *T) Runp(name string, f func(*T)) bool {
+	return t.T.Run(name, func(t *testing.T) { t.Parallel(); f(Wrap(t)) })
+}

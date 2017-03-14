@@ -23,8 +23,10 @@ import (
 
 func TestTypes(t *testing.T) {
 	tw := testutil.Wrap(t)
-	tw.Run("render", testTypesRender)
-	tw.Run("embed golang", testTypesEmbedGolang)
+	tw.Parallel()
+	tw.Runp("render", testTypesRender)
+	tw.Runp("embed golang", testTypesEmbedGolang)
+	tw.Runp("fuzz embed golang", testTypesFuzzEmbedGolang)
 }
 
 func testTypesRender(tw *testutil.T) {
@@ -110,6 +112,22 @@ func testTypesEmbedGolang(tw *testutil.T) {
 		emb := test.embedGolang()
 		if _, err := parser.ParseExpr(emb); err != nil {
 			tw.Errorf("%d: %s but got error: %v", i, emb, err)
+		}
+	}
+}
+
+func testTypesFuzzEmbedGolang(tw *testutil.T) {
+	g := newGenerator(tw)
+
+	for i := 0; i < 1000; i++ {
+		sql := g.gen()
+		emb := sql.embedGolang()
+
+		if _, err := parser.ParseExpr(emb); err != nil {
+			tw.Logf("sql: %#v", sql)
+			tw.Logf("emb: %s", emb)
+			tw.Logf("err: %v", err)
+			tw.Error()
 		}
 	}
 }
