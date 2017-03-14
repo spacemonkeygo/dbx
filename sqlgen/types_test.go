@@ -43,14 +43,14 @@ func testTypesRender(tw *testutil.T) {
 		{in: Literals{Join: "`"}, out: ""},
 		{in: Literals{Join: `"`}, out: ""},
 		{
-			in: Literals{Join: "bar", SQLs: []SQL{
+			in: Literals{Join: " bar ", SQLs: []SQL{
 				Literal("foo baz"),
 				Literal("another"),
 			}},
 			out: "foo baz bar another",
 		},
 		{
-			in: Literals{Join: "bar", SQLs: []SQL{
+			in: Literals{Join: " bar ", SQLs: []SQL{
 				Literal("inside first"),
 				Literals{},
 				Literal("inside second"),
@@ -58,8 +58,8 @@ func testTypesRender(tw *testutil.T) {
 			out: "inside first bar  bar inside second",
 		},
 		{
-			in: Literals{Join: "recursive", SQLs: []SQL{
-				Literals{Join: "bif", SQLs: []SQL{
+			in: Literals{Join: " recursive ", SQLs: []SQL{
+				Literals{Join: " bif ", SQLs: []SQL{
 					Literals{},
 					Literal("inside"),
 				}},
@@ -69,7 +69,7 @@ func testTypesRender(tw *testutil.T) {
 		},
 	}
 	for i, test := range tests {
-		if got := test.in.render(SQLite3()); got != test.out {
+		if got := test.in.render(); got != test.out {
 			tw.Errorf("%d: %q != %q", i, got, test.out)
 		}
 	}

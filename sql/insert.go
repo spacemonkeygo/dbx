@@ -14,28 +14,43 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
-
-const insertTmpl = `INSERT INTO {{ .Table -}}
-	{{ if .Columns }}(
-		{{- range $i, $col := .Columns }}
-			{{- if $i }}, {{ end }}{{ $col }}
-		{{- end }})
-		VALUES(
-		{{- range $i, $col := .Columns }}
-			{{- if $i }}, {{ end }}?
-		{{- end }})
-	{{- else }}
-		DEFAULT VALUES
-	{{- end -}}
-	{{- if .Returning }} RETURNING
-	{{- range $i, $col := .Returning }}
-		{{- if $i }},{{ end }} {{ $col }}
-	{{- end }}
-	{{- end }}`
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+)
 
 func RenderInsert(dialect Dialect, cre *ir.Create) string {
-	return render(dialect, insertTmpl, InsertFromIR(cre, dialect))
+	insert := InsertFromIR(cre, dialect)
+
+	var sql sqlgen.SQL
+	sql = sqlgen.Append(sql, sqlgen.Lf("INSERT INTO %s", insert.Table))
+
+	if len(insert.Columns) > 0 {
+		var columns, values []sqlgen.SQL
+		for _, col := range insert.Columns {
+			columns = append(columns, sqlgen.L(col))
+			values = append(values, sqlgen.Param)
+		}
+		sql = sqlgen.Append(sql, sqlgen.Join(", ", columns...))
+		sql = sqlgen.Append(sql,
+			sqlgen.L("VALUES("),
+			sqlgen.Join(", ", values...),
+			sqlgen.L(")"))
+	} else {
+		sql = sqlgen.Append(sql, sqlgen.L("DEFAULT VALUES"))
+	}
+
+	if len(insert.Returning) > 0 {
+		var returning []sqlgen.SQL
+		for _, col := range insert.Returning {
+			returning = append(returning, sqlgen.L(col))
+		}
+		sql = sqlgen.Append(sql,
+			sqlgen.L("RETURNING"),
+			sqlgen.Join(", ", returning...))
+	}
+
+	return sqlgen.Render(dialect, sql)
 }
 
 type Insert struct {

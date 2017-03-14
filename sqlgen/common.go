@@ -34,12 +34,12 @@ const (
 )
 
 type SQL interface {
-	render(dialect Dialect) string
+	render() string
 	embedGolang() string
 }
 
 func Render(dialect Dialect, sql SQL, ops ...RenderOp) string {
-	out := sql.render(dialect)
+	out := sql.render()
 
 	flatten := true
 	terminate := true

@@ -14,7 +14,16 @@
 
 package sqlgen
 
+import "fmt"
+
+const Param = Literal("?")
+
 func Append(begin SQL, suffix ...SQL) SQL {
+	if blits, ok := begin.(Literals); ok && blits.Join == " " {
+		blits.SQLs = append(blits.SQLs, suffix...)
+		return blits
+	}
+
 	var joined []SQL
 	if begin != nil {
 		joined = append(joined, begin)
@@ -27,7 +36,13 @@ func Append(begin SQL, suffix ...SQL) SQL {
 	}
 }
 
-func L(sql string) SQL { return Literal(sql) }
+func L(sql string) SQL {
+	return Literal(sql)
+}
+
+func Lf(sqlf string, args ...interface{}) SQL {
+	return Literal(fmt.Sprintf(sqlf, args...))
+}
 
 func Join(with string, sqls ...SQL) SQL {
 	return Literals{Join: with, SQLs: sqls}

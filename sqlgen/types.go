@@ -21,7 +21,7 @@ import (
 
 type Literal string
 
-func (l Literal) render(dialect Dialect) string { return string(l) }
+func (l Literal) render() string { return string(l) }
 
 func (l Literal) embedGolang() string {
 	const format = prefix + "Literal(%q)"
@@ -33,7 +33,7 @@ type Literals struct {
 	SQLs []SQL
 }
 
-func (l Literals) render(dialect Dialect) string {
+func (l Literals) render() string {
 	var out bytes.Buffer
 
 	first := true
@@ -42,12 +42,10 @@ func (l Literals) render(dialect Dialect) string {
 			continue
 		}
 		if !first {
-			out.WriteString(" ")
 			out.WriteString(l.Join)
-			out.WriteString(" ")
 		}
 		first = false
-		out.WriteString(sql.render(dialect))
+		out.WriteString(sql.render())
 	}
 
 	return out.String()
