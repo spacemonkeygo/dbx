@@ -109,17 +109,16 @@ func NewScanner(filename string, data []byte) (*Scanner, error) {
 		// insert a comma at newlines and eof unless we already have a comma
 		// or we have a list opening
 		if tok == '\n' || tok == scanner.EOF {
-			if len(tokens) == 0 {
-				continue
-			}
-			switch tokens[len(tokens)-1].tok {
-			case OpenParen, Comma:
-			default:
-				tokens = append(tokens, token{
-					tok:  Comma,
-					pos:  pos,
-					text: ",",
-				})
+			if len(tokens) > 0 {
+				switch tokens[len(tokens)-1].tok {
+				case OpenParen, Comma:
+				default:
+					tokens = append(tokens, token{
+						tok:  Comma,
+						pos:  pos,
+						text: ",",
+					})
+				}
 			}
 			if tok == '\n' {
 				continue
