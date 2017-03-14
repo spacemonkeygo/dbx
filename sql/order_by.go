@@ -14,11 +14,24 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
+)
 
 type OrderBy struct {
 	Fields     []string
 	Descending bool
+}
+
+func SQLFromOrderBy(order_by *OrderBy) sqlgen.SQL {
+	stmt := Build(L("ORDER BY"))
+	stmt.Add(J(", ", Strings(order_by.Fields)...))
+	if order_by.Descending {
+		stmt.Add(L("DESC"))
+	}
+	return stmt.SQL()
 }
 
 func OrderByFromIR(ir_order_by *ir.OrderBy) (order_by *OrderBy) {

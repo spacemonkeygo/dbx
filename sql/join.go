@@ -19,6 +19,8 @@ import (
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 type Join struct {
@@ -28,19 +30,41 @@ type Join struct {
 	Right string
 }
 
+func SQLFromJoin(join Join) sqlgen.SQL {
+	clause := Build(Lf("%s JOIN %s ON %s =", join.Type, join.Table, join.Left))
+	if join.Right != "" {
+		clause.Add(L(join.Right))
+	} else {
+		clause.Add(Placeholder)
+	}
+	return clause.SQL()
+}
+
+func SQLFromJoins(joins []Join) []sqlgen.SQL {
+	var out []sqlgen.SQL
+	for _, join := range joins {
+		out = append(out, SQLFromJoin(join))
+	}
+	return out
+}
+
+func JoinFromIR(ir_join *ir.Join) Join {
+	join := Join{
+		Table: ir_join.Right.Model.Table,
+		Left:  ir_join.Left.ColumnRef(),
+		Right: ir_join.Right.ColumnRef(),
+	}
+	switch ir_join.Type {
+	case consts.InnerJoin:
+	default:
+		panic(fmt.Sprintf("unhandled join type %q", join.Type))
+	}
+	return join
+}
+
 func JoinsFromIR(ir_joins []*ir.Join) (joins []Join) {
 	for _, ir_join := range ir_joins {
-		join := Join{
-			Table: ir_join.Right.Model.Table,
-			Left:  ir_join.Left.ColumnRef(),
-			Right: ir_join.Right.ColumnRef(),
-		}
-		switch ir_join.Type {
-		case consts.InnerJoin:
-		default:
-			panic(fmt.Sprintf("unhandled join type %q", join.Type))
-		}
-		joins = append(joins, join)
+		joins = append(joins, JoinFromIR(ir_join))
 	}
 	return joins
 }

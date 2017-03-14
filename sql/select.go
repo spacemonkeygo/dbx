@@ -56,31 +56,19 @@ func SQLFromSelect(sel *Select) sqlgen.SQL {
 		stmt.Add(L("SELECT COALESCE(("))
 	}
 
-	stmt.Add(
-		L("SELECT"),
-		J(", ", Strings(sel.Fields)...),
-		Lf("FROM %s", sel.From),
-	)
+	fields := J(", ", Strings(sel.Fields)...)
+	stmt.Add(L("SELECT"), fields, Lf("FROM %s", sel.From))
 
-	for _, join := range sel.Joins {
-		j := Build(Lf("%s JOIN %s ON %s =", join.Type, join.Table, join.Left))
-		if join.Right != "" {
-			j.Add(L(join.Right))
-		} else {
-			j.Add(Placeholder)
-		}
-		stmt.Add(j.SQL())
+	if joins := SQLFromJoins(sel.Joins); len(joins) > 0 {
+		stmt.Add(joins...)
 	}
 
 	if wheres := SQLFromWheres(sel.Where); len(wheres) > 0 {
 		stmt.Add(L("WHERE"), J(" AND ", wheres...))
 	}
 
-	if ob := sel.OrderBy; ob != nil {
-		stmt.Add(L("ORDER BY"), J(", ", Strings(ob.Fields)...))
-		if ob.Descending {
-			stmt.Add(L("DESC"))
-		}
+	if sel.OrderBy != nil {
+		stmt.Add(SQLFromOrderBy(sel.OrderBy))
 	}
 
 	if sel.Limit != "" {
