@@ -23,11 +23,19 @@ func sqlEqual(a, b SQL) bool {
 			return a == b
 		}
 		return false
+
 	case Literals:
 		if b, ok := b.(Literals); ok {
 			return a.Join == b.Join && sqlsEqual(a.SQLs, b.SQLs)
 		}
 		return false
+
+	case *Hole:
+		if b, ok := b.(*Hole); ok {
+			return a == b // pointer equality is correct
+		}
+		return false
+
 	default:
 		panic("unhandled sql type")
 	}
@@ -43,4 +51,44 @@ func sqlsEqual(as, bs []SQL) bool {
 		}
 	}
 	return true
+}
+
+func sqlNormalForm(sql SQL) bool {
+	switch sql := sql.(type) {
+	case Literal, *Hole:
+		return true
+
+	case Literals:
+		if sql.Join != "" {
+			return false
+		}
+
+		// only allow Hole and Literal and not two Literal in a row.
+
+		last := ""
+
+		for _, sql := range sql.SQLs {
+			switch sql.(type) {
+			case *Hole:
+				last = "hole"
+
+			case Literal:
+				if last == "literal" {
+					return false
+				}
+				last = "literal"
+
+			case Literals:
+				return false
+
+			default:
+				panic("unhandled sql type")
+			}
+		}
+
+		return true
+
+	default:
+		panic("unhandled sql type")
+	}
 }

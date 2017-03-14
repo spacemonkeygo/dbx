@@ -25,6 +25,7 @@ func TestCompile(t *testing.T) {
 	tw.Parallel()
 	tw.Runp("fuzz render", testCompileFuzzRender)
 	tw.Runp("idempotent", testCompileIdempotent)
+	tw.Runp("fuzz normal form", testCompileFuzzNormalForm)
 }
 
 func testCompileFuzzRender(tw *testutil.T) {
@@ -58,6 +59,21 @@ func testCompileIdempotent(tw *testutil.T) {
 			tw.Logf("sql:    %#v", sql)
 			tw.Logf("first:  %#v", first)
 			tw.Logf("second: %#v", second)
+			tw.Error()
+		}
+	}
+}
+
+func testCompileFuzzNormalForm(tw *testutil.T) {
+	g := newGenerator(tw)
+
+	for i := 0; i < 1000; i++ {
+		sql := g.gen()
+		compiled := sqlCompile(sql)
+
+		if !sqlNormalForm(compiled) {
+			tw.Logf("sql:      %#v", sql)
+			tw.Logf("compiled: %#v", compiled)
 			tw.Error()
 		}
 	}

@@ -24,6 +24,7 @@ func TestEqual(t *testing.T) {
 	tw := testutil.Wrap(t)
 	tw.Parallel()
 	tw.Runp("fuzz identity", testEqualFuzzIdentity)
+	tw.Runp("normal form", testEqualNormalForm)
 }
 
 func testEqualFuzzIdentity(tw *testutil.T) {
@@ -35,6 +36,86 @@ func testEqualFuzzIdentity(tw *testutil.T) {
 		if !sqlEqual(sql, sql) {
 			tw.Logf("sql: %#v", sql)
 			tw.Error()
+		}
+	}
+}
+
+func testEqualNormalForm(tw *testutil.T) {
+	type normalFormTestCase struct {
+		in     SQL
+		normal bool
+	}
+
+	tests := []normalFormTestCase{
+		{in: Literal(""), normal: true},
+		{in: new(Hole), normal: true},
+		{in: Literals{}, normal: true},
+		{in: Literals{Join: "foo"}, normal: false},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				Literal("foo baz"),
+			}},
+			normal: true,
+		},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				Literal("foo baz"),
+				Literal("bif bar"),
+			}},
+			normal: false,
+		},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				new(Hole),
+				Literal("foo baz"),
+			}},
+			normal: true,
+		},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				Literal("bif bar"),
+				new(Hole),
+			}},
+			normal: true,
+		},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				Literal("foo baz"),
+				new(Hole),
+				Literal("bif bar"),
+			}},
+			normal: true,
+		},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				new(Hole),
+				new(Hole),
+				Literal("foo baz"),
+			}},
+			normal: true,
+		},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				Literal("bif bar"),
+				new(Hole),
+				new(Hole),
+			}},
+			normal: true,
+		},
+		{
+			in: Literals{Join: "", SQLs: []SQL{
+				Literal("foo baz"),
+				new(Hole),
+				new(Hole),
+				Literal("bif bar"),
+			}},
+			normal: true,
+		},
+	}
+	for i, test := range tests {
+		if got := sqlNormalForm(test.in); got != test.normal {
+			tw.Errorf("%d: got:%v != exp:%v. sql:%#v",
+				i, got, test.normal, test.in)
 		}
 	}
 }

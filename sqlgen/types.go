@@ -69,3 +69,20 @@ func (l Literals) embedGolang() string {
 
 	return out.String()
 }
+
+type Hole struct {
+	Name string
+
+	val SQL
+}
+
+func (h *Hole) Fill(sql SQL) { h.val = sql }
+
+func (h *Hole) render() string {
+	if h.val == nil {
+		return ""
+	}
+	return h.val.render()
+}
+
+func (h *Hole) embedGolang() string { return "&" + prefix + "Hole{}" }

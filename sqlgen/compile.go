@@ -20,6 +20,8 @@ func sqlCompile(sql SQL) (out SQL) {
 	switch sql := sql.(type) {
 	case Literal: // a literal has nothing to do
 		return sql
+	case *Hole: // a hole has nothing to do
+		return sql
 	case Literals:
 		// if there are no SQLs, we just have an empty string so hoist to a
 		// literal type
@@ -32,27 +34,90 @@ func sqlCompile(sql SQL) (out SQL) {
 			return sqlCompile(sql.SQLs[0])
 		}
 
-		// more than one sql. constant fold the inner sql's and then recompile
-		// if that was able to do any work.
-		folded := sqlConstantFold(sql.SQLs, sql.Join)
-		if sqlsEqual(sql.SQLs, folded) {
+		// keep track of orignal so that we know if we need to recurse
+		original := sql
+
+		// recursively compile all of the children
+		sql = sqlCompileChildren(sql)
+
+		// intersperse the join in the Literals so that hoisting works better
+		sql = sqlIntersperse(sql)
+
+		// hoist any children Literals that have the same join
+		sql = sqlHoist(sql)
+
+		// constant fold any Literal children that are next to each other
+		sql = sqlConstantFold(sql)
+
+		// filter out any children that are trivial
+		sql = sqlFilterTrivial(sql)
+
+		// don't recursive if we haven't changed
+		if sqlsEqual(sql.SQLs, original.SQLs) {
 			return sql
 		}
 
-		return sqlCompile(Literals{
-			Join: sql.Join,
-			SQLs: folded,
-		})
+		// recurse until fixed point. we may have more optimization
+		//  opportunities now
+		return sqlCompile(sql)
 	default:
 		panic("unhandled sql type")
 	}
 }
 
-func sqlConstantFold(sqls []SQL, join string) (out []SQL) {
-	buf := Literals{Join: join}
-	for _, sql := range sqls {
-		sql = sqlCompile(sql)
+func sqlCompileChildren(ls Literals) (out Literals) {
+	out = ls
+	out.SQLs = nil
 
+	for _, sql := range ls.SQLs {
+		out.SQLs = append(out.SQLs, sqlCompile(sql))
+	}
+
+	return out
+}
+
+func sqlIntersperse(ls Literals) (out Literals) {
+	if ls.Join == "" {
+		return ls
+	}
+
+	out = ls
+	out.SQLs = nil
+	out.Join = ""
+
+	first := true
+	for _, sql := range ls.SQLs {
+		if !first {
+			out.SQLs = append(out.SQLs, Literal(ls.Join))
+		}
+		first = false
+		out.SQLs = append(out.SQLs, sql)
+	}
+
+	return out
+}
+
+func sqlHoist(ls Literals) (out Literals) {
+	out = ls
+	out.SQLs = nil
+
+	for _, sql := range ls.SQLs {
+		lits, ok := sql.(Literals)
+		if !ok || lits.Join != ls.Join {
+			out.SQLs = append(out.SQLs, sql)
+		}
+		out.SQLs = append(out.SQLs, lits.SQLs...)
+	}
+
+	return out
+}
+
+func sqlConstantFold(ls Literals) (out Literals) {
+	out = ls
+	out.SQLs = nil
+
+	buf := Literals{Join: ls.Join}
+	for _, sql := range ls.SQLs {
 		lit, ok := sql.(Literal)
 		if ok {
 			buf.SQLs = append(buf.SQLs, lit)
@@ -60,14 +125,29 @@ func sqlConstantFold(sqls []SQL, join string) (out []SQL) {
 		}
 
 		if len(buf.SQLs) > 0 {
-			out = append(out, Literal(buf.render()))
+			out.SQLs = append(out.SQLs, Literal(buf.render()))
 			buf.SQLs = buf.SQLs[:0]
 		}
-		out = append(out, sql)
+		out.SQLs = append(out.SQLs, sql)
 	}
 
 	if len(buf.SQLs) > 0 {
-		out = append(out, Literal(buf.render()))
+		out.SQLs = append(out.SQLs, Literal(buf.render()))
+	}
+
+	return out
+}
+
+func sqlFilterTrivial(ls Literals) (out Literals) {
+	out = ls
+	out.SQLs = nil
+
+	for _, sql := range ls.SQLs {
+		lit, ok := sql.(Literal)
+		if ok && lit == Literal("") {
+			continue
+		}
+		out.SQLs = append(out.SQLs, sql)
 	}
 
 	return out
