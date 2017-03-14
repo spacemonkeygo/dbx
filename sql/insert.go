@@ -22,7 +22,11 @@ import (
 
 func RenderInsert(dialect Dialect, cre *ir.Create) string {
 	insert := InsertFromIR(cre, dialect)
+	sql := SQLFromInsert(insert)
+	return sqlgen.Render(dialect, sql)
+}
 
+func SQLFromInsert(insert *Insert) sqlgen.SQL {
 	stmt := Build(Lf("INSERT INTO %s", insert.Table))
 
 	if cols := insert.Columns; len(cols) > 0 {
@@ -44,7 +48,7 @@ func RenderInsert(dialect Dialect, cre *ir.Create) string {
 		stmt.Add(L("RETURNING"), J(", ", Strings(rets)...))
 	}
 
-	return sqlgen.Render(dialect, stmt.SQL())
+	return sqlgen.Compile(stmt.SQL())
 }
 
 type Insert struct {

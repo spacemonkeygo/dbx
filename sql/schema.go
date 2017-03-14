@@ -25,7 +25,11 @@ import (
 
 func RenderSchema(dialect Dialect, ir_root *ir.Root) string {
 	schema := SchemaFromIR(ir_root.Models, dialect)
+	sql := SQLFromSchema(schema)
+	return sqlgen.Render(dialect, sql, sqlgen.NoFlatten, sqlgen.NoTerminate)
+}
 
+func SQLFromSchema(schema *Schema) sqlgen.SQL {
 	var stmts []sqlgen.SQL
 
 	for _, table := range schema.Tables {
@@ -83,9 +87,7 @@ func RenderSchema(dialect Dialect, ir_root *ir.Root) string {
 		stmts = append(stmts, stmt.SQL())
 	}
 
-	sql := J("\n", stmts...)
-
-	return sqlgen.Render(dialect, sql, sqlgen.NoFlatten, sqlgen.NoTerminate)
+	return sqlgen.Compile(J("\n", stmts...))
 }
 
 func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
