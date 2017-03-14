@@ -17,37 +17,33 @@ package sql
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 func RenderInsert(dialect Dialect, cre *ir.Create) string {
 	insert := InsertFromIR(cre, dialect)
 
 	var sql sqlgen.SQL
-	sql = sqlgen.Append(sql, sqlgen.Lf("INSERT INTO %s", insert.Table))
+	sql = Append(sql, Lf("INSERT INTO %s", insert.Table))
 
 	if len(insert.Columns) > 0 {
 		var columns, values []sqlgen.SQL
 		for _, col := range insert.Columns {
-			columns = append(columns, sqlgen.L(col))
-			values = append(values, sqlgen.Param)
+			columns = append(columns, L(col))
+			values = append(values, Param)
 		}
-		sql = sqlgen.Append(sql, sqlgen.Join(", ", columns...))
-		sql = sqlgen.Append(sql,
-			sqlgen.L("VALUES("),
-			sqlgen.Join(", ", values...),
-			sqlgen.L(")"))
+		sql = Append(sql, Ls(", ", columns...))
+		sql = Append(sql, L("VALUES("), Ls(", ", values...), L(")"))
 	} else {
-		sql = sqlgen.Append(sql, sqlgen.L("DEFAULT VALUES"))
+		sql = Append(sql, L("DEFAULT VALUES"))
 	}
 
 	if len(insert.Returning) > 0 {
 		var returning []sqlgen.SQL
 		for _, col := range insert.Returning {
-			returning = append(returning, sqlgen.L(col))
+			returning = append(returning, L(col))
 		}
-		sql = sqlgen.Append(sql,
-			sqlgen.L("RETURNING"),
-			sqlgen.Join(", ", returning...))
+		sql = Append(sql, L("RETURNING"), Ls(", ", returning...))
 	}
 
 	return sqlgen.Render(dialect, sql)

@@ -12,38 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sqlgen
+package sqlhelpers
 
-import "fmt"
+import (
+	"fmt"
 
-const Param = Literal("?")
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+)
 
-func Append(begin SQL, suffix ...SQL) SQL {
-	if blits, ok := begin.(Literals); ok && blits.Join == " " {
-		blits.SQLs = append(blits.SQLs, suffix...)
-		return blits
-	}
+const Param = sqlgen.Literal("?")
 
-	var joined []SQL
+func Append(begin sqlgen.SQL, suffix ...sqlgen.SQL) sqlgen.SQL {
+	var joined []sqlgen.SQL
 	if begin != nil {
 		joined = append(joined, begin)
 	}
 	joined = append(joined, suffix...)
 
-	return Literals{
+	return sqlgen.Literals{
 		Join: " ",
 		SQLs: joined,
 	}
 }
 
-func L(sql string) SQL {
-	return Literal(sql)
+func L(sql string) sqlgen.SQL {
+	return sqlgen.Literal(sql)
 }
 
-func Lf(sqlf string, args ...interface{}) SQL {
-	return Literal(fmt.Sprintf(sqlf, args...))
+func Lf(sqlf string, args ...interface{}) sqlgen.SQL {
+	return sqlgen.Literal(fmt.Sprintf(sqlf, args...))
 }
 
-func Join(with string, sqls ...SQL) SQL {
-	return Literals{Join: with, SQLs: sqls}
+func Ls(with string, sqls ...sqlgen.SQL) sqlgen.SQL {
+	return sqlgen.Literals{Join: with, SQLs: sqls}
 }
