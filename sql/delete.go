@@ -14,18 +14,26 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
-
-const (
-	deleteTmpl = `
-	DELETE FROM {{ .From }}
-	{{- if .Where }} WHERE
-	{{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }}
-	{{- end -}}`
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 func RenderDelete(dialect Dialect, ir_del *ir.Delete) string {
-	return render(dialect, deleteTmpl, DeleteFromIR(ir_del, dialect))
+	del := DeleteFromIR(ir_del, dialect)
+	sql := SQLFromDelete(del)
+	return sqlgen.Render(dialect, sql)
+}
+
+func SQLFromDelete(del *Delete) sqlgen.SQL {
+	stmt := Build(Lf("DELETE FROM %s", del.From))
+
+	if wheres := SQLFromWheres(del.Where); len(wheres) > 0 {
+		stmt.Add(L("WHERE"), J(" AND ", wheres...))
+	}
+
+	return sqlgen.Compile(stmt.SQL())
 }
 
 type Delete struct {
@@ -41,19 +49,23 @@ func DeleteFromIR(ir_del *ir.Delete, dialect Dialect) *Delete {
 		}
 	}
 
-	pk := ir_del.Model.PrimaryKey[0].ColumnRef()
+	pk_column := ir_del.Model.PrimaryKey[0].ColumnRef()
 
-	sel := render(dialect, selectTmpl, Select{
+	// TODO(jeff): we should have the where optionally have a SQL for the right
+	// maybe, or just make it SQL always that we stuff a literal in, but the
+	// wrong thing is rendering here.
+
+	sel := sqlgen.Render(dialect, SQLFromSelect(&Select{
 		From:   ir_del.Model.Table,
-		Fields: []string{pk},
+		Fields: []string{pk_column},
 		Joins:  JoinsFromIR(ir_del.Joins),
 		Where:  WheresFromIR(ir_del.Where),
-	}, noTerminate)
+	}), sqlgen.NoTerminate)
 
 	return &Delete{
 		From: ir_del.Model.Table,
 		Where: []Where{{
-			Left:  pk,
+			Left:  pk_column,
 			Op:    "IN",
 			Right: "(" + sel + ")",
 		}},

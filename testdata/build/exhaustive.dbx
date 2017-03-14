@@ -136,6 +136,13 @@ update a (
 	where b.id     = ?
 )
 
+delete a (
+	join  a.pk     = a_b.a_pk
+	join  a_b.b_pk = b.pk
+	where a.id     = ?
+	where b.id     = ?
+)
+
 read one (
 	select a
 	join   a.pk     = a_b.a_pk

@@ -23,19 +23,6 @@ import (
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
-const (
-	selectTmpl = `
-	{{ if .Has }}SELECT COALESCE(({{ end }}
-	SELECT {{ range $i, $f:= .Fields }}{{ if $i }}, {{ end }}{{ $f }}{{ end }}
-	FROM {{ .From }}
-	{{ range .Joins }}{{ .Type }} JOIN {{ .Table }} ON {{ .Left }} = {{ if .Right }}{{ .Right }}{{ else }}?{{ end }}{{- end -}}
-	{{ if .Where }} WHERE {{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }} {{- end -}}
-	{{ if .OrderBy }} ORDER BY {{- range $i, $field := .OrderBy.Fields }}{{ if $i }}, {{ end }} {{ $field }}{{ end }}{{ if .OrderBy.Descending }} DESC{{ end }} {{- end -}}
-	{{ if .Limit }} LIMIT {{ .Limit }} {{- end -}}
-	{{ if .Offset }} OFFSET {{ .Offset }} {{- end -}}
-	{{ if .Has }}), 0){{ end }}`
-)
-
 var (
 	countFields = []string{"COUNT(*)"}
 	hasFields   = []string{"1"}
