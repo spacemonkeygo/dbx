@@ -30,7 +30,11 @@ func SQLFromInsert(insert *Insert) sqlgen.SQL {
 	stmt := Build(Lf("INSERT INTO %s", insert.Table))
 
 	if cols := insert.Columns; len(cols) > 0 {
-		columns := J(", ", Strings(cols)...)
+		columns := J("",
+			L("("),
+			J(", ", Strings(cols)...),
+			L(")"),
+		)
 
 		values := J("",
 			L("VALUES("),

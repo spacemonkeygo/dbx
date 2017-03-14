@@ -41,7 +41,7 @@ func SQLFromSchema(schema *Schema) sqlgen.SQL {
 				dir.Add(L("NOT NULL"))
 			}
 			if ref := column.Reference; ref != nil {
-				dir.Add(Lf("REFERENCES %s.%s", ref.Table, ref.Column))
+				dir.Add(Lf("REFERENCES %s(%s)", ref.Table, ref.Column))
 				if ref.OnDelete != "" {
 					dir.Add(Lf("ON DELETE %s", ref.OnDelete))
 				}
@@ -53,14 +53,16 @@ func SQLFromSchema(schema *Schema) sqlgen.SQL {
 		}
 
 		if pkey := table.PrimaryKey; len(pkey) > 0 {
-			dir := Build(L("PRIMARY KEY"))
+			dir := Build(L("PRIMARY KEY ("))
 			dir.Add(J(", ", Strings(pkey)...))
+			dir.Add(L(")"))
 			dirs = append(dirs, dir.SQL())
 		}
 
 		for _, unique := range table.Unique {
-			dir := Build(L("UNIQUE"))
+			dir := Build(L("UNIQUE ("))
 			dir.Add(J(", ", Strings(unique)...))
+			dir.Add(L(")"))
 			dirs = append(dirs, dir.SQL())
 		}
 
