@@ -14,25 +14,39 @@
 
 package sql
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ir"
-
-const (
-	updateTmplPrefix = `
-	UPDATE {{ .Table }} SET`
-	updateTmplSuffix = `
-	{{ if .Where }} WHERE {{- range $i, $w := .Where }}{{ if $i }} AND{{ end }} {{ $w.Left }} {{ $w.Op }} {{ $w.Right }}{{ end }} {{- end -}}
-	{{- if .Returning }} RETURNING
-	{{- range $i, $col := .Returning }}
-		{{- if $i }},{{ end }} {{ $col }}
-	{{- end }}
-	{{- end }}`
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 func RenderUpdate(dialect Dialect, ir_upd *ir.Update) (prefix, suffix string) {
 	upd := UpdateFromIR(ir_upd, dialect)
-	prefix = render(dialect, updateTmplPrefix, upd, noTerminate) + " "
-	suffix = " " + render(dialect, updateTmplSuffix, upd)
+	prefix_sql, suffix_sql := SQLFromUpdate(upd)
+	prefix = sqlgen.Render(dialect, prefix_sql, sqlgen.NoTerminate) + " "
+	suffix = " " + sqlgen.Render(dialect, suffix_sql)
 	return prefix, suffix
+}
+
+func SQLFromUpdate(upd *Update) (prefix, suffix sqlgen.SQL) {
+	// TODO(jeff): holes instead of prefix and suffix.
+
+	{ // build prefix
+		prefix = Lf("UPDATE %s SET", upd.Table)
+	}
+
+	{ // build suffix
+		stmt := Build(nil)
+		if wheres := SQLFromWheres(upd.Where); len(wheres) > 0 {
+			stmt.Add(L("WHERE"), J(" AND ", wheres...))
+		}
+		if len(upd.Returning) > 0 {
+			stmt.Add(L("RETURNING"), J(", ", Strings(upd.Returning)...))
+		}
+		suffix = stmt.SQL()
+	}
+
+	return sqlgen.Compile(prefix), sqlgen.Compile(suffix)
 }
 
 type Update struct {
@@ -57,12 +71,16 @@ func UpdateFromIR(ir_upd *ir.Update, dialect Dialect) *Update {
 
 	pk_column := ir_upd.Model.PrimaryKey[0].Column
 
-	sel := render(dialect, selectTmpl, Select{
+	// TODO(jeff): we should have the where optionally have a SQL for the right
+	// maybe, or just make it SQL always that we stuff a literal in, but the
+	// wrong thing is rendering here.
+
+	sel := sqlgen.Render(dialect, SQLFromSelect(&Select{
 		From:   ir_upd.Model.Table,
 		Fields: []string{pk_column},
 		Joins:  JoinsFromIR(ir_upd.Joins),
 		Where:  WheresFromIR(ir_upd.Where),
-	}, noTerminate)
+	}), sqlgen.NoTerminate)
 
 	return &Update{
 		Table:     ir_upd.Model.Table,

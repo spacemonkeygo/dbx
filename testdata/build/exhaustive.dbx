@@ -1,4 +1,4 @@
-// this file attempts to be exhaustive in patty features just to give a good
+// this file attempts to be exhaustive in dbx features just to give a good
 // spot check that we didn't ruin everything.
 
 model a (
@@ -127,6 +127,13 @@ read one (
 	join   a_b.b_pk = b.pk
 	where  a.id     = ?
 	where  b.id     = ?
+)
+
+update a (
+	join  a.pk     = a_b.a_pk
+	join  a_b.b_pk = b.pk
+	where a.id     = ?
+	where b.id     = ?
 )
 
 read one (

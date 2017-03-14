@@ -32,8 +32,8 @@ func ls(sql sqlgen.SQL, join string, sqls ...sqlgen.SQL) sqlgen.SQL {
 	return sqlgen.Literals{Join: join, SQLs: joined}
 }
 
-// P is a placeholder literal
-const P = sqlgen.Literal("?")
+// Placeholder is a placeholder literal
+const Placeholder = sqlgen.Literal("?")
 
 // L constructs a Literal
 func L(sql string) sqlgen.SQL {
@@ -61,7 +61,7 @@ func Strings(parts []string) (out []sqlgen.SQL) {
 // Placeholders returns a slice of placeholder literals of the right size.
 func Placeholders(n int) (out []sqlgen.SQL) {
 	for i := 0; i < n; i++ {
-		out = append(out, P)
+		out = append(out, Placeholder)
 	}
 	return out
 }

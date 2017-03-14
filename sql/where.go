@@ -18,12 +18,26 @@ import (
 	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 type Where struct {
 	Left  string
 	Op    string
 	Right string
+}
+
+func SQLFromWhere(where Where) sqlgen.SQL {
+	return J(" ", L(where.Left), L(where.Op), L(where.Right))
+}
+
+func SQLFromWheres(wheres []Where) []sqlgen.SQL {
+	var out []sqlgen.SQL
+	for _, where := range wheres {
+		out = append(out, SQLFromWhere(where))
+	}
+	return out
 }
 
 func WhereFromIR(ir_where *ir.Where) Where {

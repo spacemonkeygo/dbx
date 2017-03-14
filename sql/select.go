@@ -19,6 +19,8 @@ import (
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 const (
@@ -40,11 +42,13 @@ var (
 )
 
 func RenderSelect(dialect Dialect, ir_read *ir.Read) string {
-	return render(dialect, selectTmpl, SelectFromSelect(ir_read, dialect))
+	sel := SelectFromIR(ir_read, dialect)
+	sql := SQLFromSelect(sel)
+	return sqlgen.Render(dialect, sql)
 }
 
 func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
-	sel := Select{
+	sql := SQLFromSelect(&Select{
 		Fields: ir_model.SelectRefs(),
 		From:   ir_model.Table,
 		Where: []Where{
@@ -54,8 +58,57 @@ func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
 				Right: "?",
 			},
 		},
+	})
+	return sqlgen.Render(dialect, sql)
+}
+
+func SQLFromSelect(sel *Select) sqlgen.SQL {
+	stmt := Build(nil)
+
+	if sel.Has {
+		stmt.Add(L("SELECT COALESCE(("))
 	}
-	return render(dialect, selectTmpl, sel)
+
+	stmt.Add(
+		L("SELECT"),
+		J(", ", Strings(sel.Fields)...),
+		Lf("FROM %s", sel.From),
+	)
+
+	for _, join := range sel.Joins {
+		j := Build(Lf("%s JOIN %s ON %s =", join.Type, join.Table, join.Left))
+		if join.Right != "" {
+			j.Add(L(join.Right))
+		} else {
+			j.Add(Placeholder)
+		}
+		stmt.Add(j.SQL())
+	}
+
+	if wheres := SQLFromWheres(sel.Where); len(wheres) > 0 {
+		stmt.Add(L("WHERE"), J(" AND ", wheres...))
+	}
+
+	if ob := sel.OrderBy; ob != nil {
+		stmt.Add(L("ORDER BY"), J(", ", Strings(ob.Fields)...))
+		if ob.Descending {
+			stmt.Add(L("DESC"))
+		}
+	}
+
+	if sel.Limit != "" {
+		stmt.Add(Lf("LIMIT %s", sel.Limit))
+	}
+
+	if sel.Offset != "" {
+		stmt.Add(Lf("OFFSET %s", sel.Offset))
+	}
+
+	if sel.Has {
+		stmt.Add(L("), 0)"))
+	}
+
+	return sqlgen.Compile(stmt.SQL())
 }
 
 type Select struct {
@@ -69,7 +122,7 @@ type Select struct {
 	Has     bool
 }
 
-func SelectFromSelect(ir_read *ir.Read, dialect Dialect) *Select {
+func SelectFromIR(ir_read *ir.Read, dialect Dialect) *Select {
 	sel := &Select{
 		From:  ir_read.From.Table,
 		Where: WheresFromIR(ir_read.Where),
