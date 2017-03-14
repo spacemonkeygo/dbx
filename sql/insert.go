@@ -23,30 +23,28 @@ import (
 func RenderInsert(dialect Dialect, cre *ir.Create) string {
 	insert := InsertFromIR(cre, dialect)
 
-	var sql sqlgen.SQL
-	sql = Append(sql, Lf("INSERT INTO %s", insert.Table))
+	stmt := Build(Lf("INSERT INTO %s", insert.Table))
 
-	if len(insert.Columns) > 0 {
-		var columns, values []sqlgen.SQL
-		for _, col := range insert.Columns {
-			columns = append(columns, L(col))
-			values = append(values, Param)
-		}
-		sql = Append(sql, Ls(", ", columns...))
-		sql = Append(sql, L("VALUES("), Ls(", ", values...), L(")"))
+	if cols := insert.Columns; len(cols) > 0 {
+		columns := J(", ", Strings(cols)...)
+
+		values := J("",
+			L("VALUES("),
+			J(", ", Placeholders(len(cols))...),
+			L(")"),
+		)
+
+		stmt.Add(columns)
+		stmt.Add(values)
 	} else {
-		sql = Append(sql, L("DEFAULT VALUES"))
+		stmt.Add(L("DEFAULT VALUES"))
 	}
 
-	if len(insert.Returning) > 0 {
-		var returning []sqlgen.SQL
-		for _, col := range insert.Returning {
-			returning = append(returning, L(col))
-		}
-		sql = Append(sql, L("RETURNING"), Ls(", ", returning...))
+	if rets := insert.Returning; len(rets) > 0 {
+		stmt.Add(L("RETURNING"), J(", ", Strings(rets)...))
 	}
 
-	return sqlgen.Render(dialect, sql)
+	return sqlgen.Render(dialect, stmt.SQL())
 }
 
 type Insert struct {

@@ -19,44 +19,73 @@ import (
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-)
-
-const (
-	schemaTmpl = `
-{{- range .Tables }}
-CREATE TABLE {{ .Name }} (
-{{- range $i, $col := .Columns }}
-{{if $i}},{{end}}	{{ with $col -}}
-	{{ .Name }} {{ .Type -}}
-	{{- if .NotNull }} NOT NULL {{- end -}}
-	{{- if .Reference }}{{ $ref := .Reference }} REFERENCES {{ $ref.Table }}({{ $ref.Column }})
-		{{- if $ref.OnDelete }} ON DELETE {{ $ref.OnDelete }}{{- end -}}
-		{{- if $ref.OnUpdate }} ON UPDATE {{ $ref.OnUpdate }}{{- end -}}
-	{{- end -}}
-{{- end -}}
-{{- end -}}
-{{ if .PrimaryKey }}
-,	PRIMARY KEY ({{- range $i, $col := .PrimaryKey }}{{if $i}}, {{end}}{{ $col }}{{ end }})
-{{- end -}}
-{{ range .Unique }}
-,	UNIQUE ({{- range $i, $col := . }}{{if $i}}, {{end}}{{ $col }}{{ end }})
-{{- end }}
-);
-{{ end -}}
-
-{{- range .Indexes }}
-CREATE {{ if .Unique }}UNIQUE {{ end }}INDEX {{ .Name }} ON {{ .Table }}(
-	{{- range $i, $col := .Columns -}}
-		{{ if $i }}, {{ end }}{{ $col }}
-	{{- end -}}
-);
-{{ end -}}
-`
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 func RenderSchema(dialect Dialect, ir_root *ir.Root) string {
-	return render(dialect, schemaTmpl,
-		SchemaFromIR(ir_root.Models, dialect), noFlatten, noTerminate)
+	schema := SchemaFromIR(ir_root.Models, dialect)
+
+	var stmts []sqlgen.SQL
+
+	for _, table := range schema.Tables {
+		var dirs []sqlgen.SQL
+
+		for _, column := range table.Columns {
+			dir := Build(Lf("%s %s", column.Name, column.Type))
+			if column.NotNull {
+				dir.Add(L("NOT NULL"))
+			}
+			if ref := column.Reference; ref != nil {
+				dir.Add(Lf("REFERENCES %s.%s", ref.Table, ref.Column))
+				if ref.OnDelete != "" {
+					dir.Add(Lf("ON DELETE %s", ref.OnDelete))
+				}
+				if ref.OnUpdate != "" {
+					dir.Add(Lf("ON UPDATE %s", ref.OnUpdate))
+				}
+			}
+			dirs = append(dirs, dir.SQL())
+		}
+
+		if pkey := table.PrimaryKey; len(pkey) > 0 {
+			dir := Build(L("PRIMARY KEY"))
+			dir.Add(J(", ", Strings(pkey)...))
+			dirs = append(dirs, dir.SQL())
+		}
+
+		for _, unique := range table.Unique {
+			dir := Build(L("UNIQUE"))
+			dir.Add(J(", ", Strings(unique)...))
+			dirs = append(dirs, dir.SQL())
+		}
+
+		directives := J(",\n\t", dirs...)
+
+		stmt := J("",
+			Lf("CREATE TABLE %s (\n\t", table.Name),
+			directives,
+			Lf("\n);"),
+		)
+
+		stmts = append(stmts, stmt)
+	}
+
+	for _, index := range schema.Indexes {
+		stmt := Build(L("CREATE"))
+		if index.Unique {
+			stmt.Add(L("UNIQUE"))
+		}
+		stmt.Add(Lf("INDEX %s ON %s (", index.Name, index.Table))
+		stmt.Add(J(", ", Strings(index.Columns)...))
+		stmt.Add(L(");"))
+
+		stmts = append(stmts, stmt.SQL())
+	}
+
+	sql := J("\n", stmts...)
+
+	return sqlgen.Render(dialect, sql, sqlgen.NoFlatten, sqlgen.NoTerminate)
 }
 
 func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {

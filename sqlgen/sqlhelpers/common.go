@@ -20,29 +20,70 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 )
 
-const Param = sqlgen.Literal("?")
-
-func Append(begin sqlgen.SQL, suffix ...sqlgen.SQL) sqlgen.SQL {
+// ls is the basic primitive for constructing larger SQLs. The first argument
+// may be nil, and the result is a Literals.
+func ls(sql sqlgen.SQL, join string, sqls ...sqlgen.SQL) sqlgen.SQL {
 	var joined []sqlgen.SQL
-	if begin != nil {
-		joined = append(joined, begin)
+	if sql != nil {
+		joined = append(joined, sql)
 	}
-	joined = append(joined, suffix...)
+	joined = append(joined, sqls...)
 
-	return sqlgen.Literals{
-		Join: " ",
-		SQLs: joined,
-	}
+	return sqlgen.Literals{Join: join, SQLs: joined}
 }
 
+// P is a placeholder literal
+const P = sqlgen.Literal("?")
+
+// L constructs a Literal
 func L(sql string) sqlgen.SQL {
 	return sqlgen.Literal(sql)
 }
 
+// Lf constructs a literal from a format string
 func Lf(sqlf string, args ...interface{}) sqlgen.SQL {
 	return sqlgen.Literal(fmt.Sprintf(sqlf, args...))
 }
 
-func Ls(with string, sqls ...sqlgen.SQL) sqlgen.SQL {
-	return sqlgen.Literals{Join: with, SQLs: sqls}
+// J constructs a SQL by joining the given sqls with the string.
+func J(join string, sqls ...sqlgen.SQL) sqlgen.SQL {
+	return ls(nil, join, sqls...)
+}
+
+// Strings turns a slice of strings into a slice of Literal.
+func Strings(parts []string) (out []sqlgen.SQL) {
+	for _, part := range parts {
+		out = append(out, sqlgen.Literal(part))
+	}
+	return out
+}
+
+// Placeholders returns a slice of placeholder literals of the right size.
+func Placeholders(n int) (out []sqlgen.SQL) {
+	for i := 0; i < n; i++ {
+		out = append(out, P)
+	}
+	return out
+}
+
+//
+// Builder constructs larger SQL statements by joining in pieces with spaces.
+//
+
+type Builder struct {
+	sql sqlgen.SQL
+}
+
+func Build(sql sqlgen.SQL) *Builder {
+	return &Builder{
+		sql: sql,
+	}
+}
+
+func (b *Builder) Add(sqls ...sqlgen.SQL) {
+	b.sql = ls(b.sql, " ", sqls...)
+}
+
+func (b *Builder) SQL() sqlgen.SQL {
+	return b.sql
 }

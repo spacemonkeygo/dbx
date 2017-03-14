@@ -18,13 +18,15 @@ import (
 
 func TestCompilation(t *testing.T) {
 	tw := testutil.Wrap(t)
+	tw.Parallel()
+
 	data_dir := filepath.Join("testdata", "build")
 
 	fileinfos, err := ioutil.ReadDir(data_dir)
 	tw.AssertNoError(err)
 
 	for _, fileinfo := range fileinfos {
-		tw.Run(fileinfo.Name(), func(tw *testutil.T) {
+		tw.Runp(fileinfo.Name(), func(tw *testutil.T) {
 			path := filepath.Join(data_dir, fileinfo.Name())
 			testFile(tw, path)
 		})
