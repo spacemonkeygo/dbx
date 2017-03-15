@@ -47,19 +47,35 @@ func (l Literals) Render() string {
 	return out.String()
 }
 
-type Hole struct {
+type Condition struct {
 	Name string
 
-	val SQL
+	Field string
+	Equal bool
+	Null  bool
 }
 
-func (*Hole) private() {}
+func (*Condition) private() {}
 
-func (h *Hole) Fill(sql SQL) { h.val = sql }
+func (c *Condition) Render() string {
+	// TODO(jeff): maybe check if we can use placeholders instead of the
+	// literal null: this would make the templates easier.
 
-func (h *Hole) Render() string {
-	if h.val == nil {
-		return ""
+	field := c.Field
+	if field != "" {
+		field += " "
 	}
-	return h.val.Render()
+
+	switch {
+	case c.Equal && c.Null:
+		return field + "is null"
+	case c.Equal && !c.Null:
+		return field + "= ?"
+	case !c.Equal && c.Null:
+		return field + "is not null"
+	case !c.Equal && !c.Null:
+		return field + "!= ?"
+	default:
+		panic("unhandled case")
+	}
 }

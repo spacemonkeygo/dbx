@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqltest"
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
 )
@@ -37,38 +38,22 @@ func testGolangBasicTypes(tw *testutil.T) {
 		sqlgen.Literal("`"),
 		sqlgen.Literal(`"`),
 
-		&sqlgen.Hole{},
-		&sqlgen.Hole{Name: "`"},
-		&sqlgen.Hole{Name: `"`},
+		&sqlgen.Condition{Name: "foo"},
 
-		// zero value
 		sqlgen.Literals{},
-
-		// no sqls
 		sqlgen.Literals{Join: "foo"},
 		sqlgen.Literals{Join: "`"},
 		sqlgen.Literals{Join: `"`},
-
-		// simple sqls
 		sqlgen.Literals{Join: "bar", SQLs: []sqlgen.SQL{
 			sqlgen.Literal("foo baz"),
 			sqlgen.Literal("another"),
-		}},
-
-		// hard sqls
-		sqlgen.Literals{Join: "bar", SQLs: []sqlgen.SQL{
-			sqlgen.Literals{},
-		}},
-		sqlgen.Literals{Join: "recursive", SQLs: []sqlgen.SQL{
-			sqlgen.Literals{Join: "bif", SQLs: []sqlgen.SQL{
-				sqlgen.Literals{},
-			}},
+			&sqlgen.Condition{Name: "foo"},
 		}},
 	}
 	for i, test := range tests {
-		emb := Golang("prefix_", test)
-		if _, err := parser.ParseExpr(emb); err != nil {
-			tw.Errorf("%d: %s but got error: %v", i, emb, err)
+		info := Embed("prefix_", test)
+		if _, err := parser.ParseExpr(info.Expression); err != nil {
+			tw.Errorf("%d: %+v but got error: %v", i, info, err)
 		}
 	}
 }
@@ -78,12 +63,14 @@ func testGolangFuzz(tw *testutil.T) {
 
 	for i := 0; i < 1000; i++ {
 		sql := g.Gen()
-		emb := Golang("prefix_", sql)
+		compiled := sqlcompile.Compile(sql)
+		info := Embed("prefix_", compiled)
 
-		if _, err := parser.ParseExpr(emb); err != nil {
-			tw.Logf("sql: %#v", sql)
-			tw.Logf("emb: %s", emb)
-			tw.Logf("err: %v", err)
+		if _, err := parser.ParseExpr(info.Expression); err != nil {
+			tw.Logf("sql:      %#v", sql)
+			tw.Logf("compiled: %#v", compiled)
+			tw.Logf("info:     %+v", info)
+			tw.Logf("err:      %v", err)
 			tw.Error()
 		}
 	}

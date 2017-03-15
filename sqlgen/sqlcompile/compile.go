@@ -16,20 +16,9 @@ package sqlcompile
 
 import "gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 
-// Compile reduces the sql expression to normal form: a single Literals with
-// an empty string join whose list elements contain non-contiguous Literal or
-// *Hole elements.
+// Compile reduces the sql expression to normal form
 func Compile(sql sqlgen.SQL) sqlgen.SQL {
-	switch compiled := sqlCompile(sql).(type) {
-	case sqlgen.Literal, *sqlgen.Hole:
-		return sqlgen.Literals{SQLs: []sqlgen.SQL{compiled}}
-
-	case sqlgen.Literals:
-		return compiled
-
-	default:
-		panic("unhandled sql type")
-	}
+	return sqlCompile(sql)
 }
 
 func sqlCompile(sql sqlgen.SQL) (out sqlgen.SQL) {
@@ -37,7 +26,7 @@ func sqlCompile(sql sqlgen.SQL) (out sqlgen.SQL) {
 	case sqlgen.Literal: // a literal has nothing to do
 		return sql
 
-	case *sqlgen.Hole: // a hole has nothing to do
+	case *sqlgen.Condition: // a hole has nothing to do
 		return sql
 
 	case sqlgen.Literals:

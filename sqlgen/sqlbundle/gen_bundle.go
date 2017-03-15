@@ -27,19 +27,28 @@ import (
 	"strings"
 )
 
+const prefix = "__sqlbundle_"
+
 const template = `%s
+//
+// DO NOT EDIT: automatically generated code.
+//
+
 //go:generate go run gen_bundle.go
 
 package sqlbundle
 
-const Source = %q
+const (
+	Source = %q
+	Prefix = %q
+)
 `
 
 var afterImportRe = regexp.MustCompile(`(?m)^\)$`)
 
 func main() {
 	copyright, bundle := loadCopyright(), loadBundle()
-	output := []byte(fmt.Sprintf(template, copyright, bundle))
+	output := []byte(fmt.Sprintf(template, copyright, bundle, prefix))
 
 	err := ioutil.WriteFile("bundle.go", output, 0644)
 	if err != nil {
@@ -75,6 +84,7 @@ func loadCopyright() string {
 func loadBundle() string {
 	source, err := exec.Command("bundle",
 		"-dst", "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlbundle",
+		"-prefix", prefix,
 		"gopkg.in/spacemonkeygo/dbx.v1/sqlgen").Output()
 	if err != nil {
 		panic(err)

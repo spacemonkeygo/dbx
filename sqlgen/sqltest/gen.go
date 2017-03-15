@@ -25,7 +25,7 @@ import (
 
 type Generator struct {
 	rng   *rand.Rand
-	holes []*sqlgen.Hole
+	conds []*sqlgen.Condition
 }
 
 func NewGenerator(tw *testutil.T) *Generator {
@@ -43,15 +43,19 @@ func (g *Generator) literal() sqlgen.Literal {
 	return sqlgen.Literal(fmt.Sprintf("(literal %d)", g.rng.Intn(1000)))
 }
 
-func (g *Generator) hole() *sqlgen.Hole {
-	if len(g.holes) == 0 || rand.Intn(2) == 0 {
-		num := len(g.holes)
-		hole := &sqlgen.Hole{Name: fmt.Sprintf("(hole %d)", num)}
-		hole.Fill(sqlgen.Literal(fmt.Sprintf("(filled %d)", num)))
-		g.holes = append(g.holes, hole)
-		return hole
+func (g *Generator) condition() *sqlgen.Condition {
+	if len(g.conds) == 0 || rand.Intn(2) == 0 {
+		num := len(g.conds)
+		condition := &sqlgen.Condition{
+			Name:  fmt.Sprintf("cond%d", num),
+			Field: fmt.Sprintf("field%d", num),
+			Null:  rand.Intn(2) == 0,
+			Equal: rand.Intn(2) == 0,
+		}
+		g.conds = append(g.conds, condition)
+		return condition
 	}
-	return g.holes[rand.Intn(len(g.holes))]
+	return g.conds[rand.Intn(len(g.conds))]
 }
 
 func (g *Generator) literals(depth int) sqlgen.Literals {
@@ -82,7 +86,7 @@ func (g *Generator) genRecursive(depth int) (out sqlgen.SQL) {
 	case 0, 1, 2:
 		return g.literal()
 	case 3, 4, 5:
-		return g.hole()
+		return g.condition()
 	default:
 		return g.literals(depth)
 	}

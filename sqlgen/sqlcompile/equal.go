@@ -30,8 +30,8 @@ func sqlEqual(a, b sqlgen.SQL) bool {
 		}
 		return false
 
-	case *sqlgen.Hole:
-		if b, ok := b.(*sqlgen.Hole); ok {
+	case *sqlgen.Condition:
+		if b, ok := b.(*sqlgen.Condition); ok {
 			return a == b // pointer equality is correct
 		}
 		return false
@@ -55,8 +55,8 @@ func sqlsEqual(as, bs []sqlgen.SQL) bool {
 
 func sqlNormalForm(sql sqlgen.SQL) bool {
 	switch sql := sql.(type) {
-	case sqlgen.Literal, *sqlgen.Hole:
-		return false
+	case sqlgen.Literal, *sqlgen.Condition:
+		return true
 
 	case sqlgen.Literals:
 		if sql.Join != "" {
@@ -69,8 +69,8 @@ func sqlNormalForm(sql sqlgen.SQL) bool {
 
 		for _, sql := range sql.SQLs {
 			switch sql.(type) {
-			case *sqlgen.Hole:
-				last = "hole"
+			case *sqlgen.Condition:
+				last = "condition"
 
 			case sqlgen.Literal:
 				if last == "literal" {

@@ -49,8 +49,8 @@ func testEqualNormalForm(tw *testutil.T) {
 	}
 
 	tests := []normalFormTestCase{
-		{in: sqlgen.Literal(""), normal: false},
-		{in: new(sqlgen.Hole), normal: false},
+		{in: sqlgen.Literal(""), normal: true},
+		{in: new(sqlgen.Condition), normal: true},
 		{in: sqlgen.Literals{}, normal: true},
 		{in: sqlgen.Literals{Join: "foo"}, normal: false},
 		{
@@ -68,7 +68,7 @@ func testEqualNormalForm(tw *testutil.T) {
 		},
 		{
 			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
-				new(sqlgen.Hole),
+				new(sqlgen.Condition),
 				sqlgen.Literal("foo baz"),
 			}},
 			normal: true,
@@ -76,22 +76,22 @@ func testEqualNormalForm(tw *testutil.T) {
 		{
 			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
 				sqlgen.Literal("bif bar"),
-				new(sqlgen.Hole),
+				new(sqlgen.Condition),
 			}},
 			normal: true,
 		},
 		{
 			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
 				sqlgen.Literal("foo baz"),
-				new(sqlgen.Hole),
+				new(sqlgen.Condition),
 				sqlgen.Literal("bif bar"),
 			}},
 			normal: true,
 		},
 		{
 			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
-				new(sqlgen.Hole),
-				new(sqlgen.Hole),
+				new(sqlgen.Condition),
+				new(sqlgen.Condition),
 				sqlgen.Literal("foo baz"),
 			}},
 			normal: true,
@@ -99,16 +99,16 @@ func testEqualNormalForm(tw *testutil.T) {
 		{
 			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
 				sqlgen.Literal("bif bar"),
-				new(sqlgen.Hole),
-				new(sqlgen.Hole),
+				new(sqlgen.Condition),
+				new(sqlgen.Condition),
 			}},
 			normal: true,
 		},
 		{
 			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
 				sqlgen.Literal("foo baz"),
-				new(sqlgen.Hole),
-				new(sqlgen.Hole),
+				new(sqlgen.Condition),
+				new(sqlgen.Condition),
 				sqlgen.Literal("bif bar"),
 			}},
 			normal: true,

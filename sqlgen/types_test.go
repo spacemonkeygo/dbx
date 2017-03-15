@@ -37,6 +37,28 @@ func testTypesRender(tw *testutil.T) {
 		{in: Literal("foo bar sql"), out: "foo bar sql"},
 		{in: Literal("`"), out: "`"},
 		{in: Literal(`"`), out: "\""},
+
+		{in: &Condition{Equal: false, Null: false}, out: "!= ?"},
+		{in: &Condition{Equal: false, Null: true}, out: "is not null"},
+		{in: &Condition{Equal: true, Null: false}, out: "= ?"},
+		{in: &Condition{Equal: true, Null: true}, out: "is null"},
+		{
+			in:  &Condition{Field: "f", Equal: false, Null: false},
+			out: "f != ?",
+		},
+		{
+			in:  &Condition{Field: "f", Equal: false, Null: true},
+			out: "f is not null",
+		},
+		{
+			in:  &Condition{Field: "f", Equal: true, Null: false},
+			out: "f = ?",
+		},
+		{
+			in:  &Condition{Field: "f", Equal: true, Null: true},
+			out: "f is null",
+		},
+
 		{in: Literals{}, out: ""},
 		{in: Literals{Join: "foo"}, out: ""},
 		{in: Literals{Join: "`"}, out: ""},
