@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sqlgen
+package sqlcompile
 
-func Equal(a, b SQL) bool { return sqlEqual(a, b) }
+import "gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 
-func sqlEqual(a, b SQL) bool {
+func sqlEqual(a, b sqlgen.SQL) bool {
 	switch a := a.(type) {
-	case Literal:
-		if b, ok := b.(Literal); ok {
+	case sqlgen.Literal:
+		if b, ok := b.(sqlgen.Literal); ok {
 			return a == b
 		}
 		return false
 
-	case Literals:
-		if b, ok := b.(Literals); ok {
+	case sqlgen.Literals:
+		if b, ok := b.(sqlgen.Literals); ok {
 			return a.Join == b.Join && sqlsEqual(a.SQLs, b.SQLs)
 		}
 		return false
 
-	case *Hole:
-		if b, ok := b.(*Hole); ok {
+	case *sqlgen.Hole:
+		if b, ok := b.(*sqlgen.Hole); ok {
 			return a == b // pointer equality is correct
 		}
 		return false
@@ -41,7 +41,7 @@ func sqlEqual(a, b SQL) bool {
 	}
 }
 
-func sqlsEqual(as, bs []SQL) bool {
+func sqlsEqual(as, bs []sqlgen.SQL) bool {
 	if len(as) != len(bs) {
 		return false
 	}
@@ -53,12 +53,12 @@ func sqlsEqual(as, bs []SQL) bool {
 	return true
 }
 
-func sqlNormalForm(sql SQL) bool {
+func sqlNormalForm(sql sqlgen.SQL) bool {
 	switch sql := sql.(type) {
-	case Literal, *Hole:
-		return true
+	case sqlgen.Literal, *sqlgen.Hole:
+		return false
 
-	case Literals:
+	case sqlgen.Literals:
 		if sql.Join != "" {
 			return false
 		}
@@ -69,16 +69,16 @@ func sqlNormalForm(sql SQL) bool {
 
 		for _, sql := range sql.SQLs {
 			switch sql.(type) {
-			case *Hole:
+			case *sqlgen.Hole:
 				last = "hole"
 
-			case Literal:
+			case sqlgen.Literal:
 				if last == "literal" {
 					return false
 				}
 				last = "literal"
 
-			case Literals:
+			case sqlgen.Literals:
 				return false
 
 			default:

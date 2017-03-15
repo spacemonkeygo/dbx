@@ -12,21 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sqlgen
+package sqlcompile
 
-func Compile(sql SQL) SQL { return sqlCompile(sql) }
+import "gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 
-func sqlCompile(sql SQL) (out SQL) {
+// Compile reduces the sql expression to normal form: a single Literals with
+// an empty string join whose list elements contain non-contiguous Literal or
+// *Hole elements.
+func Compile(sql sqlgen.SQL) sqlgen.SQL {
+	switch compiled := sqlCompile(sql).(type) {
+	case sqlgen.Literal, *sqlgen.Hole:
+		return sqlgen.Literals{SQLs: []sqlgen.SQL{compiled}}
+
+	case sqlgen.Literals:
+		return compiled
+
+	default:
+		panic("unhandled sql type")
+	}
+}
+
+func sqlCompile(sql sqlgen.SQL) (out sqlgen.SQL) {
 	switch sql := sql.(type) {
-	case Literal: // a literal has nothing to do
+	case sqlgen.Literal: // a literal has nothing to do
 		return sql
-	case *Hole: // a hole has nothing to do
+
+	case *sqlgen.Hole: // a hole has nothing to do
 		return sql
-	case Literals:
+
+	case sqlgen.Literals:
 		// if there are no SQLs, we just have an empty string so hoist to a
 		// literal type
 		if len(sql.SQLs) == 0 {
-			return Literal("")
+			return sqlgen.Literal("")
 		}
 
 		// if there is one sql, we can just return the compiled form of that.
@@ -60,12 +78,13 @@ func sqlCompile(sql SQL) (out SQL) {
 		// recurse until fixed point. we may have more optimization
 		//  opportunities now
 		return sqlCompile(sql)
+
 	default:
 		panic("unhandled sql type")
 	}
 }
 
-func sqlCompileChildren(ls Literals) (out Literals) {
+func sqlCompileChildren(ls sqlgen.Literals) (out sqlgen.Literals) {
 	out = ls
 	out.SQLs = nil
 
@@ -76,7 +95,7 @@ func sqlCompileChildren(ls Literals) (out Literals) {
 	return out
 }
 
-func sqlIntersperse(ls Literals) (out Literals) {
+func sqlIntersperse(ls sqlgen.Literals) (out sqlgen.Literals) {
 	if ls.Join == "" {
 		return ls
 	}
@@ -88,7 +107,7 @@ func sqlIntersperse(ls Literals) (out Literals) {
 	first := true
 	for _, sql := range ls.SQLs {
 		if !first {
-			out.SQLs = append(out.SQLs, Literal(ls.Join))
+			out.SQLs = append(out.SQLs, sqlgen.Literal(ls.Join))
 		}
 		first = false
 		out.SQLs = append(out.SQLs, sql)
@@ -97,12 +116,12 @@ func sqlIntersperse(ls Literals) (out Literals) {
 	return out
 }
 
-func sqlHoist(ls Literals) (out Literals) {
+func sqlHoist(ls sqlgen.Literals) (out sqlgen.Literals) {
 	out = ls
 	out.SQLs = nil
 
 	for _, sql := range ls.SQLs {
-		lits, ok := sql.(Literals)
+		lits, ok := sql.(sqlgen.Literals)
 		if !ok || lits.Join != ls.Join {
 			out.SQLs = append(out.SQLs, sql)
 		}
@@ -112,39 +131,39 @@ func sqlHoist(ls Literals) (out Literals) {
 	return out
 }
 
-func sqlConstantFold(ls Literals) (out Literals) {
+func sqlConstantFold(ls sqlgen.Literals) (out sqlgen.Literals) {
 	out = ls
 	out.SQLs = nil
 
-	buf := Literals{Join: ls.Join}
+	buf := sqlgen.Literals{Join: ls.Join}
 	for _, sql := range ls.SQLs {
-		lit, ok := sql.(Literal)
+		lit, ok := sql.(sqlgen.Literal)
 		if ok {
 			buf.SQLs = append(buf.SQLs, lit)
 			continue
 		}
 
 		if len(buf.SQLs) > 0 {
-			out.SQLs = append(out.SQLs, Literal(buf.render()))
+			out.SQLs = append(out.SQLs, sqlgen.Literal(buf.Render()))
 			buf.SQLs = buf.SQLs[:0]
 		}
 		out.SQLs = append(out.SQLs, sql)
 	}
 
 	if len(buf.SQLs) > 0 {
-		out.SQLs = append(out.SQLs, Literal(buf.render()))
+		out.SQLs = append(out.SQLs, sqlgen.Literal(buf.Render()))
 	}
 
 	return out
 }
 
-func sqlFilterTrivial(ls Literals) (out Literals) {
+func sqlFilterTrivial(ls sqlgen.Literals) (out sqlgen.Literals) {
 	out = ls
 	out.SQLs = nil
 
 	for _, sql := range ls.SQLs {
-		lit, ok := sql.(Literal)
-		if ok && lit == Literal("") {
+		lit, ok := sql.(sqlgen.Literal)
+		if ok && lit == sqlgen.Literal("") {
 			continue
 		}
 		out.SQLs = append(out.SQLs, sql)

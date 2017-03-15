@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sqlgen
+package sqlcompile
 
 import (
 	"testing"
 
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqltest"
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
 )
 
@@ -29,13 +30,13 @@ func TestCompile(t *testing.T) {
 }
 
 func testCompileFuzzRender(tw *testutil.T) {
-	g := newGenerator(tw)
+	g := sqltest.NewGenerator(tw)
 
 	for i := 0; i < 1000; i++ {
-		sql := g.gen()
-		compiled := sqlCompile(sql)
-		exp := sql.render()
-		got := compiled.render()
+		sql := g.Gen()
+		compiled := Compile(sql)
+		exp := sql.Render()
+		got := compiled.Render()
 
 		if exp != got {
 			tw.Logf("sql:      %#v", sql)
@@ -48,12 +49,12 @@ func testCompileFuzzRender(tw *testutil.T) {
 }
 
 func testCompileIdempotent(tw *testutil.T) {
-	g := newGenerator(tw)
+	g := sqltest.NewGenerator(tw)
 
 	for i := 0; i < 1000; i++ {
-		sql := g.gen()
-		first := sqlCompile(sql)
-		second := sqlCompile(first)
+		sql := g.Gen()
+		first := Compile(sql)
+		second := Compile(first)
 
 		if !sqlEqual(first, second) {
 			tw.Logf("sql:    %#v", sql)
@@ -65,11 +66,11 @@ func testCompileIdempotent(tw *testutil.T) {
 }
 
 func testCompileFuzzNormalForm(tw *testutil.T) {
-	g := newGenerator(tw)
+	g := sqltest.NewGenerator(tw)
 
 	for i := 0; i < 1000; i++ {
-		sql := g.gen()
-		compiled := sqlCompile(sql)
+		sql := g.Gen()
+		compiled := Compile(sql)
 
 		if !sqlNormalForm(compiled) {
 			tw.Logf("sql:      %#v", sql)

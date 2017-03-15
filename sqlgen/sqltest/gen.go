@@ -12,51 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sqlgen
+package sqltest
 
 import (
 	"fmt"
 	"math/rand"
 	"time"
 
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
 )
 
-type generator struct {
+type Generator struct {
 	rng   *rand.Rand
-	holes []*Hole
+	holes []*sqlgen.Hole
 }
 
-func newGenerator(tw *testutil.T) *generator {
+func NewGenerator(tw *testutil.T) *Generator {
 	seed := time.Now().UnixNano()
 	rng := rand.New(rand.NewSource(seed))
 	tw.Logf("seed: %d", seed)
-	return &generator{
+	return &Generator{
 		rng: rng,
 	}
 }
 
-func (g *generator) gen() (out SQL) { return g.genRecursive(3) }
+func (g *Generator) Gen() (out sqlgen.SQL) { return g.genRecursive(3) }
 
-func (g *generator) literal() Literal {
-	return Literal(fmt.Sprintf("(literal %d)", g.rng.Intn(1000)))
+func (g *Generator) literal() sqlgen.Literal {
+	return sqlgen.Literal(fmt.Sprintf("(literal %d)", g.rng.Intn(1000)))
 }
 
-func (g *generator) hole() *Hole {
+func (g *Generator) hole() *sqlgen.Hole {
 	if len(g.holes) == 0 || rand.Intn(2) == 0 {
 		num := len(g.holes)
-		hole := &Hole{Name: fmt.Sprintf("(hole %d)", num)}
-		hole.Fill(Literal(fmt.Sprintf("(filled %d)", num)))
+		hole := &sqlgen.Hole{Name: fmt.Sprintf("(hole %d)", num)}
+		hole.Fill(sqlgen.Literal(fmt.Sprintf("(filled %d)", num)))
 		g.holes = append(g.holes, hole)
 		return hole
 	}
 	return g.holes[rand.Intn(len(g.holes))]
 }
 
-func (g *generator) literals(depth int) Literals {
+func (g *Generator) literals(depth int) sqlgen.Literals {
 	amount := rand.Intn(30)
 
-	sqls := make([]SQL, amount)
+	sqls := make([]sqlgen.SQL, amount)
 	for i := range sqls {
 		sqls[i] = g.genRecursive(depth - 1)
 	}
@@ -66,13 +67,13 @@ func (g *generator) literals(depth int) Literals {
 		join = ""
 	}
 
-	return Literals{
+	return sqlgen.Literals{
 		Join: join,
 		SQLs: sqls,
 	}
 }
 
-func (g *generator) genRecursive(depth int) (out SQL) {
+func (g *Generator) genRecursive(depth int) (out sqlgen.SQL) {
 	if depth == 0 {
 		return g.literal()
 	}

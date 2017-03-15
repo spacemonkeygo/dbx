@@ -17,6 +17,7 @@ package sql
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
@@ -31,7 +32,7 @@ func SQLFromOrderBy(order_by *OrderBy) sqlgen.SQL {
 	if order_by.Descending {
 		stmt.Add(L("DESC"))
 	}
-	return stmt.SQL()
+	return sqlcompile.Compile(stmt.SQL())
 }
 
 func OrderByFromIR(ir_order_by *ir.OrderBy) (order_by *OrderBy) {

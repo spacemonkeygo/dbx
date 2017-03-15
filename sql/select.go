@@ -20,6 +20,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
@@ -83,7 +84,7 @@ func SQLFromSelect(sel *Select) sqlgen.SQL {
 		stmt.Add(L("), 0)"))
 	}
 
-	return sqlgen.Compile(stmt.SQL())
+	return sqlcompile.Compile(stmt.SQL())
 }
 
 type Select struct {

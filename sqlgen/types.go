@@ -14,26 +14,22 @@
 
 package sqlgen
 
-import (
-	"bytes"
-	"fmt"
-)
+import "bytes"
 
 type Literal string
 
-func (l Literal) render() string { return string(l) }
+func (Literal) private() {}
 
-func (l Literal) embedGolang() string {
-	const format = prefix + "Literal(%q)"
-	return fmt.Sprintf(format, string(l))
-}
+func (l Literal) Render() string { return string(l) }
 
 type Literals struct {
 	Join string
 	SQLs []SQL
 }
 
-func (l Literals) render() string {
+func (Literals) private() {}
+
+func (l Literals) Render() string {
 	var out bytes.Buffer
 
 	first := true
@@ -45,27 +41,8 @@ func (l Literals) render() string {
 			out.WriteString(l.Join)
 		}
 		first = false
-		out.WriteString(sql.render())
+		out.WriteString(sql.Render())
 	}
-
-	return out.String()
-}
-
-func (l Literals) embedGolang() string {
-	var out bytes.Buffer
-
-	const format = prefix + "Literals{Join:%q,SQLs:[]" + prefix + "SQL{"
-
-	fmt.Fprintf(&out, format, l.Join)
-	first := true
-	for _, sql := range l.SQLs {
-		if !first {
-			out.WriteString(",")
-		}
-		first = false
-		out.WriteString(sql.embedGolang())
-	}
-	out.WriteString("}}")
 
 	return out.String()
 }
@@ -76,13 +53,13 @@ type Hole struct {
 	val SQL
 }
 
+func (*Hole) private() {}
+
 func (h *Hole) Fill(sql SQL) { h.val = sql }
 
-func (h *Hole) render() string {
+func (h *Hole) Render() string {
 	if h.val == nil {
 		return ""
 	}
-	return h.val.render()
+	return h.val.Render()
 }
-
-func (h *Hole) embedGolang() string { return "&" + prefix + "Hole{}" }

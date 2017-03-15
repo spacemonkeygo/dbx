@@ -19,8 +19,11 @@ import (
 	"strings"
 )
 
-// this prefix has to match the prefix that the bundle command uses.
-const prefix = "sqlgen_"
+type SQL interface {
+	Render() string
+
+	private()
+}
 
 type Dialect interface {
 	Rebind(sql string) string
@@ -33,13 +36,8 @@ const (
 	NoTerminate
 )
 
-type SQL interface {
-	render() string
-	embedGolang() string
-}
-
 func Render(dialect Dialect, sql SQL, ops ...RenderOp) string {
-	out := sql.render()
+	out := sql.Render()
 
 	flatten := true
 	terminate := true

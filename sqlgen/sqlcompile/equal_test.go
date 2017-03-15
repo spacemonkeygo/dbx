@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sqlgen
+package sqlcompile
 
 import (
 	"testing"
 
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqltest"
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
 )
 
@@ -28,10 +30,10 @@ func TestEqual(t *testing.T) {
 }
 
 func testEqualFuzzIdentity(tw *testutil.T) {
-	g := newGenerator(tw)
+	g := sqltest.NewGenerator(tw)
 
 	for i := 0; i < 1000; i++ {
-		sql := g.gen()
+		sql := g.Gen()
 
 		if !sqlEqual(sql, sql) {
 			tw.Logf("sql: %#v", sql)
@@ -42,72 +44,72 @@ func testEqualFuzzIdentity(tw *testutil.T) {
 
 func testEqualNormalForm(tw *testutil.T) {
 	type normalFormTestCase struct {
-		in     SQL
+		in     sqlgen.SQL
 		normal bool
 	}
 
 	tests := []normalFormTestCase{
-		{in: Literal(""), normal: true},
-		{in: new(Hole), normal: true},
-		{in: Literals{}, normal: true},
-		{in: Literals{Join: "foo"}, normal: false},
+		{in: sqlgen.Literal(""), normal: false},
+		{in: new(sqlgen.Hole), normal: false},
+		{in: sqlgen.Literals{}, normal: true},
+		{in: sqlgen.Literals{Join: "foo"}, normal: false},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				Literal("foo baz"),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				sqlgen.Literal("foo baz"),
 			}},
 			normal: true,
 		},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				Literal("foo baz"),
-				Literal("bif bar"),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				sqlgen.Literal("foo baz"),
+				sqlgen.Literal("bif bar"),
 			}},
 			normal: false,
 		},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				new(Hole),
-				Literal("foo baz"),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				new(sqlgen.Hole),
+				sqlgen.Literal("foo baz"),
 			}},
 			normal: true,
 		},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				Literal("bif bar"),
-				new(Hole),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				sqlgen.Literal("bif bar"),
+				new(sqlgen.Hole),
 			}},
 			normal: true,
 		},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				Literal("foo baz"),
-				new(Hole),
-				Literal("bif bar"),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				sqlgen.Literal("foo baz"),
+				new(sqlgen.Hole),
+				sqlgen.Literal("bif bar"),
 			}},
 			normal: true,
 		},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				new(Hole),
-				new(Hole),
-				Literal("foo baz"),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				new(sqlgen.Hole),
+				new(sqlgen.Hole),
+				sqlgen.Literal("foo baz"),
 			}},
 			normal: true,
 		},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				Literal("bif bar"),
-				new(Hole),
-				new(Hole),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				sqlgen.Literal("bif bar"),
+				new(sqlgen.Hole),
+				new(sqlgen.Hole),
 			}},
 			normal: true,
 		},
 		{
-			in: Literals{Join: "", SQLs: []SQL{
-				Literal("foo baz"),
-				new(Hole),
-				new(Hole),
-				Literal("bif bar"),
+			in: sqlgen.Literals{Join: "", SQLs: []sqlgen.SQL{
+				sqlgen.Literal("foo baz"),
+				new(sqlgen.Hole),
+				new(sqlgen.Hole),
+				sqlgen.Literal("bif bar"),
 			}},
 			normal: true,
 		},

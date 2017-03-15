@@ -17,6 +17,7 @@ package sql
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
@@ -46,7 +47,7 @@ func SQLFromUpdate(upd *Update) (prefix, suffix sqlgen.SQL) {
 		suffix = stmt.SQL()
 	}
 
-	return sqlgen.Compile(prefix), sqlgen.Compile(suffix)
+	return sqlcompile.Compile(prefix), sqlcompile.Compile(suffix)
 }
 
 type Update struct {

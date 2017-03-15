@@ -20,6 +20,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
@@ -89,7 +90,7 @@ func SQLFromSchema(schema *Schema) sqlgen.SQL {
 		stmts = append(stmts, stmt.SQL())
 	}
 
-	return sqlgen.Compile(J("\n", stmts...))
+	return sqlcompile.Compile(J("\n", stmts...))
 }
 
 func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {

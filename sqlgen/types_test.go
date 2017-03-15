@@ -15,7 +15,6 @@
 package sqlgen
 
 import (
-	"go/parser"
 	"testing"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
@@ -25,8 +24,6 @@ func TestTypes(t *testing.T) {
 	tw := testutil.Wrap(t)
 	tw.Parallel()
 	tw.Runp("render", testTypesRender)
-	tw.Runp("embed golang", testTypesEmbedGolang)
-	tw.Runp("fuzz embed golang", testTypesFuzzEmbedGolang)
 }
 
 func testTypesRender(tw *testutil.T) {
@@ -71,63 +68,8 @@ func testTypesRender(tw *testutil.T) {
 		},
 	}
 	for i, test := range tests {
-		if got := test.in.render(); got != test.out {
+		if got := test.in.Render(); got != test.out {
 			tw.Errorf("%d: %q != %q", i, got, test.out)
-		}
-	}
-}
-
-func testTypesEmbedGolang(tw *testutil.T) {
-	tests := []SQL{
-		Literal(""),
-		Literal("foo bar sql"),
-		Literal("`"),
-		Literal(`"`),
-
-		// zero value
-		Literals{},
-
-		// no sqls
-		Literals{Join: "foo"},
-		Literals{Join: "`"},
-		Literals{Join: `"`},
-
-		// simple sqls
-		Literals{Join: "bar", SQLs: []SQL{
-			Literal("foo baz"),
-			Literal("another"),
-		}},
-
-		// hard sqls
-		Literals{Join: "bar", SQLs: []SQL{
-			Literals{},
-		}},
-		Literals{Join: "recursive", SQLs: []SQL{
-			Literals{Join: "bif", SQLs: []SQL{
-				Literals{},
-			}},
-		}},
-	}
-	for i, test := range tests {
-		emb := test.embedGolang()
-		if _, err := parser.ParseExpr(emb); err != nil {
-			tw.Errorf("%d: %s but got error: %v", i, emb, err)
-		}
-	}
-}
-
-func testTypesFuzzEmbedGolang(tw *testutil.T) {
-	g := newGenerator(tw)
-
-	for i := 0; i < 1000; i++ {
-		sql := g.gen()
-		emb := sql.embedGolang()
-
-		if _, err := parser.ParseExpr(emb); err != nil {
-			tw.Logf("sql: %#v", sql)
-			tw.Logf("emb: %s", emb)
-			tw.Logf("err: %v", err)
-			tw.Error()
 		}
 	}
 }

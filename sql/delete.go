@@ -17,6 +17,7 @@ package sql
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
@@ -33,7 +34,7 @@ func SQLFromDelete(del *Delete) sqlgen.SQL {
 		stmt.Add(L("WHERE"), J(" AND ", wheres...))
 	}
 
-	return sqlgen.Compile(stmt.SQL())
+	return sqlcompile.Compile(stmt.SQL())
 }
 
 type Delete struct {
