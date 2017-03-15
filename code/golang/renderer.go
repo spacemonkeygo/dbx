@@ -28,6 +28,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/code"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
 
@@ -326,7 +327,9 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	}
 
 	for _, dialect := range dialects {
-		dialect_schema := sql.RenderSchema(dialect, root)
+		dialect_schema := sqlgen.Render(dialect,
+			sql.SchemaSQL(root, dialect),
+			sqlgen.NoFlatten, sqlgen.NoTerminate)
 
 		dialect_tmpl, err := r.loadDialect(dialect)
 		if err != nil {
@@ -430,9 +433,10 @@ func (r *Renderer) renderDeleteWorld(w io.Writer, ir_models []*ir.Model,
 		Dialect: dialect.Name(),
 	}
 	for i := len(ir_models) - 1; i >= 0; i-- {
-		del.SQLs = append(del.SQLs, sql.RenderDelete(dialect, &ir.Delete{
+		sql := sqlgen.Render(dialect, sql.DeleteSQL(&ir.Delete{
 			Model: ir_models[i],
 		}))
+		del.SQLs = append(del.SQLs, sql)
 	}
 
 	return r.renderFunc(r.del_world, w, del, dialect)
@@ -506,7 +510,7 @@ func (r *Renderer) renderGetLast(w io.Writer, model *ir.Model,
 
 	get_last := getLast{
 		Return: VarFromModel(model),
-		SQL:    sql.RenderGetLast(dialect, model),
+		SQL:    sqlgen.Render(dialect, sql.GetLastSQL(model, dialect)),
 	}
 
 	return r.renderFunc(r.get_last, w, get_last, dialect)

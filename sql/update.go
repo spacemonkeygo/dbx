@@ -21,12 +21,45 @@ import (
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
-func RenderUpdate(dialect Dialect, ir_upd *ir.Update) (prefix, suffix string) {
-	upd := UpdateFromIR(ir_upd, dialect)
-	prefix_sql, suffix_sql := SQLFromUpdate(upd)
-	prefix = sqlgen.Render(dialect, prefix_sql, sqlgen.NoTerminate) + " "
-	suffix = " " + sqlgen.Render(dialect, suffix_sql)
-	return prefix, suffix
+func UpdateSQL(ir_upd *ir.Update, dialect Dialect) (prefix, suffix sqlgen.SQL) {
+	return SQLFromUpdate(UpdateFromIRUpdate(ir_upd, dialect))
+}
+
+type Update struct {
+	Table     string
+	Where     []Where
+	Returning []string
+	In        sqlgen.SQL
+}
+
+func UpdateFromIRUpdate(ir_upd *ir.Update, dialect Dialect) *Update {
+	var returning []string
+	if dialect.Features().Returning {
+		returning = ir_upd.Model.SelectRefs()
+	}
+
+	if len(ir_upd.Joins) == 0 {
+		return &Update{
+			Table:     ir_upd.Model.Table,
+			Where:     WheresFromIRWheres(ir_upd.Where),
+			Returning: returning,
+		}
+	}
+
+	pk_column := ir_upd.Model.PrimaryKey[0].Column
+	sel := SQLFromSelect(&Select{
+		From:   ir_upd.Model.Table,
+		Fields: []string{pk_column},
+		Joins:  JoinsFromIRJoins(ir_upd.Joins),
+		Where:  WheresFromIRWheres(ir_upd.Where),
+	})
+	in := J("", L(pk_column), L(" IN ("), sel, L(")"))
+
+	return &Update{
+		Table:     ir_upd.Model.Table,
+		Returning: returning,
+		In:        in,
+	}
 }
 
 func SQLFromUpdate(upd *Update) (prefix, suffix sqlgen.SQL) {
@@ -38,58 +71,21 @@ func SQLFromUpdate(upd *Update) (prefix, suffix sqlgen.SQL) {
 
 	{ // build suffix
 		stmt := Build(nil)
-		if wheres := SQLFromWheres(upd.Where); len(wheres) > 0 {
+
+		wheres := SQLFromWheres(upd.Where)
+		if upd.In != nil {
+			wheres = append(wheres, upd.In)
+		}
+		if len(wheres) > 0 {
 			stmt.Add(L("WHERE"), J(" AND ", wheres...))
 		}
+
 		if len(upd.Returning) > 0 {
 			stmt.Add(L("RETURNING"), J(", ", Strings(upd.Returning)...))
 		}
+
 		suffix = stmt.SQL()
 	}
 
 	return sqlcompile.Compile(prefix), sqlcompile.Compile(suffix)
-}
-
-type Update struct {
-	Table     string
-	Where     []Where
-	Returning []string
-}
-
-func UpdateFromIR(ir_upd *ir.Update, dialect Dialect) *Update {
-	var returning []string
-	if dialect.Features().Returning {
-		returning = ir_upd.Model.SelectRefs()
-	}
-
-	if len(ir_upd.Joins) == 0 {
-		return &Update{
-			Table:     ir_upd.Model.Table,
-			Where:     WheresFromIR(ir_upd.Where),
-			Returning: returning,
-		}
-	}
-
-	pk_column := ir_upd.Model.PrimaryKey[0].Column
-
-	// TODO(jeff): we should have the where optionally have a SQL for the right
-	// maybe, or just make it SQL always that we stuff a literal in, but the
-	// wrong thing is rendering here.
-
-	sel := sqlgen.Render(dialect, SQLFromSelect(&Select{
-		From:   ir_upd.Model.Table,
-		Fields: []string{pk_column},
-		Joins:  JoinsFromIR(ir_upd.Joins),
-		Where:  WheresFromIR(ir_upd.Where),
-	}), sqlgen.NoTerminate)
-
-	return &Update{
-		Table:     ir_upd.Model.Table,
-		Returning: returning,
-		Where: []Where{{
-			Left:  pk_column,
-			Op:    "IN",
-			Right: "(" + sel + ")",
-		}},
-	}
 }

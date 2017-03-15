@@ -17,6 +17,7 @@ package golang
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 )
 
 type Delete struct {
@@ -29,7 +30,7 @@ type Delete struct {
 func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
 	del := &Delete{
 		Suffix: convertSuffix(ir_del.Suffix),
-		SQL:    sql.RenderDelete(dialect, ir_del),
+		SQL:    sqlgen.Render(dialect, sql.DeleteSQL(ir_del)),
 	}
 
 	if ir_del.Distinct() {

@@ -21,39 +21,8 @@ import (
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
-func RenderInsert(dialect Dialect, cre *ir.Create) string {
-	insert := InsertFromIR(cre, dialect)
-	sql := SQLFromInsert(insert)
-	return sqlgen.Render(dialect, sql)
-}
-
-func SQLFromInsert(insert *Insert) sqlgen.SQL {
-	stmt := Build(Lf("INSERT INTO %s", insert.Table))
-
-	if cols := insert.Columns; len(cols) > 0 {
-		columns := J("",
-			L("("),
-			J(", ", Strings(cols)...),
-			L(")"),
-		)
-
-		values := J("",
-			L("VALUES("),
-			J(", ", Placeholders(len(cols))...),
-			L(")"),
-		)
-
-		stmt.Add(columns)
-		stmt.Add(values)
-	} else {
-		stmt.Add(L("DEFAULT VALUES"))
-	}
-
-	if rets := insert.Returning; len(rets) > 0 {
-		stmt.Add(L("RETURNING"), J(", ", Strings(rets)...))
-	}
-
-	return sqlcompile.Compile(stmt.SQL())
+func InsertSQL(ir_cre *ir.Create, dialect Dialect) sqlgen.SQL {
+	return SQLFromInsert(InsertFromIRCreate(ir_cre, dialect))
 }
 
 type Insert struct {
@@ -62,7 +31,7 @@ type Insert struct {
 	Returning []string
 }
 
-func InsertFromIR(ir_cre *ir.Create, dialect Dialect) *Insert {
+func InsertFromIRCreate(ir_cre *ir.Create, dialect Dialect) *Insert {
 	ins := &Insert{
 		Table: ir_cre.Model.Table,
 	}
@@ -76,4 +45,21 @@ func InsertFromIR(ir_cre *ir.Create, dialect Dialect) *Insert {
 		ins.Columns = append(ins.Columns, field.Column)
 	}
 	return ins
+}
+
+func SQLFromInsert(insert *Insert) sqlgen.SQL {
+	stmt := Build(Lf("INSERT INTO %s", insert.Table))
+
+	if cols := insert.Columns; len(cols) > 0 {
+		stmt.Add(L("("), J(", ", Strings(cols)...), L(")"))
+		stmt.Add(L("VALUES ("), J(", ", Placeholders(len(cols))...), L(")"))
+	} else {
+		stmt.Add(L("DEFAULT VALUES"))
+	}
+
+	if rets := insert.Returning; len(rets) > 0 {
+		stmt.Add(L("RETURNING"), J(", ", Strings(rets)...))
+	}
+
+	return sqlcompile.Compile(stmt.SQL())
 }

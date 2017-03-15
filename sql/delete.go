@@ -21,54 +21,49 @@ import (
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
-func RenderDelete(dialect Dialect, ir_del *ir.Delete) string {
-	del := DeleteFromIR(ir_del, dialect)
-	sql := SQLFromDelete(del)
-	return sqlgen.Render(dialect, sql)
-}
-
-func SQLFromDelete(del *Delete) sqlgen.SQL {
-	stmt := Build(Lf("DELETE FROM %s", del.From))
-
-	if wheres := SQLFromWheres(del.Where); len(wheres) > 0 {
-		stmt.Add(L("WHERE"), J(" AND ", wheres...))
-	}
-
-	return sqlcompile.Compile(stmt.SQL())
+func DeleteSQL(ir_del *ir.Delete) sqlgen.SQL {
+	return SQLFromDelete(DeleteFromIRDelete(ir_del))
 }
 
 type Delete struct {
 	From  string
 	Where []Where
+	In    sqlgen.SQL
 }
 
-func DeleteFromIR(ir_del *ir.Delete, dialect Dialect) *Delete {
+func DeleteFromIRDelete(ir_del *ir.Delete) *Delete {
 	if len(ir_del.Joins) == 0 {
 		return &Delete{
 			From:  ir_del.Model.Table,
-			Where: WheresFromIR(ir_del.Where),
+			Where: WheresFromIRWheres(ir_del.Where),
 		}
 	}
 
 	pk_column := ir_del.Model.PrimaryKey[0].ColumnRef()
-
-	// TODO(jeff): we should have the where optionally have a SQL for the right
-	// maybe, or just make it SQL always that we stuff a literal in, but the
-	// wrong thing is rendering here.
-
-	sel := sqlgen.Render(dialect, SQLFromSelect(&Select{
+	sel := SQLFromSelect(&Select{
 		From:   ir_del.Model.Table,
 		Fields: []string{pk_column},
-		Joins:  JoinsFromIR(ir_del.Joins),
-		Where:  WheresFromIR(ir_del.Where),
-	}), sqlgen.NoTerminate)
+		Joins:  JoinsFromIRJoins(ir_del.Joins),
+		Where:  WheresFromIRWheres(ir_del.Where),
+	})
+	in := J("", L(pk_column), L(" IN ("), sel, L(")"))
 
 	return &Delete{
 		From: ir_del.Model.Table,
-		Where: []Where{{
-			Left:  pk_column,
-			Op:    "IN",
-			Right: "(" + sel + ")",
-		}},
+		In:   in,
 	}
+}
+
+func SQLFromDelete(del *Delete) sqlgen.SQL {
+	stmt := Build(Lf("DELETE FROM %s", del.From))
+
+	wheres := SQLFromWheres(del.Where)
+	if del.In != nil {
+		wheres = append(wheres, del.In)
+	}
+	if len(wheres) > 0 {
+		stmt.Add(L("WHERE"), J(" AND ", wheres...))
+	}
+
+	return sqlcompile.Compile(stmt.SQL())
 }

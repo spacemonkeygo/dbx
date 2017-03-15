@@ -43,6 +43,7 @@ model d (
 	field pk    serial64
 	field id    text
 	field alias text              ( nullable, updatable )
+	field date  timestamp         ( autoinsert )
 	field e_id  e.id     restrict
 	field a_id  a.id     cascade
 )
@@ -81,6 +82,8 @@ delete e (
 )
 
 create d ( )
+
+create d ( raw )
 
 read one (
 	select d

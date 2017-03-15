@@ -29,14 +29,12 @@ var (
 	hasFields   = []string{"1"}
 )
 
-func RenderSelect(dialect Dialect, ir_read *ir.Read) string {
-	sel := SelectFromIR(ir_read, dialect)
-	sql := SQLFromSelect(sel)
-	return sqlgen.Render(dialect, sql)
+func SelectSQL(ir_read *ir.Read) sqlgen.SQL {
+	return SQLFromSelect(SelectFromIRRead(ir_read))
 }
 
-func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
-	sql := SQLFromSelect(&Select{
+func GetLastSQL(ir_model *ir.Model, dialect Dialect) sqlgen.SQL {
+	return SQLFromSelect(&Select{
 		Fields: ir_model.SelectRefs(),
 		From:   ir_model.Table,
 		Where: []Where{
@@ -47,7 +45,69 @@ func RenderGetLast(dialect Dialect, ir_model *ir.Model) string {
 			},
 		},
 	})
-	return sqlgen.Render(dialect, sql)
+}
+
+type Select struct {
+	From    string
+	Fields  []string
+	Joins   []Join
+	Where   []Where
+	OrderBy *OrderBy
+	Limit   string
+	Offset  string
+	Has     bool
+}
+
+func SelectFromIRRead(ir_read *ir.Read) *Select {
+	sel := &Select{
+		From:  ir_read.From.Table,
+		Where: WheresFromIRWheres(ir_read.Where),
+		Joins: JoinsFromIRJoins(ir_read.Joins),
+	}
+
+	for _, ir_selectable := range ir_read.Selectables {
+		sel.Fields = append(sel.Fields, ir_selectable.SelectRefs()...)
+	}
+
+	if ir_read.OrderBy != nil {
+		sel.OrderBy = OrderByFromIROrderBy(ir_read.OrderBy)
+	}
+
+	switch ir_read.View {
+	case ir.All:
+	case ir.One, ir.Scalar:
+		if !ir_read.Distinct() {
+			sel.Limit = "2"
+		}
+	case ir.LimitOffset:
+		sel.Limit = "?"
+		sel.Offset = "?"
+	case ir.Paged:
+		pk := ir_read.From.BasicPrimaryKey()
+		sel.Where = append(sel.Where, WhereFromIRWhere(&ir.Where{
+			Left: pk,
+			Op:   consts.GT,
+		}))
+		sel.OrderBy = &OrderBy{
+			Fields: []string{pk.ColumnRef()},
+		}
+		sel.Limit = "?"
+		sel.Fields = append(sel.Fields, pk.SelectRefs()...)
+	case ir.Has:
+		sel.Has = true
+		sel.Fields = hasFields
+		sel.OrderBy = nil
+	case ir.Count:
+		sel.Fields = countFields
+		sel.OrderBy = nil
+	case ir.First:
+		sel.Limit = "1"
+		sel.Offset = "0"
+	default:
+		panic(fmt.Sprintf("unsupported select view %s", ir_read.View))
+	}
+
+	return sel
 }
 
 func SQLFromSelect(sel *Select) sqlgen.SQL {
@@ -85,67 +145,4 @@ func SQLFromSelect(sel *Select) sqlgen.SQL {
 	}
 
 	return sqlcompile.Compile(stmt.SQL())
-}
-
-type Select struct {
-	From    string
-	Fields  []string
-	Joins   []Join
-	Where   []Where
-	OrderBy *OrderBy
-	Limit   string
-	Offset  string
-	Has     bool
-}
-
-func SelectFromIR(ir_read *ir.Read, dialect Dialect) *Select {
-	sel := &Select{
-		From:  ir_read.From.Table,
-		Where: WheresFromIR(ir_read.Where),
-		Joins: JoinsFromIR(ir_read.Joins),
-	}
-
-	for _, ir_selectable := range ir_read.Selectables {
-		sel.Fields = append(sel.Fields, ir_selectable.SelectRefs()...)
-	}
-
-	if ir_read.OrderBy != nil {
-		sel.OrderBy = OrderByFromIR(ir_read.OrderBy)
-	}
-
-	switch ir_read.View {
-	case ir.All:
-	case ir.One, ir.Scalar:
-		if !ir_read.Distinct() {
-			sel.Limit = "2"
-		}
-	case ir.LimitOffset:
-		sel.Limit = "?"
-		sel.Offset = "?"
-	case ir.Paged:
-		pk := ir_read.From.BasicPrimaryKey()
-		sel.Where = append(sel.Where, WhereFromIR(&ir.Where{
-			Left: pk,
-			Op:   consts.GT,
-		}))
-		sel.OrderBy = &OrderBy{
-			Fields: []string{pk.ColumnRef()},
-		}
-		sel.Limit = "?"
-		sel.Fields = append(sel.Fields, pk.SelectRefs()...)
-	case ir.Has:
-		sel.Has = true
-		sel.Fields = hasFields
-		sel.OrderBy = nil
-	case ir.Count:
-		sel.Fields = countFields
-		sel.OrderBy = nil
-	case ir.First:
-		sel.Limit = "1"
-		sel.Offset = "0"
-	default:
-		panic(fmt.Sprintf("unsupported select view %s", ir_read.View))
-	}
-
-	return sel
 }

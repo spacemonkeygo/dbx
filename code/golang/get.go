@@ -20,6 +20,7 @@ import (
 	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 )
 
 type Get struct {
@@ -33,7 +34,7 @@ type Get struct {
 func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	get := &Get{
 		Suffix: convertSuffix(ir_read.Suffix),
-		SQL:    sql.RenderSelect(dialect, ir_read),
+		SQL:    sqlgen.Render(dialect, sql.SelectSQL(ir_read)),
 	}
 
 	for _, where := range ir_read.Where {

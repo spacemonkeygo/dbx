@@ -24,76 +24,44 @@ import (
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
-func RenderSchema(dialect Dialect, ir_root *ir.Root) string {
-	schema := SchemaFromIR(ir_root.Models, dialect)
-	sql := SQLFromSchema(schema)
-	return sqlgen.Render(dialect, sql, sqlgen.NoFlatten, sqlgen.NoTerminate)
+func SchemaSQL(ir_root *ir.Root, dialect Dialect) sqlgen.SQL {
+	return SQLFromSchema(SchemaFromIRModels(ir_root.Models, dialect))
 }
 
-func SQLFromSchema(schema *Schema) sqlgen.SQL {
-	var stmts []sqlgen.SQL
-
-	for _, table := range schema.Tables {
-		var dirs []sqlgen.SQL
-
-		for _, column := range table.Columns {
-			dir := Build(Lf("%s %s", column.Name, column.Type))
-			if column.NotNull {
-				dir.Add(L("NOT NULL"))
-			}
-			if ref := column.Reference; ref != nil {
-				dir.Add(Lf("REFERENCES %s(%s)", ref.Table, ref.Column))
-				if ref.OnDelete != "" {
-					dir.Add(Lf("ON DELETE %s", ref.OnDelete))
-				}
-				if ref.OnUpdate != "" {
-					dir.Add(Lf("ON UPDATE %s", ref.OnUpdate))
-				}
-			}
-			dirs = append(dirs, dir.SQL())
-		}
-
-		if pkey := table.PrimaryKey; len(pkey) > 0 {
-			dir := Build(L("PRIMARY KEY ("))
-			dir.Add(J(", ", Strings(pkey)...))
-			dir.Add(L(")"))
-			dirs = append(dirs, dir.SQL())
-		}
-
-		for _, unique := range table.Unique {
-			dir := Build(L("UNIQUE ("))
-			dir.Add(J(", ", Strings(unique)...))
-			dir.Add(L(")"))
-			dirs = append(dirs, dir.SQL())
-		}
-
-		directives := J(",\n\t", dirs...)
-
-		stmt := J("",
-			Lf("CREATE TABLE %s (\n\t", table.Name),
-			directives,
-			Lf("\n);"),
-		)
-
-		stmts = append(stmts, stmt)
-	}
-
-	for _, index := range schema.Indexes {
-		stmt := Build(L("CREATE"))
-		if index.Unique {
-			stmt.Add(L("UNIQUE"))
-		}
-		stmt.Add(Lf("INDEX %s ON %s (", index.Name, index.Table))
-		stmt.Add(J(", ", Strings(index.Columns)...))
-		stmt.Add(L(");"))
-
-		stmts = append(stmts, stmt.SQL())
-	}
-
-	return sqlcompile.Compile(J("\n", stmts...))
+type Schema struct {
+	Tables  []Table
+	Indexes []Index
 }
 
-func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
+type Table struct {
+	Name       string
+	Columns    []Column
+	PrimaryKey []string
+	Unique     [][]string
+}
+
+type Column struct {
+	Name      string
+	Type      string
+	NotNull   bool
+	Reference *Reference
+}
+
+type Reference struct {
+	Table    string
+	Column   string
+	OnDelete string
+	OnUpdate string
+}
+
+type Index struct {
+	Name    string
+	Table   string
+	Columns []string
+	Unique  bool
+}
+
+func SchemaFromIRModels(ir_models []*ir.Model, dialect Dialect) *Schema {
 	schema := &Schema{}
 	for _, ir_model := range ir_models {
 		table := Table{
@@ -153,35 +121,65 @@ func SchemaFromIR(ir_models []*ir.Model, dialect Dialect) *Schema {
 	return schema
 }
 
-type Schema struct {
-	Tables  []Table
-	Indexes []Index
-}
+func SQLFromSchema(schema *Schema) sqlgen.SQL {
+	var stmts []sqlgen.SQL
 
-type Table struct {
-	Name       string
-	Columns    []Column
-	PrimaryKey []string
-	Unique     [][]string
-}
+	for _, table := range schema.Tables {
+		var dirs []sqlgen.SQL
 
-type Column struct {
-	Name      string
-	Type      string
-	NotNull   bool
-	Reference *Reference
-}
+		for _, column := range table.Columns {
+			dir := Build(Lf("%s %s", column.Name, column.Type))
+			if column.NotNull {
+				dir.Add(L("NOT NULL"))
+			}
+			if ref := column.Reference; ref != nil {
+				dir.Add(Lf("REFERENCES %s( %s )", ref.Table, ref.Column))
+				if ref.OnDelete != "" {
+					dir.Add(Lf("ON DELETE %s", ref.OnDelete))
+				}
+				if ref.OnUpdate != "" {
+					dir.Add(Lf("ON UPDATE %s", ref.OnUpdate))
+				}
+			}
+			dirs = append(dirs, dir.SQL())
+		}
 
-type Reference struct {
-	Table    string
-	Column   string
-	OnDelete string
-	OnUpdate string
-}
+		if pkey := table.PrimaryKey; len(pkey) > 0 {
+			dir := Build(L("PRIMARY KEY ("))
+			dir.Add(J(", ", Strings(pkey)...))
+			dir.Add(L(")"))
+			dirs = append(dirs, dir.SQL())
+		}
 
-type Index struct {
-	Name    string
-	Table   string
-	Columns []string
-	Unique  bool
+		for _, unique := range table.Unique {
+			dir := Build(L("UNIQUE ("))
+			dir.Add(J(", ", Strings(unique)...))
+			dir.Add(L(")"))
+			dirs = append(dirs, dir.SQL())
+		}
+
+		directives := J(",\n\t", dirs...)
+
+		stmt := J("",
+			Lf("CREATE TABLE %s (\n\t", table.Name),
+			directives,
+			Lf("\n);"),
+		)
+
+		stmts = append(stmts, stmt)
+	}
+
+	for _, index := range schema.Indexes {
+		stmt := Build(L("CREATE"))
+		if index.Unique {
+			stmt.Add(L("UNIQUE"))
+		}
+		stmt.Add(Lf("INDEX %s ON %s (", index.Name, index.Table))
+		stmt.Add(J(", ", Strings(index.Columns)...))
+		stmt.Add(L(");"))
+
+		stmts = append(stmts, stmt.SQL())
+	}
+
+	return sqlcompile.Compile(J("\n", stmts...))
 }

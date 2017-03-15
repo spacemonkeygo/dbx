@@ -29,20 +29,7 @@ type Where struct {
 	Right string
 }
 
-func SQLFromWhere(where Where) sqlgen.SQL {
-	return sqlcompile.Compile(
-		J(" ", L(where.Left), L(where.Op), L(where.Right)))
-}
-
-func SQLFromWheres(wheres []Where) []sqlgen.SQL {
-	var out []sqlgen.SQL
-	for _, where := range wheres {
-		out = append(out, SQLFromWhere(where))
-	}
-	return out
-}
-
-func WhereFromIR(ir_where *ir.Where) Where {
+func WhereFromIRWhere(ir_where *ir.Where) Where {
 	where := Where{
 		Left: ir_where.Left.ColumnRef(),
 		Op:   strings.ToUpper(string(ir_where.Op)),
@@ -55,10 +42,23 @@ func WhereFromIR(ir_where *ir.Where) Where {
 	return where
 }
 
-func WheresFromIR(ir_wheres []*ir.Where) (wheres []Where) {
+func WheresFromIRWheres(ir_wheres []*ir.Where) (wheres []Where) {
 	wheres = make([]Where, 0, len(ir_wheres))
 	for _, ir_where := range ir_wheres {
-		wheres = append(wheres, WhereFromIR(ir_where))
+		wheres = append(wheres, WhereFromIRWhere(ir_where))
 	}
 	return wheres
+}
+
+func SQLFromWhere(where Where) sqlgen.SQL {
+	return sqlcompile.Compile(
+		J(" ", L(where.Left), L(where.Op), L(where.Right)))
+}
+
+func SQLFromWheres(wheres []Where) []sqlgen.SQL {
+	var out []sqlgen.SQL
+	for _, where := range wheres {
+		out = append(out, SQLFromWhere(where))
+	}
+	return out
 }

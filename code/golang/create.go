@@ -19,6 +19,7 @@ import (
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 )
 
 type RawCreate struct {
@@ -34,8 +35,9 @@ func RawCreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *RawCreate {
 	ins := &RawCreate{
 		Suffix:            convertSuffix(ir_cre.Suffix),
 		Return:            VarFromModel(ir_cre.Model),
-		SQL:               sql.RenderInsert(dialect, ir_cre),
 		SupportsReturning: dialect.Features().Returning,
+		SQL: sqlgen.Render(dialect,
+			sql.InsertSQL(ir_cre, dialect)),
 	}
 
 	// the model struct is the only arg.
@@ -74,8 +76,9 @@ func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
 	ins := &Create{
 		Suffix:            convertSuffix(ir_cre.Suffix),
 		Return:            VarFromModel(ir_cre.Model),
-		SQL:               sql.RenderInsert(dialect, ir_cre),
 		SupportsReturning: dialect.Features().Returning,
+		SQL: sqlgen.Render(dialect,
+			sql.InsertSQL(ir_cre, dialect)),
 	}
 
 	args := map[string]*Var{}

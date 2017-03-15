@@ -17,6 +17,7 @@ package golang
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 )
 
 type Update struct {
@@ -35,12 +36,15 @@ type Update struct {
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
-	sql_prefix, sql_suffix := sql.RenderUpdate(dialect, ir_upd)
+	prefix, suffix := sql.UpdateSQL(ir_upd, dialect)
+	prefix_sql := sqlgen.Render(dialect, prefix, sqlgen.NoTerminate) + " "
+	suffix_sql := " " + sqlgen.Render(dialect, suffix)
+
 	upd := &Update{
 		Suffix:              convertSuffix(ir_upd.Suffix),
 		Struct:              ModelStructFromIR(ir_upd.Model),
-		SQLPrefix:           sql_prefix,
-		SQLSuffix:           sql_suffix,
+		SQLPrefix:           prefix_sql,
+		SQLSuffix:           suffix_sql,
 		Return:              VarFromModel(ir_upd.Model),
 		SupportsReturning:   dialect.Features().Returning,
 		PositionalArguments: dialect.Features().PositionalArguments,
@@ -59,13 +63,13 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 	}
 
 	if !upd.SupportsReturning {
-		upd.GetSQL = sql.RenderSelect(dialect, &ir.Read{
+		upd.GetSQL = sqlgen.Render(dialect, sql.SelectSQL(&ir.Read{
 			From:        ir_upd.Model,
 			Selectables: []ir.Selectable{ir_upd.Model},
 			Joins:       ir_upd.Joins,
 			Where:       ir_upd.Where,
 			View:        ir.All,
-		})
+		}))
 	}
 
 	return upd

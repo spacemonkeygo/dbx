@@ -26,16 +26,7 @@ type OrderBy struct {
 	Descending bool
 }
 
-func SQLFromOrderBy(order_by *OrderBy) sqlgen.SQL {
-	stmt := Build(L("ORDER BY"))
-	stmt.Add(J(", ", Strings(order_by.Fields)...))
-	if order_by.Descending {
-		stmt.Add(L("DESC"))
-	}
-	return sqlcompile.Compile(stmt.SQL())
-}
-
-func OrderByFromIR(ir_order_by *ir.OrderBy) (order_by *OrderBy) {
+func OrderByFromIROrderBy(ir_order_by *ir.OrderBy) (order_by *OrderBy) {
 	order_by = &OrderBy{
 		Descending: ir_order_by.Descending,
 	}
@@ -43,4 +34,13 @@ func OrderByFromIR(ir_order_by *ir.OrderBy) (order_by *OrderBy) {
 		order_by.Fields = append(order_by.Fields, ir_field.ColumnRef())
 	}
 	return order_by
+}
+
+func SQLFromOrderBy(order_by *OrderBy) sqlgen.SQL {
+	stmt := Build(L("ORDER BY"))
+	stmt.Add(J(", ", Strings(order_by.Fields)...))
+	if order_by.Descending {
+		stmt.Add(L("DESC"))
+	}
+	return sqlcompile.Compile(stmt.SQL())
 }
