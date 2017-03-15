@@ -88,4 +88,5 @@ var podFields = map[consts.FieldType]bool{
 	consts.TimestampUTCField: true,
 	consts.FloatField:        true,
 	consts.Float64Field:      true,
+	consts.DateField:         true,
 }

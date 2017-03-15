@@ -76,6 +76,8 @@ func (p *postgres) ColumnType(field *ir.Field) string {
 		return "timestamp"
 	case consts.BlobField:
 		return "bytea"
+	case consts.DateField:
+		return "date"
 	default:
 		panic(fmt.Sprintf("unhandled field type %s", field.Type))
 	}

@@ -71,6 +71,7 @@ const (
 	TimestampField
 	TimestampUTCField
 	BlobField
+	DateField
 )
 
 func (f FieldType) String() string {

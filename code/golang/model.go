@@ -145,6 +145,8 @@ func valueType(t consts.FieldType, nullable bool) (value_type string) {
 		value_type = "float32"
 	case consts.Float64Field:
 		value_type = "float64"
+	case consts.DateField:
+		value_type = "time.Time"
 	default:
 		panic(fmt.Sprintf("unhandled field type %q", t))
 	}
@@ -182,6 +184,8 @@ func zeroVal(t consts.FieldType, nullable bool) string {
 		return `float32(0)`
 	case consts.Float64Field:
 		return `float64(0)`
+	case consts.DateField:
+		return `time.Time{}`
 	default:
 		panic(fmt.Sprintf("unhandled field type %q", t))
 	}
@@ -244,14 +248,23 @@ func initVal(t consts.FieldType, nullable bool) string {
 			return `(*float64)(nil)`
 		}
 		return `float64(0)`
+	case consts.DateField:
+		if nullable {
+			return `(*time.Time)(nil)`
+		}
+		return `toDate(__now)`
 	default:
 		panic(fmt.Sprintf("unhandled field type %q", t))
 	}
 }
 
 func mutateFn(field_type consts.FieldType) string {
-	if field_type == consts.TimestampUTCField {
+	switch field_type {
+	case consts.TimestampUTCField:
 		return "toUTC"
+	case consts.DateField:
+		return "toDate"
+	default:
+		return ""
 	}
-	return ""
 }

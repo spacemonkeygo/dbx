@@ -71,6 +71,7 @@ var fieldTypeMapping = map[string]consts.FieldType{
 	"float":      consts.FloatField,
 	"float64":    consts.Float64Field,
 	"blob":       consts.BlobField,
+	"date":       consts.DateField,
 }
 
 func validFieldTypes() []string {

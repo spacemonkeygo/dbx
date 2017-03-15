@@ -60,7 +60,7 @@ func (f *Field) IsInt() bool {
 
 func (f *Field) IsTime() bool {
 	switch f.Type {
-	case consts.TimestampField, consts.TimestampUTCField:
+	case consts.TimestampField, consts.TimestampUTCField, consts.DateField:
 		return true
 	default:
 		return false

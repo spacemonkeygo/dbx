@@ -407,3 +407,9 @@ func ({{ $fstruct }}) _Column() string { return "{{ .Column }}" }
 func toUTC(t time.Time) time.Time {
 	return t.UTC()
 }
+
+func toDate(t time.Time) time.Time {
+	// keep up the minute portion so that translations between timezones will
+	// continue to reflect properly.
+	return t.Truncate(time.Minute)
+}

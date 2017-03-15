@@ -59,6 +59,8 @@ func (s *sqlite3) ColumnType(field *ir.Field) string {
 		return "TIMESTAMP"
 	case consts.BlobField:
 		return "BLOB"
+	case consts.DateField:
+		return "DATE"
 	default:
 		panic(fmt.Sprintf("unhandled field type %s", field.Type))
 	}
