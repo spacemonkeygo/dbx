@@ -91,13 +91,13 @@ func SchemaFromIRModels(ir_models []*ir.Model, dialect Dialect) *Schema {
 				switch ir_field.Relation.Kind {
 				case consts.SetNull:
 					column.Reference.OnDelete = "SET NULL"
-					//column.Reference.OnUpdate = "RESTRICT"
+
 				case consts.Cascade:
 					column.Reference.OnDelete = "CASCADE"
-					//column.Reference.OnUpdate = "RESTRICT"
+
 				case consts.Restrict:
 					column.Reference.OnDelete = ""
-					//column.Reference.OnUpdate = "RESTRICT"
+
 				default:
 					panic(fmt.Sprintf("unhandled relation kind %q",
 						ir_field.Relation.Kind))

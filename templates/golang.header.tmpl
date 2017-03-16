@@ -6,11 +6,13 @@
 package {{ .Package }}
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -413,3 +415,8 @@ func toDate(t time.Time) time.Time {
 	// continue to reflect properly.
 	return t.Truncate(time.Minute)
 }
+
+// runtime support for building sql statements
+
+{{ .SQLSupport }}
+

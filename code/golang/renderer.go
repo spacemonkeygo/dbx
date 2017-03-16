@@ -29,6 +29,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlbundle"
 	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
 
@@ -318,12 +319,14 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 		Dialects     []headerDialect
 		Structs      []*ModelStruct
 		Options      Options
+		SQLSupport   string
 	}
 
 	params := headerParams{
-		Package: r.options.Package,
-		Structs: ModelStructsFromIR(root.Models),
-		Options: r.options,
+		Package:    r.options.Package,
+		Structs:    ModelStructsFromIR(root.Models),
+		Options:    r.options,
+		SQLSupport: sqlbundle.Source,
 	}
 
 	for _, dialect := range dialects {
