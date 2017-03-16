@@ -47,7 +47,7 @@ func testDialectsPostgres(tw *testutil.T) {
 }
 
 func testDialectsPostgresRebind(tw *testutil.T) {
-	testDialectsRebind(tw, make_postgres(), []rebindTestCase{
+	testDialectsRebind(tw, postgres{}, []rebindTestCase{
 		{in: "", out: ""},
 		{in: "? foo bar ? baz", out: "$1 foo bar $2 baz"},
 		{in: "? ? ?", out: "$1 $2 $3"},
@@ -59,7 +59,7 @@ func testDialectsSQLite3(tw *testutil.T) {
 }
 
 func testDialectsSQLite3Rebind(tw *testutil.T) {
-	testDialectsRebind(tw, make_sqlite3(), []rebindTestCase{
+	testDialectsRebind(tw, sqlite3{}, []rebindTestCase{
 		{in: "", out: ""},
 		{in: "? foo bar ? baz", out: "? foo bar ? baz"},
 		{in: "? ? ?", out: "? ? ?"},

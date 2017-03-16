@@ -16,15 +16,11 @@ package sqlgen
 
 import "strconv"
 
+// this type is specially named to match up with the name returned by the
+// dialect impl in the sql package.
 type postgres struct{}
 
-// this function is specially named to match up with the name returned by the
-// dialect impl in the sql package.
-func make_postgres() Dialect {
-	return &postgres{}
-}
-
-func (p *postgres) Rebind(sql string) string {
+func (p postgres) Rebind(sql string) string {
 	out := make([]byte, 0, len(sql)+10)
 
 	j := 1
@@ -43,14 +39,10 @@ func (p *postgres) Rebind(sql string) string {
 	return string(out)
 }
 
+// this type is specially named to match up with the name returned by the
+// dialect impl in the sql package.
 type sqlite3 struct{}
 
-// this function is specially named to match up with the name returned by the
-// dialect impl in the sql package.
-func make_sqlite3() Dialect {
-	return &sqlite3{}
-}
-
-func (s *sqlite3) Rebind(sql string) string {
+func (s sqlite3) Rebind(sql string) string {
 	return sql
 }

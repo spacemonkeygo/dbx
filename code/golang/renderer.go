@@ -299,8 +299,7 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 
 	rendered, err = format.Source(buf.Bytes())
 	if err != nil {
-		rendered = buf.Bytes()
-		//	return nil, Error.Wrap(err)
+		return nil, Error.Wrap(err)
 	}
 
 	return rendered, nil
