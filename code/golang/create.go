@@ -47,10 +47,10 @@ func RawCreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *RawCreate {
 		f := ModelFieldFromIR(field)
 		v := VarFromField(field)
 		if field.Nullable {
-			v.InitVal = fmt.Sprintf("%s_%s_Raw(%s.%s)",
+			v.InitVal = fmt.Sprintf("%s_%s_Raw(%s.%s).value()",
 				ins.Arg.Type, f.Name, ins.Arg.Name, f.Name)
 		} else {
-			v.InitVal = fmt.Sprintf("%s_%s(%s.%s)",
+			v.InitVal = fmt.Sprintf("%s_%s(%s.%s).value()",
 				ins.Arg.Type, f.Name, ins.Arg.Name, f.Name)
 		}
 		v.Name = fmt.Sprintf("__%s_val", v.Name)

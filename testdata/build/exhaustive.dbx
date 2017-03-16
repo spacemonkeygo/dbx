@@ -173,3 +173,53 @@ update b (
 	where b.id = ?
 )
 
+model foo (
+	key id
+
+	field id serial64
+	field int int (updatable)
+	field int64 int64 (updatable)
+	field uint uint (updatable)
+	field uint64 uint64 (updatable)
+	field float float (updatable)
+	field float64 float64 (updatable)
+	field string text (updatable)
+	field blob blob (updatable)
+	field timestamp timestamp (updatable, autoinsert)
+	field utimestamp utimestamp (updatable, autoinsert, autoupdate)
+	field bool bool (updatable)
+	field date date (updatable)
+
+	field null_int int (nullable, updatable)
+	field null_int64 int64 (nullable, updatable)
+	field null_uint uint (nullable, updatable)
+	field null_uint64 uint64 (nullable, updatable)
+	field null_float float (nullable, updatable)
+	field null_float64 float64 (nullable, updatable)
+	field null_string text (nullable, updatable)
+	field null_blob blob (nullable, updatable)
+	field null_timestamp timestamp (nullable, updatable)
+	field null_utimestamp utimestamp (nullable, updatable)
+	field null_bool bool (nullable, updatable)
+	field null_date date (nullable, updatable, autoupdate)
+)
+
+create foo()
+create foo(raw)
+
+update foo (
+	where foo.id=?
+)
+
+read all paged limitoffset has count (
+	select foo
+)
+
+read scalar one first has count (
+	select foo
+	where foo.id=?
+)
+
+read all (
+	select foo.bool foo.int
+	)
