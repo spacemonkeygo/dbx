@@ -22,6 +22,10 @@ type Where struct {
 	Right *Field
 }
 
+func (w *Where) Nullable() bool {
+	return w.Left.Nullable && (w.Op == consts.EQ || w.Op == consts.NE)
+}
+
 func WhereFieldEquals(field *Field) *Where {
 	return &Where{
 		Left: field,

@@ -1,18 +1,30 @@
 {{- define "signature" -}}
-Delete_{{ .Suffix }}({{ ctxparam .Args }}) (
+Delete_{{ .Suffix }}({{ ctxparam .AllArgs }}) (
 	deleted bool, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Delete_{{ .Suffix }}({{ ctxarg .Args }})
+Delete_{{ .Suffix }}({{ ctxarg .AllArgs }})
 {{- end -}}
 
 {{- define "body" -}}
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
-	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
-	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
-	__res, err := obj.driver.Exec(__stmt, {{ fieldvalue .Args }})
+	var __values []interface{}
+	__values = append(__values, {{ fieldvalue .StaticArgs }})
+
+	{{ range $i, $arg := .NullableArgs }}
+	if !{{ $arg.Name }}.isnull() {
+		__cond_{{ $i }}.Null = false
+		__values = append(__values, {{ $arg.Name }}.value())
+	}
+	{{ end }}
+
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
+	obj.logStmt(__stmt, __values...)
+
+	__res, err := obj.driver.Exec(__stmt, __values...)
 	if err != nil {
 		return false, obj.makeErr(err)
 	}

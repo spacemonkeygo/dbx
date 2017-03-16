@@ -1,20 +1,34 @@
 {{- define "signature" -}}
-Limited_{{ .Suffix }}({{ ctxparam .Args}},
+Limited_{{ .Suffix }}({{ ctxparam .AllArgs }},
 	limit int, offset int64) (
 	rows {{ sliceof .Row }}, err error)
 {{- end -}}
 
 
 {{- define "invoke" -}}
-Limited_{{ .Suffix }}({{ ctxarg .Args}}, limit, offset)
+Limited_{{ .Suffix }}({{ ctxarg .AllArgs }}, limit, offset)
 {{- end -}}
 
 {{- define "body" }}
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
-	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
-	obj.logStmt(__stmt, {{ fieldvalue .Args | comma }}limit, offset)
 
-	__rows, err := obj.driver.Query(__stmt, {{ fieldvalue .Args | comma }}limit, offset)
+	var __values []interface{}
+	__values = append(__values, {{ fieldvalue .StaticArgs }})
+
+	{{ range $i, $arg := .NullableArgs }}
+	if !{{ $arg.Name }}.isnull() {
+		__cond_{{ $i }}.Null = false
+		__values = append(__values, {{ $arg.Name }}.value())
+	}
+	{{ end }}
+
+	__values = append(__values, limit, offset)
+
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
+	obj.logStmt(__stmt, __values...)
+
+	__rows, err := obj.driver.Query(__stmt, __values...)
 	if err != nil {
 		return nil, obj.makeErr(err)
 	}

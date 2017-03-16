@@ -108,19 +108,20 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	funcs := template.FuncMap{
-		"sliceof":    sliceofFn,
-		"param":      paramFn,
-		"arg":        argFn,
-		"zero":       zeroFn,
-		"init":       initFn,
-		"initnew":    initnewFn,
-		"addrof":     addrofFn,
-		"flatten":    flattenFn,
-		"fieldvalue": fieldvalueFn,
-		"comma":      commaFn,
-		"ctxparam":   ctxparamFn,
-		"ctxarg":     ctxargFn,
-		"embedsql":   embedsqlFn,
+		"sliceof":           sliceofFn,
+		"param":             paramFn,
+		"arg":               argFn,
+		"zero":              zeroFn,
+		"init":              initFn,
+		"initnew":           initnewFn,
+		"addrof":            addrofFn,
+		"flatten":           flattenFn,
+		"fieldvalue":        fieldvalueFn,
+		"comma":             commaFn,
+		"ctxparam":          ctxparamFn,
+		"ctxarg":            ctxargFn,
+		"embedsql":          embedsqlFn,
+		"embedplaceholders": embedplaceholdersFn,
 	}
 
 	r.cre, err = loader.Load("golang.create.tmpl", funcs)

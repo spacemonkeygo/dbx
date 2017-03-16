@@ -21,12 +21,12 @@ import (
 )
 
 type Update struct {
+	PartitionedArgs
 	Info              sqlembedgo.Info
 	InfoGet           sqlembedgo.Info
 	Suffix            string
 	Struct            *ModelStruct
 	Return            *Var
-	Args              []*Var
 	AutoFields        []*Var
 	SupportsReturning bool
 	NeedsNow          bool
@@ -35,17 +35,12 @@ type Update struct {
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 	update_sql := sql.UpdateSQL(ir_upd, dialect)
 	upd := &Update{
+		PartitionedArgs:   PartitionedArgsFromWheres(ir_upd.Where),
 		Info:              sqlembedgo.Embed("__", update_sql),
 		Suffix:            convertSuffix(ir_upd.Suffix),
 		Struct:            ModelStructFromIR(ir_upd.Model),
 		Return:            VarFromModel(ir_upd.Model),
 		SupportsReturning: dialect.Features().Returning,
-	}
-
-	for _, where := range ir_upd.Where {
-		if where.Right == nil {
-			upd.Args = append(upd.Args, ArgFromWhere(where))
-		}
 	}
 
 	for _, field := range ir_upd.AutoUpdatableFields() {

@@ -398,6 +398,8 @@ func {{ $ctor }}_Raw(v {{ .Type }}) {{ $fstruct }} {
 func {{ $ctor }}_Null() {{ $fstruct }} {
 	return {{ $fstruct }}{ _set: true }
 }
+
+func (f {{ $fstruct }}) isnull() bool {	return !f._set || f._value == nil }
 {{ end }}
 
 func (f {{ $fstruct }}) value() interface{} { if !f._set { return nil }; return f._value }

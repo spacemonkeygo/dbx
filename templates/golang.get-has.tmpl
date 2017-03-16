@@ -1,18 +1,30 @@
 {{- define "signature" -}}
-Has_{{ .Suffix }}({{ ctxparam .Args }}) (
+Has_{{ .Suffix }}({{ ctxparam .AllArgs }}) (
 	has bool, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Has_{{ .Suffix }}({{ ctxarg .Args }})
+Has_{{ .Suffix }}({{ ctxarg .AllArgs }})
 {{- end -}}
 
 {{- define "body" }}
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
-	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
-	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
-	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan(&has)
+	var __values []interface{}
+	__values = append(__values, {{ fieldvalue .StaticArgs }})
+
+	{{ range $i, $arg := .NullableArgs }}
+	if !{{ $arg.Name }}.isnull() {
+		__cond_{{ $i }}.Null = false
+		__values = append(__values, {{ $arg.Name }}.value())
+	}
+	{{ end }}
+
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
+	obj.logStmt(__stmt, __values...)
+
+	err = obj.driver.QueryRow(__stmt, __values...).Scan(&has)
 	if err != nil {
 		return false, obj.makeErr(err)
 	}

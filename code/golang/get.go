@@ -24,24 +24,19 @@ import (
 )
 
 type Get struct {
+	PartitionedArgs
 	Info   sqlembedgo.Info
 	Suffix string
 	Row    *Var
-	Args   []*Var
 	LastPk *Var
 }
 
 func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	select_sql := sql.SelectSQL(ir_read)
 	get := &Get{
-		Info:   sqlembedgo.Embed("__", select_sql),
-		Suffix: convertSuffix(ir_read.Suffix),
-	}
-
-	for _, where := range ir_read.Where {
-		if where.Right == nil {
-			get.Args = append(get.Args, ArgFromWhere(where))
-		}
+		PartitionedArgs: PartitionedArgsFromWheres(ir_read.Where),
+		Info:            sqlembedgo.Embed("__", select_sql),
+		Suffix:          convertSuffix(ir_read.Suffix),
 	}
 
 	get.Row = GetRowFromIR(ir_read)

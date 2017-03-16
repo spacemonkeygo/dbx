@@ -1,18 +1,20 @@
 {{- define "signature" -}}
-Update_{{ .Suffix }}({{ ctxparam .Args }},
+Update_{{ .Suffix }}({{ ctxparam .AllArgs }},
 	update {{ .Struct.UpdateStructName }}) (
 	{{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
+Update_{{ .Suffix }}({{ ctxarg .AllArgs }}, update)
 {{- end -}}
 
 {{- define "body" -}}
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
 
 	__sets_sql := __sqlbundle_Literals{Join: ", "}
 	var __values []interface{}
+	var __args []interface{}
 
 	{{ range .Struct.UpdatableFields }}
 	if update.{{ .Name }}._set {
@@ -34,9 +36,19 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 		return nil, emptyUpdate()
 	}
 	{{ end }}
-	__values = append(__values, {{ fieldvalue .Args }})
 
+	__args = append(__args, {{ fieldvalue .StaticArgs }})
+
+	{{ range $i, $arg := .NullableArgs }}
+	if !{{ $arg.Name }}.isnull() {
+		__cond_{{ $i }}.Null = false
+		__args = append(__args, {{ $arg.Name }}.value())
+	}
+	{{ end }}
+
+	__values = append(__values, __args...)
 	__sets.SQL = __sets_sql
+
 	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, __values...)
 
@@ -57,9 +69,9 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 
 	{{ embedsql .InfoGet "__embed_stmt_get" }}
 	var __stmt_get = __sqlbundle_Render(obj.dialect, __embed_stmt_get)
-	obj.logStmt("(IMPLIED) " + __stmt_get, {{ fieldvalue .Args }})
+	obj.logStmt("(IMPLIED) " + __stmt_get, __args...)
 
-	err = obj.driver.QueryRow(__stmt_get, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Return) }})
+	err = obj.driver.QueryRow(__stmt_get, __args...).Scan({{ addrof (flatten .Return) }})
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

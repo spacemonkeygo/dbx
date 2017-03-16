@@ -81,6 +81,8 @@ delete e (
 	where e.a_id = ?
 )
 
+delete e ( )
+
 create d ( )
 
 create d ( raw )
@@ -221,11 +223,12 @@ model foo (
 	field null_date date (nullable, updatable, autoupdate)
 )
 
-create foo()
-create foo(raw)
+create foo ( )
+
+create foo ( raw )
 
 update foo (
-	where foo.id=?
+	where foo.id = ?
 )
 
 read all paged limitoffset has count (
@@ -234,9 +237,31 @@ read all paged limitoffset has count (
 
 read scalar one first has count (
 	select foo
-	where foo.id=?
+	where foo.id = ?
 )
 
 read all (
 	select foo.bool foo.int
-	)
+)
+
+read first (
+	select foo
+	where  foo.null_int    =  ?
+	where  foo.int         =  ?
+	where  foo.null_int64  != ?
+	where  foo.null_uint   =  ?
+	where  foo.uint        =  ?
+	where  foo.null_uint64 != ?
+)
+
+update foo (
+	where foo.null_int    =  ?
+	where foo.int         =  ?
+	where foo.null_int64  != ?
+	where foo.null_uint   =  ?
+	where foo.uint        =  ?
+	where foo.null_uint64 != ?
+	where foo.id          =  ?
+)
+
+delete foo ( )

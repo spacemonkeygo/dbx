@@ -1,18 +1,30 @@
 {{- define "signature" -}}
-All_{{ .Suffix }}({{ ctxparam .Args }}) (
+All_{{ .Suffix }}({{ ctxparam .AllArgs }}) (
 	rows {{ sliceof .Row }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-All_{{ .Suffix }}({{ ctxarg .Args }})
+All_{{ .Suffix }}({{ ctxarg .AllArgs }})
 {{- end -}}
 
 {{- define "body" }}
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
-	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
-	obj.logStmt(__stmt, {{ fieldvalue .Args }})
 
-	__rows, err := obj.driver.Query(__stmt, {{ fieldvalue .Args}})
+	var __values []interface{}
+	__values = append(__values, {{ fieldvalue .StaticArgs }})
+
+	{{ range $i, $arg := .NullableArgs }}
+	if !{{ $arg.Name }}.isnull() {
+		__cond_{{ $i }}.Null = false
+		__values = append(__values, {{ $arg.Name }}.value())
+	}
+	{{ end }}
+
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
+	obj.logStmt(__stmt, __values...)
+
+	__rows, err := obj.driver.Query(__stmt, __values...)
 	if err != nil {
 		return nil, obj.makeErr(err)
 	}

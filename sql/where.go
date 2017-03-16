@@ -32,16 +32,14 @@ type Where struct {
 
 func WhereFromIRWhere(ir_where *ir.Where) Where {
 	where := Where{
-		Left: ir_where.Left.ColumnRef(),
-		Op:   strings.ToUpper(string(ir_where.Op)),
+		Left:     ir_where.Left.ColumnRef(),
+		Op:       strings.ToUpper(string(ir_where.Op)),
+		Nullable: ir_where.Nullable(),
 	}
 	if ir_where.Right != nil {
 		where.Right = ir_where.Right.ColumnRef()
 	} else {
 		where.Right = "?"
-	}
-	if (where.Op == "=" || where.Op == "!=") && ir_where.Left.Nullable {
-		where.Nullable = true
 	}
 	return where
 }
@@ -55,20 +53,29 @@ func WheresFromIRWheres(ir_wheres []*ir.Where) (wheres []Where) {
 }
 
 func SQLFromWheres(wheres []Where) (out []sqlgen.SQL) {
+	// we put all the condition wheres at the end for ease of template
+	// generation later.
+
+	for _, where := range wheres {
+		if where.Nullable {
+			continue
+		}
+		out = append(out,
+			J(" ", L(where.Left), L(where.Op), L(where.Right)))
+	}
+
 	conditions := 0
 	for _, where := range wheres {
-		var where_sql sqlgen.SQL
-		if where.Nullable {
-			where_sql = &sqlgen.Condition{
-				Name:  fmt.Sprintf("cond_%d", conditions),
-				Field: where.Left,
-				Equal: where.Op == "=",
-			}
-			conditions++
-		} else {
-			where_sql = J(" ", L(where.Left), L(where.Op), L(where.Right))
+		if !where.Nullable {
+			continue
 		}
-		out = append(out, where_sql)
+		out = append(out, &sqlgen.Condition{
+			Name:  fmt.Sprintf("cond_%d", conditions),
+			Field: where.Left,
+			Equal: where.Op == "=",
+		})
+		conditions++
 	}
+
 	return out
 }

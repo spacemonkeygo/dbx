@@ -5,7 +5,9 @@ getLast{{ .Return.Type }}(ctx context.Context,
 {{- end -}}
 
 {{- define "body" -}}
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
+
 	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, pk)
 

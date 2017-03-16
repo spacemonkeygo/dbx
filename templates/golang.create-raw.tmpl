@@ -10,7 +10,9 @@ RawCreate_{{ .Suffix }}({{ ctxarg .Arg }})
 {{- define "body" -}}
 	{{ initnew .Fields }}
 
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
+
 	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, {{ arg .Fields }})
 

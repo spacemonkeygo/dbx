@@ -1,19 +1,31 @@
 {{- define "signature" -}}
-Find_{{ .Suffix }}({{ ctxparam .Args }}) (
+Find_{{ .Suffix }}({{ ctxparam .AllArgs }}) (
 	{{ param .Row }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Find_{{ .Suffix }}({{ ctxarg .Args }})
+Find_{{ .Suffix }}({{ ctxarg .AllArgs }})
 {{- end -}}
 
 {{- define "body" }}
+	{{ embedplaceholders .Info }}
 	{{ embedsql .Info "__embed_stmt" }}
+
+	var __values []interface{}
+	__values = append(__values, {{ fieldvalue .StaticArgs }})
+
+	{{ range $i, $arg := .NullableArgs }}
+	if !{{ $arg.Name }}.isnull() {
+		__cond_{{ $i }}.Null = false
+		__values = append(__values, {{ $arg.Name }}.value())
+	}
+	{{ end }}
+
 	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
-	obj.logStmt(__stmt, {{ fieldvalue .Args }})
+	obj.logStmt(__stmt, __values...)
 
 	{{ init .Row }}
-	err = obj.driver.QueryRow(__stmt, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Row) }})
+	err = obj.driver.QueryRow(__stmt, __values...).Scan({{ addrof (flatten .Row) }})
 	if err == sql.ErrNoRows {
 		return {{ zero .Row }}, nil
 	}

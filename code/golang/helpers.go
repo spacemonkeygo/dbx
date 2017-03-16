@@ -166,7 +166,7 @@ func convertSuffix(suffix []string) string {
 	return strings.Join(parts, "_")
 }
 
-func embedsqlFn(info sqlembedgo.Info, name string) string {
+func embedplaceholdersFn(info sqlembedgo.Info) string {
 	var out bytes.Buffer
 
 	for _, hole := range info.Holes {
@@ -177,7 +177,9 @@ func embedsqlFn(info sqlembedgo.Info, name string) string {
 		fmt.Fprintf(&out, "var %s = %s\n", cond.Name, cond.Expression)
 	}
 
-	fmt.Fprintf(&out, "var %s = %s\n", name, info.Expression)
-
 	return out.String()
+}
+
+func embedsqlFn(info sqlembedgo.Info, name string) string {
+	return fmt.Sprintf("var %s = %s\n", name, info.Expression)
 }
