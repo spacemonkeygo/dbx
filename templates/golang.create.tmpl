@@ -1,10 +1,10 @@
 {{- define "signature" -}}
-Create_{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxparam .Args }}) (
+{{ if .Raw }}Raw{{- end -}}Create_{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Create_{{ if .Raw }}Raw{{- end -}}{{ .Suffix }}({{ ctxarg .Args }})
+{{ if .Raw }}Raw{{- end -}}Create_{{ .Suffix }}({{ ctxarg .Args }})
 {{ end -}}
 
 {{- define "body" -}}
