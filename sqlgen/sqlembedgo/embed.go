@@ -27,9 +27,15 @@ type Condition struct {
 	Expression string
 }
 
+type Hole struct {
+	Name       string
+	Expression string
+}
+
 type Info struct {
 	Expression string
 	Conditions []Condition
+	Holes      []Hole
 }
 
 func Embed(prefix string, sql sqlgen.SQL) Info {
@@ -50,6 +56,13 @@ func Embed(prefix string, sql sqlgen.SQL) Info {
 			Conditions: []Condition{cond},
 		}
 
+	case *sqlgen.Hole:
+		hole := golangHole(prefix, sql)
+		return Info{
+			Expression: hole.Name,
+			Holes:      []Hole{hole},
+		}
+
 	default:
 		panic("unhandled sql type")
 	}
@@ -65,6 +78,7 @@ func golangLiterals(prefix string, sql sqlgen.Literals) (info Info) {
 	const format = "%[1]sLiterals{Join:%[2]q,SQLs:[]%[1]sSQL{"
 
 	var conds []Condition
+	var holes []Hole
 	var expr bytes.Buffer
 	fmt.Fprintf(&expr, format, sqlbundle.Prefix, sql.Join)
 
@@ -86,6 +100,13 @@ func golangLiterals(prefix string, sql sqlgen.Literals) (info Info) {
 			// TODO(jeff): dedupe based on name?
 			conds = append(conds, cond)
 
+		case *sqlgen.Hole:
+			hole := golangHole(prefix, sql)
+			expr.WriteString(hole.Name)
+
+			// TODO(jeff): dedupe based on name?
+			holes = append(holes, hole)
+
 		case sqlgen.Literals:
 			panic("sql not in normal form")
 
@@ -98,6 +119,7 @@ func golangLiterals(prefix string, sql sqlgen.Literals) (info Info) {
 	return Info{
 		Expression: expr.String(),
 		Conditions: conds,
+		Holes:      holes,
 	}
 }
 
@@ -108,5 +130,17 @@ func golangCondition(prefix string, sql *sqlgen.Condition) Condition {
 		Name: sql.Name,
 		Expression: fmt.Sprintf(format, sqlbundle.Prefix,
 			sql.Name, sql.Field, sql.Equal, sql.Null),
+	}
+}
+
+func golangHole(prefix string, sql *sqlgen.Hole) Hole {
+	const format = "&%[1]sHole{Name:%q}"
+
+	// TODO(jeff): embed what the hole is filled with? no use case yet.
+
+	return Hole{
+		Name: sql.Name,
+		Expression: fmt.Sprintf(format, sqlbundle.Prefix,
+			sql.Name),
 	}
 }

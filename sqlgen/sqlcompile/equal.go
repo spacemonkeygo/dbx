@@ -36,6 +36,12 @@ func sqlEqual(a, b sqlgen.SQL) bool {
 		}
 		return false
 
+	case *sqlgen.Hole:
+		if b, ok := b.(*sqlgen.Hole); ok {
+			return a == b // pointer equality is correct
+		}
+		return false
+
 	default:
 		panic("unhandled sql type")
 	}
@@ -55,7 +61,7 @@ func sqlsEqual(as, bs []sqlgen.SQL) bool {
 
 func sqlNormalForm(sql sqlgen.SQL) bool {
 	switch sql := sql.(type) {
-	case sqlgen.Literal, *sqlgen.Condition:
+	case sqlgen.Literal, *sqlgen.Condition, *sqlgen.Hole:
 		return true
 
 	case sqlgen.Literals:
@@ -63,7 +69,8 @@ func sqlNormalForm(sql sqlgen.SQL) bool {
 			return false
 		}
 
-		// only allow Hole and Literal and not two Literal in a row.
+		// only allow Hole, Condition and Literal but disallow two Literal in
+		// a row.
 
 		last := ""
 
@@ -71,6 +78,9 @@ func sqlNormalForm(sql sqlgen.SQL) bool {
 			switch sql.(type) {
 			case *sqlgen.Condition:
 				last = "condition"
+
+			case *sqlgen.Hole:
+				last = "hole"
 
 			case sqlgen.Literal:
 				if last == "literal" {

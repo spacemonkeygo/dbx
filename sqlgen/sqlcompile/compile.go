@@ -23,10 +23,8 @@ func Compile(sql sqlgen.SQL) sqlgen.SQL {
 
 func sqlCompile(sql sqlgen.SQL) (out sqlgen.SQL) {
 	switch sql := sql.(type) {
-	case sqlgen.Literal: // a literal has nothing to do
-		return sql
-
-	case *sqlgen.Condition: // a hole has nothing to do
+	// these cases cannot be compiled further
+	case sqlgen.Literal, *sqlgen.Condition, *sqlgen.Hole:
 		return sql
 
 	case sqlgen.Literals:

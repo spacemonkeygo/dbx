@@ -79,3 +79,13 @@ func (c *Condition) Render() string {
 		panic("unhandled case")
 	}
 }
+
+type Hole struct {
+	Name string
+
+	SQL SQL
+}
+
+func (*Hole) private() {}
+
+func (h *Hole) Render() string { return h.SQL.Render() }
