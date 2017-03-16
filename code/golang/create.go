@@ -20,6 +20,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 )
 
 type RawCreate struct {
@@ -27,17 +28,17 @@ type RawCreate struct {
 	Return            *Var
 	Arg               *Var
 	Fields            []*Var
-	SQL               string
+	Info              sqlembedgo.Info
 	SupportsReturning bool
 }
 
 func RawCreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *RawCreate {
+	insert_sql := sql.InsertSQL(ir_cre, dialect)
 	ins := &RawCreate{
 		Suffix:            convertSuffix(ir_cre.Suffix),
 		Return:            VarFromModel(ir_cre.Model),
+		Info:              sqlembedgo.Embed("__", insert_sql),
 		SupportsReturning: dialect.Features().Returning,
-		SQL: sqlgen.Render(dialect,
-			sql.InsertSQL(ir_cre, dialect)),
 	}
 
 	// the model struct is the only arg.

@@ -15,11 +15,13 @@
 package golang
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
 	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 )
 
 func cleanSignature(in string) (out string) {
@@ -162,4 +164,10 @@ func convertSuffix(suffix []string) string {
 		parts = append(parts, inflect.Camelize(part))
 	}
 	return strings.Join(parts, "_")
+}
+
+func embedsqlFn(info sqlembedgo.Info, name string) string {
+	var out bytes.Buffer
+	fmt.Fprintf(&out, "var %s = %s\n", name, info.Expression)
+	return out.String()
 }

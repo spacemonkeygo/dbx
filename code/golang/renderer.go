@@ -119,6 +119,7 @@ func New(loader tmplutil.Loader, options *Options) (
 		"comma":      commaFn,
 		"ctxparam":   ctxparamFn,
 		"ctxarg":     ctxargFn,
+		"embedsql":   embedsqlFn,
 	}
 
 	r.cre, err = loader.Load("golang.create.tmpl", funcs)

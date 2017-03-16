@@ -18,7 +18,9 @@ import "strconv"
 
 type postgres struct{}
 
-func Postgres() Dialect {
+// this function is specially named to match up with the name returned by the
+// dialect impl in the sql package.
+func make_postgres() Dialect {
 	return &postgres{}
 }
 
@@ -43,7 +45,9 @@ func (p *postgres) Rebind(sql string) string {
 
 type sqlite3 struct{}
 
-func SQLite3() Dialect {
+// this function is specially named to match up with the name returned by the
+// dialect impl in the sql package.
+func make_sqlite3() Dialect {
 	return &sqlite3{}
 }
 

@@ -240,8 +240,9 @@ func (tx *dialectTx) Rollback() (err error) {
 {{- $impltype := .Name | printf "%sImpl" }}
 
 type {{ $impltype }} struct {
-	db     *DB
-	driver driver
+	db      *DB
+	dialect __sqlbundle_Dialect
+	driver  driver
 }
 
 func (obj *{{ $impltype }}) logStmt(stmt string, args... interface{}) {
@@ -265,8 +266,9 @@ func new{{ .Name }}(db *DB) *{{ $dbtype }} {
 	return &{{ $dbtype }}{
 		db: db,
 		{{ $impltype }}: &{{ $impltype }}{
-			db:     db,
-			driver: db.DB,
+			db:      db,
+			dialect: __sqlbundle_make_{{ .Name }}(),
+			driver:  db.DB,
 		},
 	}
 }
@@ -416,7 +418,12 @@ func toDate(t time.Time) time.Time {
 	return t.Truncate(time.Minute)
 }
 
+//
 // runtime support for building sql statements
+//
 
 {{ .SQLSupport }}
 
+//
+// end runtime support for building sql statements
+//
