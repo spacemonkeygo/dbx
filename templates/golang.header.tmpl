@@ -281,8 +281,9 @@ func (obj *{{ $dbtype }}) wrapTx(tx *sql.Tx) txMethods {
 	return &{{ $txtype }}{
 		dialectTx: dialectTx{tx: tx},
 		{{ $impltype }}: &{{ $impltype }}{
-			db:     obj.db,
-			driver: tx,
+			db:      obj.db,
+			dialect: __sqlbundle_make_{{ .Name }}(),
+			driver:  tx,
 		},
 	}
 }

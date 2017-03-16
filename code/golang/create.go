@@ -19,25 +19,24 @@ import (
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 )
 
 type RawCreate struct {
+	Info              sqlembedgo.Info
 	Suffix            string
 	Return            *Var
 	Arg               *Var
 	Fields            []*Var
-	Info              sqlembedgo.Info
 	SupportsReturning bool
 }
 
 func RawCreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *RawCreate {
 	insert_sql := sql.InsertSQL(ir_cre, dialect)
 	ins := &RawCreate{
+		Info:              sqlembedgo.Embed("__", insert_sql),
 		Suffix:            convertSuffix(ir_cre.Suffix),
 		Return:            VarFromModel(ir_cre.Model),
-		Info:              sqlembedgo.Embed("__", insert_sql),
 		SupportsReturning: dialect.Features().Returning,
 	}
 
@@ -64,22 +63,22 @@ func RawCreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *RawCreate {
 }
 
 type Create struct {
+	Info              sqlembedgo.Info
 	Suffix            string
 	Return            *Var
 	Args              []*Var
 	Fields            []*Var
-	SQL               string
 	SupportsReturning bool
 	NeedsNow          bool
 }
 
 func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
+	insert_sql := sql.InsertSQL(ir_cre, dialect)
 	ins := &Create{
+		Info:              sqlembedgo.Embed("__", insert_sql),
 		Suffix:            convertSuffix(ir_cre.Suffix),
 		Return:            VarFromModel(ir_cre.Model),
 		SupportsReturning: dialect.Features().Returning,
-		SQL: sqlgen.Render(dialect,
-			sql.InsertSQL(ir_cre, dialect)),
 	}
 
 	args := map[string]*Var{}

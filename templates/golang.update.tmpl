@@ -9,8 +9,10 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 {{- end -}}
 
 {{- define "body" -}}
-	const __stmt_prefix={{ printf "%q" .SQLPrefix }}
-	const __stmt_suffix={{ printf "%q" .SQLSuffix }}
+	{{ embedsql .InfoPrefix "__embed_stmt_prefix" }}
+	var __stmt_prefix = __sqlbundle_Render(obj.dialect, __embed_stmt_prefix, __sqlbundle_NoTerminate) + " "
+	{{ embedsql .InfoSuffix "__embed_stmt_suffix" }}
+	var __stmt_suffix = " " + __sqlbundle_Render(obj.dialect, __embed_stmt_suffix)
 
 	var qs []byte
 	var values []interface{}
@@ -75,10 +77,12 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 	if err != nil {
 		return nil, obj.makeErr(err)
 	}
-	const __get_stmt={{ printf "%q" .GetSQL }}
-	obj.logStmt("(IMPLIED) " + __get_stmt, {{ fieldvalue .Args }})
 
-	err = obj.driver.QueryRow(__get_stmt, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Return) }})
+	{{ embedsql .InfoGet "__embed_stmt_get" }}
+	var __stmt_get = __sqlbundle_Render(obj.dialect, __embed_stmt_get)
+	obj.logStmt("(IMPLIED) " + __stmt_get, {{ fieldvalue .Args }})
+
+	err = obj.driver.QueryRow(__stmt_get, {{ fieldvalue .Args }}).Scan({{ addrof (flatten .Return) }})
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

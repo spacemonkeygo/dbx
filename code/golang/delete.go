@@ -17,20 +17,21 @@ package golang
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 )
 
 type Delete struct {
+	Info   sqlembedgo.Info
 	Suffix string
 	Args   []*Var
 	Result *Var
-	SQL    string
 }
 
 func DeleteFromIR(ir_del *ir.Delete, dialect sql.Dialect) *Delete {
+	delete_sql := sql.DeleteSQL(ir_del)
 	del := &Delete{
+		Info:   sqlembedgo.Embed("__", delete_sql),
 		Suffix: convertSuffix(ir_del.Suffix),
-		SQL:    sqlgen.Render(dialect, sql.DeleteSQL(ir_del)),
 	}
 
 	if ir_del.Distinct() {

@@ -13,7 +13,8 @@ Create_{{ .Suffix }}({{ ctxarg .Args }})
 	{{ end -}}
 	{{ initnew .Fields }}
 
-	const __stmt={{ printf "%q" .SQL }}
+	{{ embedsql .Info "__embed_stmt" }}
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, {{ arg .Fields }})
 
 	{{ if .SupportsReturning }}

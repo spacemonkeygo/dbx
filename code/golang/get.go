@@ -20,21 +20,22 @@ import (
 	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 )
 
 type Get struct {
+	Info   sqlembedgo.Info
 	Suffix string
 	Row    *Var
 	Args   []*Var
 	LastPk *Var
-	SQL    string
 }
 
 func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
+	select_sql := sql.SelectSQL(ir_read)
 	get := &Get{
+		Info:   sqlembedgo.Embed("__", select_sql),
 		Suffix: convertSuffix(ir_read.Suffix),
-		SQL:    sqlgen.Render(dialect, sql.SelectSQL(ir_read)),
 	}
 
 	for _, where := range ir_read.Where {

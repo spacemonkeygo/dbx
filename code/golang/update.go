@@ -17,34 +17,31 @@ package golang
 import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
-	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 )
 
 type Update struct {
+	InfoPrefix          sqlembedgo.Info
+	InfoSuffix          sqlembedgo.Info
+	InfoGet             sqlembedgo.Info
 	Suffix              string
 	Struct              *ModelStruct
 	Return              *Var
 	Args                []*Var
 	AutoFields          []*Var
-	SQLPrefix           string
-	SQLSuffix           string
 	SupportsReturning   bool
 	PositionalArguments bool
 	ArgumentPrefix      string
 	NeedsNow            bool
-	GetSQL              string
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
-	prefix, suffix := sql.UpdateSQL(ir_upd, dialect)
-	prefix_sql := sqlgen.Render(dialect, prefix, sqlgen.NoTerminate) + " "
-	suffix_sql := " " + sqlgen.Render(dialect, suffix)
-
+	prefix_sql, suffix_sql := sql.UpdateSQL(ir_upd, dialect)
 	upd := &Update{
+		InfoPrefix:          sqlembedgo.Embed("__", prefix_sql),
+		InfoSuffix:          sqlembedgo.Embed("__", suffix_sql),
 		Suffix:              convertSuffix(ir_upd.Suffix),
 		Struct:              ModelStructFromIR(ir_upd.Model),
-		SQLPrefix:           prefix_sql,
-		SQLSuffix:           suffix_sql,
 		Return:              VarFromModel(ir_upd.Model),
 		SupportsReturning:   dialect.Features().Returning,
 		PositionalArguments: dialect.Features().PositionalArguments,
@@ -63,13 +60,14 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 	}
 
 	if !upd.SupportsReturning {
-		upd.GetSQL = sqlgen.Render(dialect, sql.SelectSQL(&ir.Read{
+		select_sql := sql.SelectSQL(&ir.Read{
 			From:        ir_upd.Model,
 			Selectables: []ir.Selectable{ir_upd.Model},
 			Joins:       ir_upd.Joins,
 			Where:       ir_upd.Where,
 			View:        ir.All,
-		}))
+		})
+		upd.InfoGet = sqlembedgo.Embed("__", select_sql)
 	}
 
 	return upd

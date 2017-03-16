@@ -13,7 +13,8 @@ Paged_{{ .Suffix }}({{ ctxarg .Args }}, limit, ctoken)
 		ctoken = "0"
 	}
 
-	const __stmt={{ printf "%q" .SQL }}
+	{{ embedsql .Info "__embed_stmt" }}
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, {{ fieldvalue .Args | comma }}ctoken, limit)
 
 	__rows, err := obj.driver.Query(__stmt, {{ fieldvalue .Args | comma}}ctoken, limit)

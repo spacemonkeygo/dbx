@@ -30,6 +30,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlbundle"
+	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 	"gopkg.in/spacemonkeygo/dbx.v1/tmplutil"
 )
 
@@ -508,13 +509,14 @@ func (r *Renderer) renderGetLast(w io.Writer, model *ir.Model,
 	dialect sql.Dialect) error {
 
 	type getLast struct {
+		Info   sqlembedgo.Info
 		Return *Var
-		SQL    string
 	}
 
+	get_last_sql := sql.GetLastSQL(model, dialect)
 	get_last := getLast{
+		Info:   sqlembedgo.Embed("__", get_last_sql),
 		Return: VarFromModel(model),
-		SQL:    sqlgen.Render(dialect, sql.GetLastSQL(model, dialect)),
 	}
 
 	return r.renderFunc(r.get_last, w, get_last, dialect)
