@@ -1,16 +1,13 @@
 {{- define "signature" -}}
-Create_{{ .Suffix }}({{ ctxparam .Args }}) (
+RawCreate_{{ .Suffix }}({{ ctxparam .Arg }}) (
 	{{ param .Return }}, err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Create_{{ .Suffix }}({{ ctxarg .Args }})
+RawCreate_{{ .Suffix }}({{ ctxarg .Arg }})
 {{ end -}}
 
 {{- define "body" -}}
-	{{- if .NeedsNow }}
-	__now := obj.db.Hooks.Now().UTC()
-	{{ end -}}
 	{{ initnew .Fields }}
 
 	const __stmt={{ printf "%q" .SQL }}

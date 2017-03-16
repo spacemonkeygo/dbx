@@ -53,6 +53,7 @@ type Renderer struct {
 	misc            *template.Template
 	decl            *template.Template
 	cre             *template.Template
+	cre_raw         *template.Template
 	get_all         *template.Template
 	get_has         *template.Template
 	get_count       *template.Template
@@ -119,6 +120,11 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	r.cre, err = loader.Load("golang.create.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.cre_raw, err = loader.Load("golang.create-raw.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
@@ -347,8 +353,13 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 func (r *Renderer) renderCreate(w io.Writer, ir_cre *ir.Create,
 	dialect sql.Dialect) (err error) {
 
-	cre := CreateFromIR(ir_cre, dialect)
-	return r.renderFunc(r.cre, w, cre, dialect)
+	if ir_cre.Raw {
+		cre := RawCreateFromIR(ir_cre, dialect)
+		return r.renderFunc(r.cre_raw, w, cre, dialect)
+	} else {
+		cre := CreateFromIR(ir_cre, dialect)
+		return r.renderFunc(r.cre, w, cre, dialect)
+	}
 }
 
 func (r *Renderer) renderRead(w io.Writer, ir_read *ir.Read,

@@ -21,6 +21,45 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 )
 
+type RawCreate struct {
+	Suffix            string
+	Return            *Var
+	Arg               *Var
+	Fields            []*Var
+	SQL               string
+	SupportsReturning bool
+}
+
+func RawCreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *RawCreate {
+	ins := &RawCreate{
+		Suffix:            convertSuffix(ir_cre.Suffix),
+		Return:            VarFromModel(ir_cre.Model),
+		SQL:               sql.RenderInsert(dialect, ir_cre),
+		SupportsReturning: dialect.Features().Returning,
+	}
+
+	// the model struct is the only arg.
+	ins.Arg = VarFromModel(ir_cre.Model)
+	ins.Arg.Name = "raw_" + ins.Arg.Name
+
+	// each field in the model is initialized from the raw model struct.
+	for _, field := range ir_cre.Fields() {
+		f := ModelFieldFromIR(field)
+		v := VarFromField(field)
+		if field.Nullable {
+			v.InitVal = fmt.Sprintf("%s_%s_Raw(%s.%s)",
+				ins.Arg.Type, f.Name, ins.Arg.Name, f.Name)
+		} else {
+			v.InitVal = fmt.Sprintf("%s_%s(%s.%s)",
+				ins.Arg.Type, f.Name, ins.Arg.Name, f.Name)
+		}
+		v.Name = fmt.Sprintf("__%s_val", v.Name)
+		ins.Fields = append(ins.Fields, v)
+	}
+
+	return ins
+}
+
 type Create struct {
 	Suffix            string
 	Return            *Var
@@ -29,7 +68,6 @@ type Create struct {
 	SQL               string
 	SupportsReturning bool
 	NeedsNow          bool
-	Raw               bool
 }
 
 func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
@@ -38,7 +76,6 @@ func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
 		Return:            VarFromModel(ir_cre.Model),
 		SQL:               sql.RenderInsert(dialect, ir_cre),
 		SupportsReturning: dialect.Features().Returning,
-		Raw:               ir_cre.Raw,
 	}
 
 	args := map[string]*Var{}
@@ -65,7 +102,7 @@ func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
 
 	// Now for each field
 	for _, field := range ir_cre.Fields() {
-		if field == ir_cre.Model.BasicPrimaryKey() && !ir_cre.Raw {
+		if field == ir_cre.Model.BasicPrimaryKey() {
 			continue
 		}
 		v := VarFromField(field)
