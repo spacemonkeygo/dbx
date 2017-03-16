@@ -15,18 +15,19 @@
 package sql
 
 import (
+	"fmt"
 	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
-	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
 type Where struct {
-	Left  string
-	Op    string
-	Right string
+	Left     string
+	Op       string
+	Right    string
+	Nullable bool
 }
 
 func WhereFromIRWhere(ir_where *ir.Where) Where {
@@ -39,6 +40,9 @@ func WhereFromIRWhere(ir_where *ir.Where) Where {
 	} else {
 		where.Right = "?"
 	}
+	if (where.Op == "=" || where.Op == "!=") && ir_where.Left.Nullable {
+		where.Nullable = true
+	}
 	return where
 }
 
@@ -50,15 +54,21 @@ func WheresFromIRWheres(ir_wheres []*ir.Where) (wheres []Where) {
 	return wheres
 }
 
-func SQLFromWhere(where Where) sqlgen.SQL {
-	return sqlcompile.Compile(
-		J(" ", L(where.Left), L(where.Op), L(where.Right)))
-}
-
-func SQLFromWheres(wheres []Where) []sqlgen.SQL {
-	var out []sqlgen.SQL
+func SQLFromWheres(wheres []Where) (out []sqlgen.SQL) {
+	conditions := 0
 	for _, where := range wheres {
-		out = append(out, SQLFromWhere(where))
+		var where_sql sqlgen.SQL
+		if where.Nullable {
+			where_sql = &sqlgen.Condition{
+				Name:  fmt.Sprintf("cond_%d", conditions),
+				Field: where.Left,
+				Equal: where.Op == "=",
+			}
+			conditions++
+		} else {
+			where_sql = J(" ", L(where.Left), L(where.Op), L(where.Right))
+		}
+		out = append(out, where_sql)
 	}
 	return out
 }

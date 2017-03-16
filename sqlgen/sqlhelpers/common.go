@@ -66,14 +66,6 @@ func Placeholders(n int) (out []sqlgen.SQL) {
 	return out
 }
 
-func Cond(name string, field string, equal bool) *sqlgen.Condition {
-	return &sqlgen.Condition{
-		Name:  name,
-		Field: field,
-		Equal: equal,
-	}
-}
-
 func Hole(name string) *sqlgen.Hole {
 	return &sqlgen.Hole{Name: name}
 }
