@@ -48,11 +48,13 @@ func (l Literals) Render() string {
 }
 
 type Condition struct {
-	Name string
-
+	// set at compile/embed time
+	Name  string
 	Field string
 	Equal bool
-	Null  bool
+
+	// set at runtime
+	Null bool
 }
 
 func (*Condition) private() {}
@@ -81,8 +83,10 @@ func (c *Condition) Render() string {
 }
 
 type Hole struct {
+	// set at compiile/embed time
 	Name string
 
+	// set at runtime
 	SQL SQL
 }
 

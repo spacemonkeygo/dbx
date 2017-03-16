@@ -21,7 +21,7 @@ import (
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
-func UpdateSQL(ir_upd *ir.Update, dialect Dialect) (prefix, suffix sqlgen.SQL) {
+func UpdateSQL(ir_upd *ir.Update, dialect Dialect) sqlgen.SQL {
 	return SQLFromUpdate(UpdateFromIRUpdate(ir_upd, dialect))
 }
 
@@ -62,30 +62,22 @@ func UpdateFromIRUpdate(ir_upd *ir.Update, dialect Dialect) *Update {
 	}
 }
 
-func SQLFromUpdate(upd *Update) (prefix, suffix sqlgen.SQL) {
-	// TODO(jeff): holes instead of prefix and suffix.
+func SQLFromUpdate(upd *Update) sqlgen.SQL {
+	stmt := Build(Lf("UPDATE %s SET", upd.Table))
 
-	{ // build prefix
-		prefix = Lf("UPDATE %s SET", upd.Table)
+	stmt.Add(Hole("sets"))
+
+	wheres := SQLFromWheres(upd.Where)
+	if upd.In != nil {
+		wheres = append(wheres, upd.In)
+	}
+	if len(wheres) > 0 {
+		stmt.Add(L("WHERE"), J(" AND ", wheres...))
 	}
 
-	{ // build suffix
-		stmt := Build(nil)
-
-		wheres := SQLFromWheres(upd.Where)
-		if upd.In != nil {
-			wheres = append(wheres, upd.In)
-		}
-		if len(wheres) > 0 {
-			stmt.Add(L("WHERE"), J(" AND ", wheres...))
-		}
-
-		if len(upd.Returning) > 0 {
-			stmt.Add(L("RETURNING"), J(", ", Strings(upd.Returning)...))
-		}
-
-		suffix = stmt.SQL()
+	if len(upd.Returning) > 0 {
+		stmt.Add(L("RETURNING"), J(", ", Strings(upd.Returning)...))
 	}
 
-	return sqlcompile.Compile(prefix), sqlcompile.Compile(suffix)
+	return sqlcompile.Compile(stmt.SQL())
 }

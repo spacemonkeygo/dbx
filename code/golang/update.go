@@ -21,31 +21,25 @@ import (
 )
 
 type Update struct {
-	InfoPrefix          sqlembedgo.Info
-	InfoSuffix          sqlembedgo.Info
-	InfoGet             sqlembedgo.Info
-	Suffix              string
-	Struct              *ModelStruct
-	Return              *Var
-	Args                []*Var
-	AutoFields          []*Var
-	SupportsReturning   bool
-	PositionalArguments bool
-	ArgumentPrefix      string
-	NeedsNow            bool
+	Info              sqlembedgo.Info
+	InfoGet           sqlembedgo.Info
+	Suffix            string
+	Struct            *ModelStruct
+	Return            *Var
+	Args              []*Var
+	AutoFields        []*Var
+	SupportsReturning bool
+	NeedsNow          bool
 }
 
 func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
-	prefix_sql, suffix_sql := sql.UpdateSQL(ir_upd, dialect)
+	update_sql := sql.UpdateSQL(ir_upd, dialect)
 	upd := &Update{
-		InfoPrefix:          sqlembedgo.Embed("__", prefix_sql),
-		InfoSuffix:          sqlembedgo.Embed("__", suffix_sql),
-		Suffix:              convertSuffix(ir_upd.Suffix),
-		Struct:              ModelStructFromIR(ir_upd.Model),
-		Return:              VarFromModel(ir_upd.Model),
-		SupportsReturning:   dialect.Features().Returning,
-		PositionalArguments: dialect.Features().PositionalArguments,
-		ArgumentPrefix:      dialect.ArgumentPrefix(),
+		Info:              sqlembedgo.Embed("__", update_sql),
+		Suffix:            convertSuffix(ir_upd.Suffix),
+		Struct:            ModelStructFromIR(ir_upd.Model),
+		Return:            VarFromModel(ir_upd.Model),
+		SupportsReturning: dialect.Features().Returning,
 	}
 
 	for _, where := range ir_upd.Where {

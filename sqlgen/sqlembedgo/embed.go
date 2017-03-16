@@ -124,23 +124,21 @@ func golangLiterals(prefix string, sql sqlgen.Literals) (info Info) {
 }
 
 func golangCondition(prefix string, sql *sqlgen.Condition) Condition {
-	const format = "&%[1]sCondition{Name:%q, Field:%q, Equal:%t, Null:%t}"
+	const format = "&%[1]sCondition{Field:%q, Equal:%t}"
 
 	return Condition{
-		Name: sql.Name,
-		Expression: fmt.Sprintf(format, sqlbundle.Prefix,
-			sql.Name, sql.Field, sql.Equal, sql.Null),
+		Name:       prefix + sql.Name,
+		Expression: fmt.Sprintf(format, sqlbundle.Prefix, sql.Field, sql.Equal),
 	}
 }
 
 func golangHole(prefix string, sql *sqlgen.Hole) Hole {
-	const format = "&%[1]sHole{Name:%q}"
+	const format = "&%[1]sHole{}"
 
 	// TODO(jeff): embed what the hole is filled with? no use case yet.
 
 	return Hole{
-		Name: sql.Name,
-		Expression: fmt.Sprintf(format, sqlbundle.Prefix,
-			sql.Name),
+		Name:       prefix + sql.Name,
+		Expression: fmt.Sprintf(format, sqlbundle.Prefix),
 	}
 }

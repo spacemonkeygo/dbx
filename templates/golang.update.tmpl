@@ -9,36 +9,15 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 {{- end -}}
 
 {{- define "body" -}}
-	{{ embedsql .InfoPrefix "__embed_stmt_prefix" }}
-	var __stmt_prefix = __sqlbundle_Render(obj.dialect, __embed_stmt_prefix, __sqlbundle_NoTerminate) + " "
-	{{ embedsql .InfoSuffix "__embed_stmt_suffix" }}
-	var __stmt_suffix = " " + __sqlbundle_Render(obj.dialect, __embed_stmt_suffix)
+	{{ embedsql .Info "__embed_stmt" }}
 
-	var qs []byte
-	var values []interface{}
-
-	{{ if .PositionalArguments }}
-	j := {{ len .Args }}
-	values = append(values, {{ fieldvalue .Args }})
-	{{ end -}}
-
-	addArgument := func(name string) {
-		qs = append(qs, name...)
-		{{- if .PositionalArguments }}
-		j++
-		qs = append(qs, " = {{ .ArgumentPrefix }}"...)
-		qs = append(qs, strconv.Itoa(j)...)
-		qs = append(qs, ", "...)
-		{{- else }}
-		qs = append(qs, " = {{ .ArgumentPrefix }}, "...)
-		{{- end }}
-	}
-	_ = addArgument
+	__sets_sql := __sqlbundle_Literals{Join: ", "}
+	var __values []interface{}
 
 	{{ range .Struct.UpdatableFields }}
 	if update.{{ .Name }}._set {
-		addArgument("{{ .Column }}")
-		values = append(values, update.{{ .Name }}.value())
+		__values = append(__values, update.{{ .Name }}.value())
+		__sets_sql.SQLs = append(__sets_sql.SQLs, __sqlbundle_Literal("{{ .Column }} = ?"))
 	}
 	{{ end }}
 
@@ -46,26 +25,24 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 	__now := obj.db.Hooks.Now().UTC()
 	{{ end -}}
 	{{ range .AutoFields }}
-	addArgument("{{ .Name }}")
-	values = append(values, {{ .InitVal }})
+	__values = append(__values, {{ .InitVal }})
+	__sets_sql.SQLs = append(__sets_sql.SQLs, __sqlbundle_Literal("{{ .Name }} = ?"))
 	{{ end }}
 
 	{{ if not .AutoFields }}
-	if len(qs) == 0 {
+	if len(__sets_sql.SQLs) == 0 {
 		return nil, emptyUpdate()
 	}
 	{{ end }}
+	__values = append(__values, {{ fieldvalue .Args }})
 
-	{{ if not .PositionalArguments -}}
-	values = append(values, {{ fieldvalue .Args }})
-	{{ end }}
-
-	__stmt := __stmt_prefix + string(qs[:len(qs)-2]) + __stmt_suffix
-	obj.logStmt(__stmt, values...)
+	__sets.SQL = __sets_sql
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
+	obj.logStmt(__stmt, __values...)
 
 	{{ init .Return }}
 	{{ if .SupportsReturning }}
-	err = obj.driver.QueryRow(__stmt, values...).Scan({{ addrof (flatten .Return) }})
+	err = obj.driver.QueryRow(__stmt, __values...).Scan({{ addrof (flatten .Return) }})
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -73,7 +50,7 @@ Update_{{ .Suffix }}({{ ctxarg .Args }}, update)
 		return nil, obj.makeErr(err)
 	}
 	{{ else -}}
-	_, err = obj.driver.Exec(__stmt, values...)
+	_, err = obj.driver.Exec(__stmt, __values...)
 	if err != nil {
 		return nil, obj.makeErr(err)
 	}

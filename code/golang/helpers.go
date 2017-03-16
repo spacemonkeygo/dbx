@@ -168,6 +168,16 @@ func convertSuffix(suffix []string) string {
 
 func embedsqlFn(info sqlembedgo.Info, name string) string {
 	var out bytes.Buffer
+
+	for _, hole := range info.Holes {
+		fmt.Fprintf(&out, "var %s = %s\n", hole.Name, hole.Expression)
+	}
+
+	for _, cond := range info.Conditions {
+		fmt.Fprintf(&out, "var %s = %s\n", cond.Name, cond.Expression)
+	}
+
 	fmt.Fprintf(&out, "var %s = %s\n", name, info.Expression)
+
 	return out.String()
 }
