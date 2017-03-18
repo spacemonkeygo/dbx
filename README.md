@@ -77,18 +77,18 @@ type DBMethods interface {
 The package comes with some customizable hooks.
 
 ```
-var WrapErr = func(err error) error { return err }
+var WrapErr = func(err *Error) error { return err }
 var Logger func(format string, args ...interface{})
-var Now = time.Now
 ```
 
 - All of the errors returned by the database are passed through the `WrapErr`
 function so that you may process them however you wish: by adding contextual
 information or stack traces for example.
 - If the `Logger` is not nil, all of the SQL statements that would be executed
-are passed to it in the args.
-- `Now` is for mocking out time in your tests so that any
-`autoinsert`/`autoupdate` time fields can be given a deterministic value.
+are passed to it in the args, as well as other informational statements.
+- There is a `Hooks` type on the `*DB` that contains hooks like `Now` for
+mocking out time in your tests so that any `autoinsert`/`autoupdate` time
+fields can be given a deterministic value.
 
 The package has an `Open` function that returns a `*DB` instance. It's
 signature looks like
