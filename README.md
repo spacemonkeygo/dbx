@@ -42,13 +42,27 @@ source with the command
 $ dbx.v1 golang example.dbx .
 ```
 
-This will create an `example.go` file in the current directory. By default DBX
-will generate code for all of the models and fields and use the postgres SQL
-dialect. Check the output of `dbx.v1 golang` for more options including how to
-pass other SQL dialects.
+This will create an `example.go` file in the current directory. 
 
-The package doesn't do very much because we didn't ask for very much, but it
-does include a struct definition like
+Generating a schema is also pretty straightforward:
+
+```
+$ dbx.v1 schema examples.dbx
+```
+
+By default DBX will generate code for all of the models and fields and use the 
+postgres SQL dialect. You can support multiple SQL dialects:
+
+```
+$ dbx.v1 golang -d postgres -d sqlite3 example.dbx .
+$ dbx.v1 schema -d postgres -d sqlite3 example.dbx .
+```
+
+Check the output of `dbx.v1 golang` for more options including how to pass 
+other SQL dialects.
+
+This example package doesn't do very much because we didn't ask for very much, 
+but it does include a struct definition like
 
 ```
 type User struct {
