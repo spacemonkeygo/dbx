@@ -58,6 +58,14 @@ $ dbx.v1 golang -d postgres -d sqlite3 example.dbx .
 $ dbx.v1 schema -d postgres -d sqlite3 example.dbx .
 ```
 
+Note that these commands are intended to normally be used with `//go:generate`
+directives, such as:
+
+```
+//go:generate dbx.v1 golang -d postgres -d sqlite3 example.dbx .
+//go:generate dbx.v1 schema -d postgres -d sqlite3 example.dbx .
+```
+
 Check the output of `dbx.v1 golang` for more options including how to pass 
 other SQL dialects.
 
