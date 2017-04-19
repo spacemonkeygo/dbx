@@ -1,6 +1,8 @@
 # DBX
 
-DBX is a tool to generate database schemas and code to operate with it. It currently generates Go bindings to Postgres and/or SQLite, but it should be fairly straightforward to add other database *and* language targets.
+DBX is a tool to generate database schemas and code to operate with it. It
+currently generates Go bindings to Postgres and/or SQLite, but it should be
+fairly straightforward to add other database *and* language targets.
 
 ## How it works
 
@@ -42,34 +44,24 @@ source with the command
 $ dbx.v1 golang example.dbx .
 ```
 
-This will create an `example.go` file in the current directory. 
+This will create an `example.go` file in the current directory. Check the
+output of `dbx.v1 golang` for more options like controling the package name or
+other features of the generated code.
 
-Generating a schema is also pretty straightforward:
-
-```
-$ dbx.v1 schema examples.dbx
-```
-
-By default DBX will generate code for all of the models and fields and use the 
-postgres SQL dialect. You can support multiple SQL dialects:
+Generating a schema is also straightforward:
 
 ```
-$ dbx.v1 golang -d postgres -d sqlite3 example.dbx .
-$ dbx.v1 schema -d postgres -d sqlite3 example.dbx .
+$ dbx.v1 schema examples.dbx .
 ```
 
-Note that these commands are intended to normally be used with `//go:generate`
-directives, such as:
+This creates an `example.dbx.postgres.sql` file in the current directory with
+sql statements to create the tables for the models.
 
-```
-//go:generate dbx.v1 golang -d postgres -d sqlite3 example.dbx .
-//go:generate dbx.v1 schema -d postgres -d sqlite3 example.dbx .
-```
+By default DBX will generate code for all of the models and fields and use the
+postgres SQL dialect. See the dialects section below for more discussion on
+other supported dialects and how to generate them.
 
-Check the output of `dbx.v1 golang` for more options including how to pass 
-other SQL dialects.
-
-This example package doesn't do very much because we didn't ask for very much, 
+This example package doesn't do very much because we didn't ask for very much,
 but it does include a struct definition like
 
 ```
@@ -86,15 +78,24 @@ as well as concrete types `DB` and `Tx`, and interfaces that they implement
 that look like
 
 ```
-type TXMethods interface {
-	DeleteAll(ctx context.Context) (count int64, err error)
+type Methods interface {
+}
+
+type TxMethods interface {
+	Methods
+
+	Commit() error
+	Rollback() error
 }
 
 type DBMethods interface {
 	Schema() string
-	TXMethods
+	Methods
 }
 ```
+
+The `Methods` interface is shared between the `Tx` and `DB` interfaces and will
+contain methods to interact with the database when they are generated.
 
 The package comes with some customizable hooks.
 
@@ -144,13 +145,24 @@ read one (
 Regenerating the Go code will expand our database interface:
 
 ```
-type TXMethods interface {
-	DeleteAll(ctx context.Context) (count int64, err error)
+type Methods interface {
+	Create_User(ctx context.Context,
+		user_id User_Id_Field,
+		user_name User_Name_Field) (
+		user *User, err error)
 
-	Create_User(ctx context.Context, user_id User_Id_Field, user_name User_Name_Field) (user *User, err error)
-	Delete_User_By_Pk(ctx context.Context, user_pk User_Pk_Field) (deleted bool, err error)
-	Get_User_By_Pk(ctx context.Context, user_pk User_Pk_Field) (user *User, err error)
-	Update_User_By_Pk(ctx context.Context, user_pk User_Pk_Field, update UpdateUser) (user *User, err error)
+	Delete_User_By_Pk(ctx context.Context,
+		user_pk User_Pk_Field) (
+		deleted bool, err error)
+
+	Get_User_By_Pk(ctx context.Context,
+		user_pk User_Pk_Field) (
+		user *User, err error)
+
+	Update_User_By_Pk(ctx context.Context,
+		user_pk User_Pk_Field,
+		update User_Update_Fields) (
+		user *User, err error)
 }
 ```
 
@@ -182,12 +194,14 @@ func createUser(ctx context.Context, db *DB) (user *User, err error) {
 		if err == nil {
 			err = tx.Commit()
 		} else {
-			tx.Rollback() // log this perhaps?
+			// tx.Rollback() returns an error, perhaps we should log it, or
+			// do something else? the choice is yours.
+			tx.Rollback()
 		}
 	}()
 
 	return tx.Create_User(ctx, 
-		User_Id("some unique id i just generated"), 
+		User_Id("some unique id i just generated"),
 		User_Name("Donny B. Xavier"))
 }
 ```
@@ -232,12 +246,34 @@ func createUser(ctx context.Context, db *DB) (user *User, err error) {
 DBX does not generate this helper for you so that you can have full control
 over how you want to handle the error in the Rollback case.
 
-If you added that file with the `WithTx` helper, it's also a great place to add
-a `go:generate` directive:
+### Dialects
+
+DBX doesn't work with just Postgres, and is designed to be agnostic to many
+different database engines. Currently, it supports Postgres and SQLite3. Any
+of the above commands can be passed the `--dialect` (or, shorthand `-d`) flag
+to specify additional dialects. For example, running
 
 ```
-//go:generate dbx.v1 golang example.dbx .
+dbx.v1 schema -d postgres -d sqlite3 example.dbx .
+dbx.v1 golang -d postgres -d sqlite3 example.dbx .
 ```
+
+will create both `example.dbx.postgres.sql` and `example.dbx.sqlite3.sql` with
+the statements required to create the tables, and generate the Go code to
+operate with both sqlite3 and postgres.
+
+### Generate
+
+All of these commands are intended to normally be used with `//go:generate`
+directives, such as:
+
+```
+//go:generate dbx.v1 golang -d postgres -d sqlite3 example.dbx .
+//go:generate dbx.v1 schema -d postgres -d sqlite3 example.dbx .
+```
+
+A great spot to put them would be in the file that modifies the hooks and adds
+other customizations.
 
 ## Details
 
