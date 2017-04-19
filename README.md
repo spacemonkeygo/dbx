@@ -1,6 +1,6 @@
 # DBX
 
-DBX is a tool to generate database schemas and code to operate with it.
+DBX is a tool to generate database schemas and code to operate with it. It currently generates Go bindings to Postgres and/or SQLite, but it should be fairly straightforward to add other database *and* language targets.
 
 ## How it works
 
