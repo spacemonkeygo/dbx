@@ -96,6 +96,13 @@ func stringFromToken(node *tokenNode) *ast.String {
 	return stringFromValue(node, node.text)
 }
 
+func stringsFromTokens(nodes []*tokenNode) (out []*ast.String) {
+	for _, node := range nodes {
+		out = append(out, stringFromToken(node))
+	}
+	return out
+}
+
 func fieldRefFromTokens(first, second *tokenNode) *ast.FieldRef {
 	ref := &ast.FieldRef{
 		Pos:   first.getPos(),
@@ -155,5 +162,25 @@ func operatorFromValue(n node, val consts.Operator) *ast.Operator {
 	return &ast.Operator{
 		Pos:   n.getPos(),
 		Value: val,
+	}
+}
+
+func nullFromToken(token *tokenNode) *ast.Null {
+	return &ast.Null{
+		Pos: token.getPos(),
+	}
+}
+
+func placeholderFromToken(token *tokenNode) *ast.Placeholder {
+	return &ast.Placeholder{
+		Pos: token.getPos(),
+	}
+}
+
+func funcCallFromTokenAndArgs(name *tokenNode, args []*ast.Expr) *ast.FuncCall {
+	return &ast.FuncCall{
+		Pos:  name.getPos(),
+		Name: stringFromToken(name),
+		Args: args,
 	}
 }

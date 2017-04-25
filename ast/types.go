@@ -16,6 +16,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 	"text/scanner"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
@@ -241,17 +242,73 @@ func (j *JoinType) Get() consts.JoinType {
 
 type Where struct {
 	Pos   scanner.Position
-	Left  *FieldRef
+	Left  *Expr
 	Op    *Operator
-	Right *FieldRef
+	Right *Expr
 }
 
 func (w *Where) String() string {
-	right := "?"
-	if w.Right != nil {
-		right = w.Right.String()
+	return fmt.Sprintf("%s %s %s", w.Left, w.Op, w.Right)
+}
+
+type Expr struct {
+	Pos scanner.Position
+	// The following fields are mutually exclusive
+	Null        *Null
+	StringLit   *String
+	NumberLit   *String
+	Placeholder *Placeholder
+	FieldRef    *FieldRef
+	FuncCall    *FuncCall
+}
+
+func (e *Expr) String() string {
+	switch {
+	case e.Null != nil:
+		return e.Null.String()
+	case e.StringLit != nil:
+		return fmt.Sprintf("%q", e.StringLit.Value)
+	case e.NumberLit != nil:
+		return e.NumberLit.Value
+	case e.Placeholder != nil:
+		return e.Placeholder.String()
+	case e.FieldRef != nil:
+		return e.FieldRef.String()
+	case e.FuncCall != nil:
+		return e.FuncCall.String()
+	default:
+		return ""
 	}
-	return fmt.Sprintf("%s %s %s", w.Left, w.Op, right)
+}
+
+type Null struct {
+	Pos scanner.Position
+}
+
+func (p *Null) String() string {
+	return "null"
+}
+
+type Placeholder struct {
+	Pos scanner.Position
+}
+
+func (p *Placeholder) String() string {
+	return "?"
+}
+
+type FuncCall struct {
+	Pos  scanner.Position
+	Name *String
+	Args []*Expr
+}
+
+func (f *FuncCall) String() string {
+	var args []string
+	for _, arg := range f.Args {
+		args = append(args, arg.String())
+	}
+	return fmt.Sprintf("%s(%s)", f.Name.Value, strings.Join(args, ", "))
 }
 
 type Operator struct {

@@ -36,6 +36,8 @@ const (
 	OpenParen   Token = "("
 	CloseParen  Token = ")"
 	Exclamation Token = "!"
+	String      Token = "String"
+	Float       Token = "Float"
 	Illegal     Token = "Illegal"
 )
 
@@ -67,6 +69,10 @@ func (t Token) String() string {
 		return "CloseParen"
 	case Exclamation:
 		return "Exclamation"
+	case String:
+		return "String"
+	case Float:
+		return "Float"
 	case Illegal:
 		return "Illegal"
 	default:
@@ -89,7 +95,7 @@ func NewScanner(filename string, data []byte) (*Scanner, error) {
 	var s scanner.Scanner
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanInts | scanner.ScanIdents | scanner.ScanComments |
-		scanner.SkipComments
+		scanner.SkipComments | scanner.ScanStrings
 	s.Whitespace = 0
 
 	base_filename := filepath.Base(filename)
@@ -227,6 +233,10 @@ func convertToken(tok rune) Token {
 		return Int
 	case scanner.EOF:
 		return EOF
+	case scanner.String:
+		return String
+	case scanner.Float:
+		return Float
 	case '!':
 		return Exclamation
 	case ':':

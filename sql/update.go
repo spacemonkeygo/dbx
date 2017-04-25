@@ -27,7 +27,7 @@ func UpdateSQL(ir_upd *ir.Update, dialect Dialect) sqlgen.SQL {
 
 type Update struct {
 	Table     string
-	Where     []Where
+	Where     []sqlgen.SQL
 	Returning []string
 	In        sqlgen.SQL
 }
@@ -41,7 +41,7 @@ func UpdateFromIRUpdate(ir_upd *ir.Update, dialect Dialect) *Update {
 	if len(ir_upd.Joins) == 0 {
 		return &Update{
 			Table:     ir_upd.Model.Table,
-			Where:     WheresFromIRWheres(ir_upd.Where),
+			Where:     WhereSQL(ir_upd.Where, dialect),
 			Returning: returning,
 		}
 	}
@@ -51,7 +51,7 @@ func UpdateFromIRUpdate(ir_upd *ir.Update, dialect Dialect) *Update {
 		From:   ir_upd.Model.Table,
 		Fields: []string{pk_column},
 		Joins:  JoinsFromIRJoins(ir_upd.Joins),
-		Where:  WheresFromIRWheres(ir_upd.Where),
+		Where:  WhereSQL(ir_upd.Where, dialect),
 	})
 	in := J("", L(pk_column), L(" IN ("), sel, L(")"))
 
@@ -67,7 +67,7 @@ func SQLFromUpdate(upd *Update) sqlgen.SQL {
 
 	stmt.Add(Hole("sets"))
 
-	wheres := SQLFromWheres(upd.Where)
+	wheres := upd.Where
 	if upd.In != nil {
 		wheres = append(wheres, upd.In)
 	}

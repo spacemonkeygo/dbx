@@ -452,11 +452,32 @@ read <views> (
 	// "project.id"
 	select <field refs>
 	
-	// a read can have any number of where clauses. the clause refers to a
-	// field, an operation like "!=" or "<=", and another field. if the right
-	// side field is a question mark, the read will fill it in with an argument
-	// and be generated with a parameter for that argument.
-	where <model.field> <op> <model.field or "?">
+	// a read can have any number of where clauses. the clause refers to an
+	// expression, an operation like "!=" or "<=", and another expression. if
+	// the right side field has a placeholder (?), the read will fill it in
+	// with an argument and be generated with a parameter for that argument.
+	//
+	// <expr> can be one of the following:
+	// 1) placeholder
+	//    where animal.name = ?
+	// 2) null
+	//    where animal.name = null
+	// 3) string literal
+	//    where animal.name = "Tiger"
+	// 4) number literal
+	//    where animal.age < 30
+	// 5) model field reference: <model>.<field>
+	//    where animal.height = animal.width
+	// 6) SQL function call: <name>(<expr>)
+	//    where lower(animal.name) = "tiger"
+	//
+	// SQL function calls take an expression for each argument. Currently only
+	// "lower" is implemented.
+	//
+	// <limited-expr> is the same as <expr> except that it can only contain
+	// a model field reference, optionally wrapped in one or more function
+	// calls.
+	where <limited-expr> <op> <expr>
 	
 	// a join describes a join for the read. it brings the right hand side
 	// model into scope for the selects, and the joins must be in a consistent

@@ -17,6 +17,7 @@ package sql
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -104,3 +105,12 @@ func (p *postgres) Rebind(sql string) string {
 
 func (p *postgres) ArgumentPrefix() string { return "$" }
 func (p *postgres) ExecOnOpen() []string   { return nil }
+
+var postgresEscaper = strings.NewReplacer(
+	`'`, `\'`,
+	`\`, `\\`,
+)
+
+func (p *postgres) EscapeString(s string) string {
+	return postgresEscaper.Replace(s)
+}

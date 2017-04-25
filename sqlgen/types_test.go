@@ -68,24 +68,24 @@ func testTypesRender(tw *testutil.T) {
 			out: " bif inside recursive outside",
 		},
 
-		{in: &Condition{Equal: false, Null: false}, out: "!= ?"},
-		{in: &Condition{Equal: false, Null: true}, out: "is not null"},
-		{in: &Condition{Equal: true, Null: false}, out: "= ?"},
-		{in: &Condition{Equal: true, Null: true}, out: "is null"},
+		{in: &Condition{Equal: false, Null: false}, out: " != "},
+		{in: &Condition{Equal: false, Null: true}, out: " is not null"},
+		{in: &Condition{Equal: true, Null: false}, out: " = "},
+		{in: &Condition{Equal: true, Null: true}, out: " is null"},
 		{
-			in:  &Condition{Field: "f", Equal: false, Null: false},
+			in:  &Condition{Left: "f", Right: "?", Equal: false, Null: false},
 			out: "f != ?",
 		},
 		{
-			in:  &Condition{Field: "f", Equal: false, Null: true},
+			in:  &Condition{Left: "f", Right: "?", Equal: false, Null: true},
 			out: "f is not null",
 		},
 		{
-			in:  &Condition{Field: "f", Equal: true, Null: false},
+			in:  &Condition{Left: "f", Right: "?", Equal: true, Null: false},
 			out: "f = ?",
 		},
 		{
-			in:  &Condition{Field: "f", Equal: true, Null: true},
+			in:  &Condition{Left: "f", Right: "?", Equal: true, Null: true},
 			out: "f is null",
 		},
 

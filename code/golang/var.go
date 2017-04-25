@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"bitbucket.org/pkg/inflect"
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -74,16 +75,25 @@ func ArgFromField(field *ir.Field) *Var {
 }
 
 func ArgFromWhere(where *ir.Where) *Var {
-	name := where.Left.UnderRef()
-	if suffix := where.Op.Suffix(); suffix != "" {
-		name += "_" + suffix
+	// TODO: clean this up when we do full expression type evaluation.
+	// assume for now that the left hand side evaluates eventually to a single
+	// field wrapped in zero or more function calls since that is all that is
+	// possible via the xform package.
+	expr := where.Left
+	for expr.Field == nil {
+		expr = expr.FuncCall.Args[0]
+	}
+
+	name := expr.Field.UnderRef()
+	if where.Op != consts.EQ {
+		name += "_" + where.Op.Suffix()
 	}
 
 	// we don't set ZeroVal or InitVal because these args should only be used
 	// as incoming arguments to function calls.
 	return &Var{
 		Name: name,
-		Type: ModelFieldFromIR(where.Left).StructName(),
+		Type: ModelFieldFromIR(expr.Field).StructName(),
 	}
 }
 

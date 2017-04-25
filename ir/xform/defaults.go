@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -91,18 +92,67 @@ func whereSuffix(wheres []*ir.Where, full bool) (parts []string) {
 	}
 	parts = append(parts, "by")
 	for i, where := range wheres {
-		if where.Right != nil {
-			continue
-		}
 		if i > 0 {
 			parts = append(parts, "and")
 		}
-		if full {
-			parts = append(parts, where.Left.Model.Name)
+
+		left := exprSuffix(where.Left, full)
+		right := exprSuffix(where.Right, full)
+
+		parts = append(parts, left...)
+		if len(right) > 0 || where.Op != consts.EQ {
+			op := where.Op.Suffix()
+			nulloperand := where.Left.Null || where.Right.Null
+			switch where.Op {
+			case consts.EQ:
+				if nulloperand {
+					parts = append(parts, "is")
+				} else {
+					parts = append(parts, op)
+				}
+			case consts.NE:
+				if nulloperand {
+					parts = append(parts, "is not")
+				} else {
+					parts = append(parts, op)
+				}
+			default:
+				parts = append(parts, op)
+			}
 		}
-		parts = append(parts, where.Left.Name)
-		if suffix := where.Op.Suffix(); suffix != "" {
-			parts = append(parts, suffix)
+		if len(right) > 0 {
+			parts = append(parts, right...)
+		}
+
+	}
+	return parts
+}
+
+func exprSuffix(expr *ir.Expr, full bool) (parts []string) {
+	switch {
+	case expr.Null:
+		parts = []string{"null"}
+	case expr.StringLit != nil:
+		parts = []string{"literal"}
+	case expr.NumberLit != nil:
+		parts = []string{"literal"}
+	case expr.Placeholder:
+	case expr.Field != nil:
+		if full {
+			parts = append(parts, expr.Field.Model.Name)
+		}
+		parts = append(parts, expr.Field.Name)
+	case expr.FuncCall != nil:
+		parts = append(parts, expr.FuncCall.Name)
+		for i, arg := range expr.FuncCall.Args {
+			arg_suffix := exprSuffix(arg, full)
+			if len(arg_suffix) == 0 {
+				continue
+			}
+			if i != 0 {
+				parts = append(parts, "and")
+			}
+			parts = append(parts, arg_suffix...)
 		}
 	}
 	return parts
