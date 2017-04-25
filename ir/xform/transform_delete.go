@@ -15,6 +15,8 @@
 package xform
 
 import (
+	"text/scanner"
+
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -40,8 +42,8 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 
 	// Figure out set of models that are included in the delete.
 	// These come from explicit joins.
-	models := map[string]*ast.ModelRef{
-		model.Name: ast_del.Model,
+	models := map[string]scanner.Position{
+		model.Name: ast_del.Model.Pos,
 	}
 
 	next := model.Name
@@ -65,45 +67,19 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 			Left:  left,
 			Right: right,
 		})
-		if existing := models[join.Right.Model.Value]; existing != nil {
+		if existing_pos, ok := models[join.Right.Model.Value]; ok {
 			return nil, errutil.New(join.Right.Model.Pos,
 				"model %q already joined at %s",
-				join.Right.Model.Value, existing.Pos)
+				join.Right.Model.Value, existing_pos)
 		}
-		models[join.Right.Model.Value] = join.Right.ModelRef()
+		models[join.Right.Model.Value] = join.Right.Pos
 	}
 
 	// Finalize the where conditions and make sure referenced models are part
 	// of the select.
-	for _, ast_where := range ast_del.Where {
-		left, err := lookup.FindField(ast_where.Left)
-		if err != nil {
-			return nil, err
-		}
-		if models[ast_where.Left.Model.Value] == nil {
-			return nil, errutil.New(ast_where.Pos,
-				"invalid where condition %q; model %q is not joined",
-				ast_where, ast_where.Left.Model.Value)
-		}
-
-		var right *ir.Field
-		if ast_where.Right != nil {
-			right, err = lookup.FindField(ast_where.Right)
-			if err != nil {
-				return nil, err
-			}
-			if models[ast_where.Right.Model.Value] == nil {
-				return nil, errutil.New(ast_where.Pos,
-					"invalid where condition %q; model %q is not joined",
-					ast_where, ast_where.Right.Model.Value)
-			}
-		}
-
-		del.Where = append(del.Where, &ir.Where{
-			Op:    ast_where.Op.Value,
-			Left:  left,
-			Right: right,
-		})
+	del.Where, err = transformWheres(lookup, models, ast_del.Where)
+	if err != nil {
+		return nil, err
 	}
 
 	if del.Suffix == nil {

@@ -125,11 +125,12 @@ func golangLiterals(prefix string, sql sqlgen.Literals) (info Info) {
 
 func golangCondition(prefix string, sql *sqlgen.Condition) Condition {
 	// start off conditions as null to shrink generated code some.
-	const format = "&%[1]sCondition{Field:%q, Equal:%t, Null:true}"
+	const format = "&%[1]sCondition{Left:%q, Equal:%t, Right: %q, Null:true}"
 
 	return Condition{
-		Name:       prefix + sql.Name,
-		Expression: fmt.Sprintf(format, sqlbundle.Prefix, sql.Field, sql.Equal),
+		Name: prefix + sql.Name,
+		Expression: fmt.Sprintf(
+			format, sqlbundle.Prefix, sql.Left, sql.Equal, sql.Right),
 	}
 }
 

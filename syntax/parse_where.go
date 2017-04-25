@@ -19,15 +19,14 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 )
 
-func parseWhere(node *tupleNode) (*ast.Where, error) {
-	where := new(ast.Where)
+func parseWhere(node *tupleNode) (where *ast.Where, err error) {
+	where = new(ast.Where)
 	where.Pos = node.getPos()
 
-	left_field_ref, err := parseFieldRef(node, true)
+	where.Left, err = parseExpr(node)
 	if err != nil {
 		return nil, err
 	}
-	where.Left = left_field_ref
 
 	err = node.consumeTokenNamed(tokenCases{
 		Exclamation.tokenCase(): func(token *tokenNode) error {
@@ -67,15 +66,10 @@ func parseWhere(node *tupleNode) (*ast.Where, error) {
 		return nil, err
 	}
 
-	if node.consumeIfToken(Question) != nil {
-		return where, nil
-	}
-
-	right_field_ref, err := parseFieldRef(node, true)
+	where.Right, err = parseExpr(node)
 	if err != nil {
 		return nil, err
 	}
-	where.Right = right_field_ref
 
 	return where, nil
 }

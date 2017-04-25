@@ -59,10 +59,19 @@ func fieldSetPrune(all, bad []*Field) (out []*Field) {
 
 func whereUnique(wheres []*Where) (unique map[string]bool) {
 	fields := map[*Model][]*Field{}
-	for _, eq := range FilterWhere(wheres, consts.EQ) {
-		fields[eq.Left.Model] = append(fields[eq.Left.Model], eq.Left)
-		if eq.Right != nil {
-			fields[eq.Right.Model] = append(fields[eq.Right.Model], eq.Right)
+	for _, where := range wheres {
+		if where.Op != consts.EQ {
+			continue
+		}
+
+		left := where.Left.Field
+		right := where.Right.Field
+
+		if left != nil {
+			fields[left.Model] = append(fields[left.Model], left)
+		}
+		if right != nil {
+			fields[right.Model] = append(fields[right.Model], left)
 		}
 	}
 

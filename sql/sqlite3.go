@@ -16,6 +16,7 @@ package sql
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -74,4 +75,12 @@ func (s *sqlite3) ExecOnOpen() []string {
 	return []string{
 		"PRAGMA foreign_keys = ON;",
 	}
+}
+
+var sqlite3Replacer = strings.NewReplacer(
+	`'`, `''`,
+)
+
+func (p *sqlite3) EscapeString(s string) string {
+	return sqlite3Replacer.Replace(s)
 }

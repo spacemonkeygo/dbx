@@ -15,6 +15,8 @@
 package xform
 
 import (
+	"text/scanner"
+
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -68,7 +70,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	}
 
 	// Make sure models referenced in joins have continuity
-	models := map[string]*ast.FieldRef{}
+	models := map[string]scanner.Position{}
 	switch {
 	case len(selected) == 1:
 		from, err := lookup.FindModel(ast_read.Select.Refs[0].ModelRef())
@@ -78,7 +80,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		tmpl.From = from
 		if len(ast_read.Joins) == 0 {
 			model_name := ast_read.Select.Refs[0].Model.Value
-			models[model_name] = ast_read.Select.Refs[0]
+			models[model_name] = ast_read.Select.Refs[0].Pos
 		}
 	case len(ast_read.Joins) == 0:
 		return nil, errutil.New(ast_read.Select.Pos,
@@ -104,12 +106,12 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 
 		switch {
 		case next == "":
-			if existing := models[join.Left.Model.Value]; existing != nil {
+			if existing_pos, ok := models[join.Left.Model.Value]; ok {
 				return nil, errutil.New(join.Left.Model.Pos,
 					"model %q already joined at %s",
-					join.Left.Model.Value, existing.Pos)
+					join.Left.Model.Value, existing_pos)
 			}
-			models[join.Left.Model.Value] = join.Left
+			models[join.Left.Model.Value] = join.Left.Pos
 			tmpl.From = left.Model
 		case next != join.Left.Model.Value:
 			return nil, errutil.New(join.Left.Model.Pos,
@@ -117,19 +119,19 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 				next, join.Left.Model.Value)
 		}
 
-		if existing := models[join.Right.Model.Value]; existing != nil {
+		if existing_pos, ok := models[join.Right.Model.Value]; ok {
 			return nil, errutil.New(join.Right.Model.Pos,
 				"model %q already joined at %s",
-				join.Right.Model.Value, existing.Pos)
+				join.Right.Model.Value, existing_pos)
 		}
-		models[join.Right.Model.Value] = join.Right
+		models[join.Right.Model.Value] = join.Right.Pos
 
 		next = join.Right.Model.Value
 	}
 
 	// Make sure all of the fields are accounted for in the set of models
 	for _, ast_fieldref := range ast_read.Select.Refs {
-		if models[ast_fieldref.Model.Value] == nil {
+		if _, ok := models[ast_fieldref.Model.Value]; !ok {
 			return nil, errutil.New(ast_fieldref.Pos,
 				"cannot select %q; model %q is not joined",
 				ast_fieldref, ast_fieldref.Model.Value)
@@ -138,35 +140,9 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 
 	// Finalize the where conditions and make sure referenced models are part
 	// of the select.
-	for _, ast_where := range ast_read.Where {
-		left, err := lookup.FindField(ast_where.Left)
-		if err != nil {
-			return nil, err
-		}
-		if models[ast_where.Left.Model.Value] == nil {
-			return nil, errutil.New(ast_where.Pos,
-				"invalid where condition %q; model %q is not joined",
-				ast_where, ast_where.Left.Model.Value)
-		}
-
-		var right *ir.Field
-		if ast_where.Right != nil {
-			right, err = lookup.FindField(ast_where.Right)
-			if err != nil {
-				return nil, err
-			}
-			if models[ast_where.Right.Model.Value] == nil {
-				return nil, errutil.New(ast_where.Pos,
-					"invalid where condition %q; model %q is not joined",
-					ast_where, ast_where.Right.Model.Value)
-			}
-		}
-
-		tmpl.Where = append(tmpl.Where, &ir.Where{
-			Op:    ast_where.Op.Value,
-			Left:  left,
-			Right: right,
-		})
+	tmpl.Where, err = transformWheres(lookup, models, ast_read.Where)
+	if err != nil {
+		return nil, err
 	}
 
 	// Finalize OrderBy and make sure referenced fields are part of the select
@@ -176,7 +152,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 			return nil, err
 		}
 		for _, order_by_field := range ast_read.OrderBy.Fields.Refs {
-			if models[order_by_field.Model.Value] == nil {
+			if _, ok := models[order_by_field.Model.Value]; !ok {
 				return nil, errutil.New(order_by_field.Pos,
 					"invalid orderby field %q; model %q is not joined",
 					order_by_field, order_by_field.Model.Value)

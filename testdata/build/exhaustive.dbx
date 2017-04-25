@@ -264,4 +264,39 @@ update foo (
 	where foo.id          =  ?
 )
 
+read scalar (
+	select foo
+	where foo.int = 3
+)
+
+read scalar (
+	select foo
+	where foo.null_int = null
+)
+
+read scalar (
+	select foo
+	where foo.string = "boo"
+)
+
+read scalar (
+	select foo
+	where lower(foo.string) = ?
+)
+
+read scalar (
+	select foo
+	where lower(foo.string) = lower(?)
+)
+
+read scalar (
+	select foo
+	where foo.string = lower(?)
+)
+
+read scalar (
+	select foo
+	where foo.string = lower("BOO")
+)
+
 delete foo ( )

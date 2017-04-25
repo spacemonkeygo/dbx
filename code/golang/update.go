@@ -55,7 +55,7 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 			Joins:       ir_upd.Joins,
 			Where:       ir_upd.Where,
 			View:        ir.All,
-		})
+		}, dialect)
 		upd.InfoGet = sqlembedgo.Embed("__", select_sql)
 	}
 

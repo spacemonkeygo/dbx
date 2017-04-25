@@ -15,6 +15,8 @@
 package xform
 
 import (
+	"text/scanner"
+
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -40,8 +42,8 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 
 	// Figure out set of models that are included in the update.
 	// These come from explicit joins.
-	models := map[string]*ast.ModelRef{
-		model.Name: ast_upd.Model,
+	models := map[string]scanner.Position{
+		model.Name: ast_upd.Model.Pos,
 	}
 
 	next := model.Name
@@ -65,45 +67,19 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 			Left:  left,
 			Right: right,
 		})
-		if existing := models[join.Right.Model.Value]; existing != nil {
+		if existing_pos, ok := models[join.Right.Model.Value]; ok {
 			return nil, errutil.New(join.Right.Model.Pos,
 				"model %q already joined at %s",
-				join.Right.Model.Value, existing.Pos)
+				join.Right.Model.Value, existing_pos)
 		}
-		models[join.Right.Model.Value] = join.Right.ModelRef()
+		models[join.Right.Model.Value] = join.Right.ModelRef().Pos
 	}
 
 	// Finalize the where conditions and make sure referenced models are part
 	// of the select.
-	for _, ast_where := range ast_upd.Where {
-		left, err := lookup.FindField(ast_where.Left)
-		if err != nil {
-			return nil, err
-		}
-		if models[ast_where.Left.Model.Value] == nil {
-			return nil, errutil.New(ast_where.Pos,
-				"invalid where condition %q; model %q is not joined",
-				ast_where, ast_where.Left.Model.Value)
-		}
-
-		var right *ir.Field
-		if ast_where.Right != nil {
-			right, err = lookup.FindField(ast_where.Right)
-			if err != nil {
-				return nil, err
-			}
-			if models[ast_where.Right.Model.Value] == nil {
-				return nil, errutil.New(ast_where.Pos,
-					"invalid where condition %q; model %q is not joined",
-					ast_where, ast_where.Right.Model.Value)
-			}
-		}
-
-		upd.Where = append(upd.Where, &ir.Where{
-			Op:    ast_where.Op.Value,
-			Left:  left,
-			Right: right,
-		})
+	upd.Where, err = transformWheres(lookup, models, ast_upd.Where)
+	if err != nil {
+		return nil, err
 	}
 
 	if !upd.One() {

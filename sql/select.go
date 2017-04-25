@@ -29,20 +29,16 @@ var (
 	hasFields   = []string{"1"}
 )
 
-func SelectSQL(ir_read *ir.Read) sqlgen.SQL {
-	return SQLFromSelect(SelectFromIRRead(ir_read))
+func SelectSQL(ir_read *ir.Read, dialect Dialect) sqlgen.SQL {
+	return SQLFromSelect(SelectFromIRRead(ir_read, dialect))
 }
 
 func GetLastSQL(ir_model *ir.Model, dialect Dialect) sqlgen.SQL {
 	return SQLFromSelect(&Select{
 		Fields: ir_model.SelectRefs(),
 		From:   ir_model.Table,
-		Where: []Where{
-			{
-				Left:  dialect.RowId(),
-				Op:    "=",
-				Right: "?",
-			},
+		Where: []sqlgen.SQL{
+			J(" ", L(dialect.RowId()), L("="), L("?")),
 		},
 	})
 }
@@ -51,17 +47,17 @@ type Select struct {
 	From    string
 	Fields  []string
 	Joins   []Join
-	Where   []Where
+	Where   []sqlgen.SQL
 	OrderBy *OrderBy
 	Limit   string
 	Offset  string
 	Has     bool
 }
 
-func SelectFromIRRead(ir_read *ir.Read) *Select {
+func SelectFromIRRead(ir_read *ir.Read, dialect Dialect) *Select {
 	sel := &Select{
 		From:  ir_read.From.Table,
-		Where: WheresFromIRWheres(ir_read.Where),
+		Where: WhereSQL(ir_read.Where, dialect),
 		Joins: JoinsFromIRJoins(ir_read.Joins),
 	}
 
@@ -84,10 +80,15 @@ func SelectFromIRRead(ir_read *ir.Read) *Select {
 		sel.Offset = "?"
 	case ir.Paged:
 		pk := ir_read.From.BasicPrimaryKey()
-		sel.Where = append(sel.Where, WhereFromIRWhere(&ir.Where{
-			Left: pk,
-			Op:   consts.GT,
-		}))
+		sel.Where = append(sel.Where, WhereSQL([]*ir.Where{&ir.Where{
+			Left: &ir.Expr{
+				Field: pk,
+			},
+			Op: consts.GT,
+			Right: &ir.Expr{
+				Placeholder: true,
+			},
+		}}, dialect)...)
 		sel.OrderBy = &OrderBy{
 			Fields: []string{pk.ColumnRef()},
 		}
@@ -124,8 +125,8 @@ func SQLFromSelect(sel *Select) sqlgen.SQL {
 		stmt.Add(joins...)
 	}
 
-	if wheres := SQLFromWheres(sel.Where); len(wheres) > 0 {
-		stmt.Add(L("WHERE"), J(" AND ", wheres...))
+	if len(sel.Where) > 0 {
+		stmt.Add(L("WHERE"), J(" AND ", sel.Where...))
 	}
 
 	if sel.OrderBy != nil {

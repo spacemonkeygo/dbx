@@ -15,34 +15,32 @@
 package sql
 
 import (
+	"fmt"
+
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen"
-	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlcompile"
 	. "gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlhelpers"
 )
 
-func DeleteSQL(ir_del *ir.Delete, dialect Dialect) sqlgen.SQL {
-	stmt := Build(Lf("DELETE FROM %s", ir_del.Model.Table))
-
-	var wheres []sqlgen.SQL
-	if len(ir_del.Joins) == 0 {
-		wheres = WhereSQL(ir_del.Where, dialect)
-	} else {
-		pk_column := ir_del.Model.PrimaryKey[0].ColumnRef()
-		sel := SelectSQL(&ir.Read{
-			View:        ir.All,
-			From:        ir_del.Model,
-			Selectables: []ir.Selectable{ir_del.Model.PrimaryKey[0]},
-			Joins:       ir_del.Joins,
-			Where:       ir_del.Where,
-		}, dialect)
-		wheres = append(wheres, J("", L(pk_column), L(" IN ("), sel, L(")")))
+func ExprSQL(expr *ir.Expr, dialect Dialect) sqlgen.SQL {
+	switch {
+	case expr.Null:
+		return L("NULL")
+	case expr.StringLit != nil:
+		return J("", L("'"), L(dialect.EscapeString(*expr.StringLit)), L("'"))
+	case expr.NumberLit != nil:
+		return L(*expr.NumberLit)
+	case expr.Placeholder:
+		return L("?")
+	case expr.Field != nil:
+		return L(expr.Field.ColumnRef())
+	case expr.FuncCall != nil:
+		var args []sqlgen.SQL
+		for _, arg := range expr.FuncCall.Args {
+			args = append(args, ExprSQL(arg, dialect))
+		}
+		return J("", L(expr.FuncCall.Name), L("("), J(", ", args...), L(")"))
+	default:
+		panic(fmt.Sprintf("unhandled expression variant: %+v", expr))
 	}
-
-	if len(wheres) > 0 {
-		stmt.Add(L("WHERE"), J(" AND ", wheres...))
-	}
-
-	return sqlcompile.Compile(stmt.SQL())
-
 }

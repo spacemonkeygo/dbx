@@ -49,7 +49,8 @@ func (g *Generator) condition() *sqlgen.Condition {
 		num := len(g.conds)
 		condition := &sqlgen.Condition{
 			Name:  fmt.Sprintf("cond%d", num),
-			Field: fmt.Sprintf("field%d", num),
+			Left:  fmt.Sprintf("left%d", num),
+			Right: fmt.Sprintf("right%d", num),
 			Null:  rand.Intn(2) == 0,
 			Equal: rand.Intn(2) == 0,
 		}

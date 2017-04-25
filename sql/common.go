@@ -34,4 +34,5 @@ type Dialect interface {
 	ColumnType(field *ir.Field) string
 	Rebind(sql string) string
 	ExecOnOpen() []string
+	EscapeString(s string) string
 }

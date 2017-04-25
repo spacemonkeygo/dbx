@@ -45,7 +45,7 @@ func (o Operator) Suffix() string {
 	case GE:
 		return "greater_or_equal"
 	case EQ:
-		return ""
+		return "equal"
 	case NE:
 		return "not"
 	case Like:

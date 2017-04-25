@@ -50,8 +50,9 @@ func (l Literals) Render() string {
 type Condition struct {
 	// set at compile/embed time
 	Name  string
-	Field string
+	Left  string
 	Equal bool
+	Right string
 
 	// set at runtime
 	Null bool
@@ -63,20 +64,15 @@ func (c *Condition) Render() string {
 	// TODO(jeff): maybe check if we can use placeholders instead of the
 	// literal null: this would make the templates easier.
 
-	field := c.Field
-	if field != "" {
-		field += " "
-	}
-
 	switch {
 	case c.Equal && c.Null:
-		return field + "is null"
+		return c.Left + " is null"
 	case c.Equal && !c.Null:
-		return field + "= ?"
+		return c.Left + " = " + c.Right
 	case !c.Equal && c.Null:
-		return field + "is not null"
+		return c.Left + " is not null"
 	case !c.Equal && !c.Null:
-		return field + "!= ?"
+		return c.Left + " != " + c.Right
 	default:
 		panic("unhandled case")
 	}

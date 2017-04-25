@@ -17,37 +17,24 @@ package ir
 import "gopkg.in/spacemonkeygo/dbx.v1/consts"
 
 type Where struct {
-	Left  *Field
+	Left  *Expr
 	Op    consts.Operator
-	Right *Field
+	Right *Expr
 }
 
-func (w *Where) Nullable() bool {
-	return w.Left.Nullable && (w.Op == consts.EQ || w.Op == consts.NE)
-}
+func (w *Where) NeedsCondition() bool {
+	// only EQ and NE need a condition to switch on "=" v.s. "is", etc.
+	switch w.Op {
+	case consts.EQ, consts.NE:
+	default:
+		return false
+	}
 
-func WhereFieldEquals(field *Field) *Where {
-	return &Where{
-		Left: field,
-		Op:   consts.EQ,
+	// null values are fixed and don't need a runtime condition to render
+	// appropriately
+	if w.Left.Null || w.Right.Null {
+		return false
 	}
-}
 
-func WhereFieldsEquals(fields ...*Field) (wheres []*Where) {
-	if len(fields) == 0 {
-		return nil
-	}
-	for _, field := range fields {
-		wheres = append(wheres, WhereFieldEquals(field))
-	}
-	return wheres
-}
-
-func FilterWhere(wheres []*Where, op consts.Operator) (filtered []*Where) {
-	for _, where := range wheres {
-		if where.Op == op {
-			filtered = append(filtered, where)
-		}
-	}
-	return filtered
+	return w.Left.Nullable() && w.Right.Nullable()
 }

@@ -24,14 +24,14 @@ type PartitionedArgs struct {
 
 func PartitionedArgsFromWheres(wheres []*ir.Where) (out PartitionedArgs) {
 	for _, where := range wheres {
-		if where.Right != nil {
+		if !where.Right.HasPlaceholder() {
 			continue
 		}
 
 		arg := ArgFromWhere(where)
 		out.AllArgs = append(out.AllArgs, arg)
 
-		if where.Nullable() {
+		if where.NeedsCondition() {
 			out.NullableArgs = append(out.NullableArgs, arg)
 		} else {
 			out.StaticArgs = append(out.StaticArgs, arg)

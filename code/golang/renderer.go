@@ -440,7 +440,7 @@ func (r *Renderer) renderDeleteWorld(w io.Writer, ir_models []*ir.Model,
 	for i := len(ir_models) - 1; i >= 0; i-- {
 		sql := sqlgen.Render(dialect, sql.DeleteSQL(&ir.Delete{
 			Model: ir_models[i],
-		}))
+		}, dialect))
 		del.SQLs = append(del.SQLs, sql)
 	}
 

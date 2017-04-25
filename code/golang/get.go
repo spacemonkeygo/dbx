@@ -32,7 +32,7 @@ type Get struct {
 }
 
 func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
-	select_sql := sql.SelectSQL(ir_read)
+	select_sql := sql.SelectSQL(ir_read, dialect)
 	get := &Get{
 		PartitionedArgs: PartitionedArgsFromWheres(ir_read.Where),
 		Info:            sqlembedgo.Embed("__", select_sql),

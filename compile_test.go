@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"testing"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
@@ -37,7 +38,7 @@ func TestCompilation(t *testing.T) {
 func testFile(t *testutil.T, file string) {
 	defer func() {
 		if val := recover(); val != nil {
-			t.Fatal(val)
+			t.Fatalf("%s\n%s", val, string(debug.Stack()))
 		}
 	}()
 
@@ -57,18 +58,22 @@ func testFile(t *testutil.T, file string) {
 	}
 
 	runBuild := func(rx, userdata bool) {
+		t.Logf("[%s] generating... (rx=%t, userdata=%t)", file, rx, userdata)
 		err = golangCmd("", dialects, "", rx, userdata, file, dir)
 		t.AssertNoError(err)
 
+		t.Logf("[%s] loading...", file)
 		go_file := filepath.Join(dir, filepath.Base(file)+".go")
 		go_source, err := ioutil.ReadFile(go_file)
 		t.AssertNoError(err)
 		t.Context("go", linedSource(go_source))
 
+		t.Logf("[%s] parsing...", file)
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, go_file, go_source, parser.AllErrors)
 		t.AssertNoError(err)
 
+		t.Logf("[%s] compiling...", file)
 		config := types.Config{
 			Importer: importer.Default(),
 		}
