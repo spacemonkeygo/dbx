@@ -466,9 +466,11 @@ read <views> (
 	//    where animal.name = "Tiger"
 	// 4) number literal
 	//    where animal.age < 30
-	// 5) model field reference: <model>.<field>
+	// 5) boolean literal
+	//    where animal.dead = false
+	// 6) model field reference: <model>.<field>
 	//    where animal.height = animal.width
-	// 6) SQL function call: <name>(<expr>)
+	// 7) SQL function call: <name>(<expr>)
 	//    where lower(animal.name) = "tiger"
 	//
 	// SQL function calls take an expression for each argument. Currently only

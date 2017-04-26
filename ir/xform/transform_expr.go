@@ -51,6 +51,14 @@ func transformExpr(lookup *lookup, models map[string]scanner.Position,
 		return &ir.Expr{
 			NumberLit: &ast_expr.NumberLit.Value,
 		}, nil
+	case ast_expr.BoolLit != nil:
+		if is_left {
+			return nil, errutil.New(ast_expr.Pos,
+				"literals are not valid on the left side of a where clause")
+		}
+		return &ir.Expr{
+			BoolLit: &ast_expr.BoolLit.Value,
+		}, nil
 	case ast_expr.Placeholder != nil:
 		if is_left {
 			return nil, errutil.New(ast_expr.Pos,

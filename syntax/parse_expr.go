@@ -59,8 +59,12 @@ func parseExpr(node *tupleNode) (*ast.Expr, error) {
 	first.debugAssertToken(Ident)
 
 	if node.consumeIfToken(Dot) == nil {
-		if first.text == "null" {
+		switch first.text {
+		case "null":
 			expr.Null = nullFromToken(first)
+			return expr, nil
+		case "true", "false":
+			expr.BoolLit = boolFromToken(first)
 			return expr, nil
 		}
 

@@ -30,6 +30,8 @@ func ExprSQL(expr *ir.Expr, dialect Dialect) sqlgen.SQL {
 		return J("", L("'"), L(dialect.EscapeString(*expr.StringLit)), L("'"))
 	case expr.NumberLit != nil:
 		return L(*expr.NumberLit)
+	case expr.BoolLit != nil:
+		return Lf("%t", *expr.BoolLit)
 	case expr.Placeholder:
 		return L("?")
 	case expr.Field != nil:

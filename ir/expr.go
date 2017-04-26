@@ -19,7 +19,8 @@ type Expr struct {
 	Placeholder bool
 	StringLit   *string
 	NumberLit   *string
-	Field     *Field
+	BoolLit     *bool
+	Field       *Field
 	FuncCall    *FuncCall
 }
 

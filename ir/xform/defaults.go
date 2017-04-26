@@ -133,9 +133,11 @@ func exprSuffix(expr *ir.Expr, full bool) (parts []string) {
 	case expr.Null:
 		parts = []string{"null"}
 	case expr.StringLit != nil:
-		parts = []string{"literal"}
+		parts = []string{"string"}
 	case expr.NumberLit != nil:
-		parts = []string{"literal"}
+		parts = []string{"number"}
+	case expr.BoolLit != nil:
+		parts = []string{fmt.Sprint(*expr.BoolLit)}
 	case expr.Placeholder:
 	case expr.Field != nil:
 		if full {
@@ -154,6 +156,8 @@ func exprSuffix(expr *ir.Expr, full bool) (parts []string) {
 			}
 			parts = append(parts, arg_suffix...)
 		}
+	default:
+		panic(fmt.Sprintf("unhandled expr for suffix: %+v", expr))
 	}
 	return parts
 }

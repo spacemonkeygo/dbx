@@ -171,6 +171,13 @@ func nullFromToken(token *tokenNode) *ast.Null {
 	}
 }
 
+func boolFromToken(token *tokenNode) *ast.Bool {
+	return &ast.Bool{
+		Pos:   token.getPos(),
+		Value: token.text == "true",
+	}
+}
+
 func placeholderFromToken(token *tokenNode) *ast.Placeholder {
 	return &ast.Placeholder{
 		Pos: token.getPos(),

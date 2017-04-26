@@ -64,6 +64,10 @@ func (b *Bool) Get() bool {
 	return b.Value
 }
 
+func (b *Bool) String() string {
+	return fmt.Sprint(b.Value)
+}
+
 type Int struct {
 	Pos   scanner.Position
 	Value int
@@ -257,6 +261,7 @@ type Expr struct {
 	Null        *Null
 	StringLit   *String
 	NumberLit   *String
+	BoolLit     *Bool
 	Placeholder *Placeholder
 	FieldRef    *FieldRef
 	FuncCall    *FuncCall
@@ -270,6 +275,8 @@ func (e *Expr) String() string {
 		return fmt.Sprintf("%q", e.StringLit.Value)
 	case e.NumberLit != nil:
 		return e.NumberLit.Value
+	case e.BoolLit != nil:
+		return e.BoolLit.String()
 	case e.Placeholder != nil:
 		return e.Placeholder.String()
 	case e.FieldRef != nil:

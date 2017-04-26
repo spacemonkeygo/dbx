@@ -299,4 +299,14 @@ read scalar (
 	where foo.string = lower("BOO")
 )
 
+read scalar (
+	select foo
+	where foo.bool = true
+)
+
+read scalar (
+	select foo
+	where foo.null_bool = false
+)
+
 delete foo ( )
