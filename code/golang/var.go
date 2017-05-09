@@ -22,12 +22,19 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
-func VarFromSelectable(selectable ir.Selectable) (v *Var) {
+func VarFromSelectable(selectable ir.Selectable, full_name bool) (v *Var) {
 	switch obj := selectable.(type) {
 	case *ir.Model:
 		v = VarFromModel(obj)
+		v.Name = inflect.Camelize(v.Name)
 	case *ir.Field:
 		v = VarFromField(obj)
+		if full_name {
+			v.Name = inflect.Camelize(obj.Model.Name) + "_" +
+				inflect.Camelize(obj.Name)
+		} else {
+			v.Name = inflect.Camelize(v.Name)
+		}
 	default:
 		panic(fmt.Sprintf("unhandled selectable type %T", obj))
 	}
@@ -35,8 +42,16 @@ func VarFromSelectable(selectable ir.Selectable) (v *Var) {
 }
 
 func VarsFromSelectables(selectables []ir.Selectable) (vars []*Var) {
+	nmodels := 0
 	for _, selectable := range selectables {
-		vars = append(vars, VarFromSelectable(selectable))
+		if _, ok := selectable.(*ir.Model); ok {
+			nmodels++
+		}
+	}
+
+	for _, selectable := range selectables {
+		v := VarFromSelectable(selectable, nmodels > 1)
+		vars = append(vars, v)
 	}
 	return vars
 }

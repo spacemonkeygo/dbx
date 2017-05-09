@@ -17,7 +17,6 @@ package golang
 import (
 	"strings"
 
-	"bitbucket.org/pkg/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sql"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
@@ -42,7 +41,7 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 	get.Row = GetRowFromIR(ir_read)
 
 	if ir_read.View == ir.Paged {
-		pk_var := VarFromSelectable(ir_read.From.BasicPrimaryKey())
+		pk_var := VarFromField(ir_read.From.BasicPrimaryKey())
 		pk_var.Name = "__" + pk_var.Name
 		get.LastPk = pk_var
 	}
@@ -52,24 +51,43 @@ func GetFromIR(ir_read *ir.Read, dialect sql.Dialect) *Get {
 
 func GetRowFromIR(ir_read *ir.Read) *Var {
 	if model := ir_read.SelectedModel(); model != nil {
-		return VarFromSelectable(model)
+		return VarFromModel(model)
 	}
 
-	s := ResultStructFromRead(ir_read)
-	return StructVar("row", s.Name, s.FieldVars())
+	return MakeResultVar(ir_read.Selectables)
+}
+
+func MakeResultVar(selectables []ir.Selectable) *Var {
+	vars := VarsFromSelectables(selectables)
+
+	// construct the aggregate struct name
+	var parts []string
+	for _, v := range vars {
+		parts = append(parts, v.Name)
+	}
+	parts = append(parts, "Row")
+	name := strings.Join(parts, "_")
+	return StructVar("row", name, vars)
 }
 
 func ResultStructFromRead(ir_read *ir.Read) *Struct {
-	fields := FieldsFromSelectables(ir_read.Selectables)
-
-	var parts []string
-	for _, field := range fields {
-		parts = append(parts, inflect.Camelize(field.Name))
+	// no result struct if there is just a single model selected
+	if ir_read.SelectedModel() != nil {
+		return nil
 	}
-	parts = append(parts, "Row")
 
-	return &Struct{
-		Name:   strings.Join(parts, "_"),
-		Fields: fields,
+	result := MakeResultVar(ir_read.Selectables)
+
+	s := &Struct{
+		Name: result.Type,
 	}
+
+	for _, field := range result.Fields {
+		s.Fields = append(s.Fields, Field{
+			Name: field.Name,
+			Type: field.Type,
+		})
+	}
+
+	return s
 }

@@ -14,26 +14,9 @@
 
 package golang
 
-import (
-	"fmt"
-
-	"bitbucket.org/pkg/inflect"
-	"gopkg.in/spacemonkeygo/dbx.v1/ir"
-)
-
 type Struct struct {
 	Name   string
 	Fields []Field
-}
-
-func (s *Struct) FieldVars() (vars []*Var) {
-	for _, field := range s.Fields {
-		vars = append(vars, &Var{
-			Name: field.Name,
-			Type: field.Type,
-		})
-	}
-	return vars
 }
 
 type Field struct {
@@ -45,40 +28,4 @@ type Field struct {
 type Tag struct {
 	Key   string
 	Value string
-}
-
-func FieldFromSelectable(selectable ir.Selectable, full_name bool) Field {
-	field := Field{}
-	switch obj := selectable.(type) {
-	case *ir.Model:
-		field.Name = inflect.Camelize(obj.Name)
-		field.Type = field.Name
-	case *ir.Field:
-		if full_name {
-			field.Name = inflect.Camelize(obj.Model.Name) + "_" +
-				inflect.Camelize(obj.Name)
-		} else {
-			field.Name = inflect.Camelize(obj.Name)
-		}
-		field.Type = valueType(obj.Type, obj.Nullable)
-	default:
-		panic(fmt.Sprintf("unhandled selectable type %T", obj))
-	}
-	return field
-}
-
-func FieldsFromSelectables(selectables []ir.Selectable) (fields []Field) {
-	// count the number of models being selected
-	nmodels := 0
-	for _, selectable := range selectables {
-		if _, ok := selectable.(*ir.Model); ok {
-			nmodels++
-		}
-	}
-
-	for _, selectable := range selectables {
-		field := FieldFromSelectable(selectable, nmodels > 1)
-		fields = append(fields, field)
-	}
-	return fields
 }
