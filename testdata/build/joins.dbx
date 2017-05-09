@@ -1,0 +1,44 @@
+model foo (
+	key id
+	unique name
+	unique bar_id
+	unique baz_id
+
+	field id serial64
+	field bar_id bar.id restrict
+	field baz_id baz.id restrict
+	field name text (updatable)
+)
+
+model bar (
+	key id
+	unique name
+
+	field id serial64
+	field name text
+)
+
+model baz (
+	key id
+	unique name
+
+	field id serial64
+	field name text
+)
+
+// Join to two different tables from the same table
+read all (
+	select foo bar baz
+	join foo.bar_id = bar.id
+	join foo.baz_id = baz.id
+)
+
+update foo (
+	join foo.bar_id = bar.id
+	where bar.name = ?
+)
+
+delete foo (
+	join foo.bar_id = bar.id
+	where bar.name = ?
+)

@@ -15,8 +15,6 @@
 package xform
 
 import (
-	"text/scanner"
-
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -69,64 +67,26 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 	}
 
-	// Make sure models referenced in joins have continuity
-	models := map[string]scanner.Position{}
-	switch {
-	case len(selected) == 1:
-		from, err := lookup.FindModel(ast_read.Select.Refs[0].ModelRef())
+	models, joins, err := transformJoins(lookup, ast_read.Joins)
+	if err != nil {
+		return nil, err
+	}
+
+	tmpl.Joins = joins
+
+	if len(joins) > 0 {
+		tmpl.From = joins[0].Left.Model
+	} else if len(selected) == 1 {
+		sel := ast_read.Select.Refs[0]
+		from, err := lookup.FindModel(sel.ModelRef())
 		if err != nil {
 			return nil, err
 		}
 		tmpl.From = from
-		if len(ast_read.Joins) == 0 {
-			model_name := ast_read.Select.Refs[0].Model.Value
-			models[model_name] = ast_read.Select.Refs[0].Pos
-		}
-	case len(ast_read.Joins) == 0:
+		models[sel.Model.Value] = sel.Pos
+	} else {
 		return nil, errutil.New(ast_read.Select.Pos,
 			"cannot select from multiple models without a join")
-	}
-
-	var next string
-	for _, join := range ast_read.Joins {
-		left, err := lookup.FindField(join.Left)
-		if err != nil {
-			return nil, err
-		}
-		right, err := lookup.FindField(join.Right)
-		if err != nil {
-			return nil, err
-		}
-
-		tmpl.Joins = append(tmpl.Joins, &ir.Join{
-			Type:  join.Type.Get(),
-			Left:  left,
-			Right: right,
-		})
-
-		switch {
-		case next == "":
-			if existing_pos, ok := models[join.Left.Model.Value]; ok {
-				return nil, errutil.New(join.Left.Model.Pos,
-					"model %q already joined at %s",
-					join.Left.Model.Value, existing_pos)
-			}
-			models[join.Left.Model.Value] = join.Left.Pos
-			tmpl.From = left.Model
-		case next != join.Left.Model.Value:
-			return nil, errutil.New(join.Left.Model.Pos,
-				"model order must have continuity; expected %q; got %q",
-				next, join.Left.Model.Value)
-		}
-
-		if existing_pos, ok := models[join.Right.Model.Value]; ok {
-			return nil, errutil.New(join.Right.Model.Pos,
-				"model %q already joined at %s",
-				join.Right.Model.Value, existing_pos)
-		}
-		models[join.Right.Model.Value] = join.Right.Pos
-
-		next = join.Right.Model.Value
 	}
 
 	// Make sure all of the fields are accounted for in the set of models

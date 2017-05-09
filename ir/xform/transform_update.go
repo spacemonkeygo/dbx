@@ -15,8 +15,6 @@
 package xform
 
 import (
-	"text/scanner"
-
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
@@ -40,40 +38,13 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 		Suffix: transformSuffix(ast_upd.Suffix),
 	}
 
-	// Figure out set of models that are included in the update.
-	// These come from explicit joins.
-	models := map[string]scanner.Position{
-		model.Name: ast_upd.Model.Pos,
+	models, joins, err := transformJoins(lookup, ast_upd.Joins)
+	if err != nil {
+		return nil, err
 	}
+	models[model.Name] = ast_upd.Model.Pos
 
-	next := model.Name
-	for _, join := range ast_upd.Joins {
-		left, err := lookup.FindField(join.Left)
-		if err != nil {
-			return nil, err
-		}
-		if join.Left.Model.Value != next {
-			return nil, errutil.New(join.Left.Model.Pos,
-				"model order must be consistent; expected %q; got %q",
-				next, join.Left.Model.Value)
-		}
-		right, err := lookup.FindField(join.Right)
-		if err != nil {
-			return nil, err
-		}
-		next = join.Right.Model.Value
-		upd.Joins = append(upd.Joins, &ir.Join{
-			Type:  join.Type.Get(),
-			Left:  left,
-			Right: right,
-		})
-		if existing_pos, ok := models[join.Right.Model.Value]; ok {
-			return nil, errutil.New(join.Right.Model.Pos,
-				"model %q already joined at %s",
-				join.Right.Model.Value, existing_pos)
-		}
-		models[join.Right.Model.Value] = join.Right.ModelRef().Pos
-	}
+	upd.Joins = joins
 
 	// Finalize the where conditions and make sure referenced models are part
 	// of the select.
