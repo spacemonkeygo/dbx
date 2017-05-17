@@ -455,7 +455,8 @@ read <views> (
 	// a read can have any number of where clauses. the clause refers to an
 	// expression, an operation like "!=" or "<=", and another expression. if
 	// the right side field has a placeholder (?), the read will fill it in
-	// with an argument and be generated with a parameter for that argument.
+	// with an argument and be generated with a parameter for that argument. 
+	// multiple where clauses will be joined by "and"s.
 	//
 	// <expr> can be one of the following:
 	// 1) placeholder
