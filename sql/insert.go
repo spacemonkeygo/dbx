@@ -35,7 +35,7 @@ func InsertFromIRCreate(ir_cre *ir.Create, dialect Dialect) *Insert {
 	ins := &Insert{
 		Table: ir_cre.Model.Table,
 	}
-	if dialect.Features().Returning {
+	if dialect.Features().Returning && !ir_cre.NoReturn {
 		ins.Returning = ir_cre.Model.SelectRefs()
 	}
 	for _, field := range ir_cre.Fields() {

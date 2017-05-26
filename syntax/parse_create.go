@@ -32,7 +32,8 @@ func parseCreate(node *tupleNode) (*ast.Create, error) {
 	}
 
 	err = list_token.consumeAnyTuples(tupleCases{
-		"raw": tupleFlagField("create", "raw", &cre.Raw),
+		"raw":      tupleFlagField("create", "raw", &cre.Raw),
+		"noreturn": tupleFlagField("create", "noreturn", &cre.NoReturn),
 		"suffix": func(node *tupleNode) error {
 			if cre.Suffix != nil {
 				return previouslyDefined(node.getPos(), "create", "suffix",

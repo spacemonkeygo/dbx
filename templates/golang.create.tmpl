@@ -1,10 +1,15 @@
 {{- define "signature" -}}
+{{- if .Return -}}
 Create_{{ .Suffix }}({{ ctxparam .Args }}) (
 	{{ param .Return }}, err error)
+{{- else -}}
+CreateNoReturn_{{ .Suffix }}({{ ctxparam .Args }}) (
+	err error)
+{{- end -}}
 {{- end -}}
 
 {{- define "invoke" -}}
-Create_{{ .Suffix }}({{ ctxarg .Args }})
+Create{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}({{ ctxarg .Args }})
 {{ end -}}
 
 {{- define "body" -}}
@@ -19,6 +24,13 @@ Create_{{ .Suffix }}({{ ctxarg .Args }})
 	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, {{ arg .Fields }})
 
+	{{ if not .Return }}
+	_, err = obj.driver.Exec(__stmt, {{ arg .Fields}})
+	if err != nil {
+		return obj.makeErr(err)
+	}
+	return nil
+	{{ else -}}
 	{{ if .SupportsReturning }}
 	{{ init .Return }}
 	err = obj.driver.QueryRow(__stmt, {{ arg .Fields }}).Scan({{ addrof (flatten .Return) }})
@@ -36,5 +48,6 @@ Create_{{ .Suffix }}({{ ctxarg .Args }})
 		return nil, obj.makeErr(err)
 	}
 	return obj.getLast{{ .Return.Type }}(ctx, __pk)
+	{{ end -}}
 	{{ end -}}
 {{ end -}}

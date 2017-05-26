@@ -34,8 +34,9 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 	}
 
 	upd = &ir.Update{
-		Model:  model,
-		Suffix: transformSuffix(ast_upd.Suffix),
+		Model:    model,
+		NoReturn: ast_upd.NoReturn.Get(),
+		Suffix:   transformSuffix(ast_upd.Suffix),
 	}
 
 	models, joins, err := transformJoins(lookup, ast_upd.Joins)

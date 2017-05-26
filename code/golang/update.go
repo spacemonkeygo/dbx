@@ -39,8 +39,10 @@ func UpdateFromIR(ir_upd *ir.Update, dialect sql.Dialect) *Update {
 		Info:              sqlembedgo.Embed("__", update_sql),
 		Suffix:            convertSuffix(ir_upd.Suffix),
 		Struct:            ModelStructFromIR(ir_upd.Model),
-		Return:            VarFromModel(ir_upd.Model),
 		SupportsReturning: dialect.Features().Returning,
+	}
+	if !ir_upd.NoReturn {
+		upd.Return = VarFromModel(ir_upd.Model)
 	}
 
 	for _, field := range ir_upd.AutoUpdatableFields() {
