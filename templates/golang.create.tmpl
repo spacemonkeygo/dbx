@@ -1,15 +1,14 @@
-{{- define "signature" -}}
-{{- if .Return -}}
-Create_{{ .Suffix }}({{ ctxparam .Args }}) (
-	{{ param .Return }}, err error)
-{{- else -}}
-CreateNoReturn_{{ .Suffix }}({{ ctxparam .Args }}) (
-	err error)
+{{- define "name" -}}
+Create{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}
 {{- end -}}
+
+{{- define "signature" -}}
+{{- template "name" . }}({{ ctxparam .Args }}) (
+	{{ if .Return }}{{ param .Return }}, {{ end }}err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Create{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}({{ ctxarg .Args }})
+{{- template "name" . }}({{ ctxarg .Args }})
 {{ end -}}
 
 {{- define "body" -}}

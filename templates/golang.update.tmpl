@@ -1,17 +1,15 @@
-{{- define "signature" -}}
-{{- if .Return -}}
-Update_{{ .Suffix }}({{ ctxparam .AllArgs }},
-	update {{ .Struct.UpdateStructName }}) (
-	{{ param .Return }}, err error)
-{{- else -}}
-UpdateNoReturn_{{ .Suffix }}({{ ctxparam .AllArgs }},
-	update {{ .Struct.UpdateStructName }}) (
-	err error)
+{{- define "name" -}}
+Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}
 {{- end -}}
+
+{{- define "signature" -}}
+{{- template "name" . }}({{ ctxparam .AllArgs }},
+	update {{ .Struct.UpdateStructName }}) (
+	{{ if .Return }}{{ param .Return }}, {{ end }}err error)
 {{- end -}}
 
 {{- define "invoke" -}}
-Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}({{ ctxarg .AllArgs }}, update)
+{{- template "name" . }}({{ ctxarg .AllArgs }}, update)
 {{- end -}}
 
 {{- define "body" -}}
