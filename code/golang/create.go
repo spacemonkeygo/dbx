@@ -36,8 +36,10 @@ func RawCreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *RawCreate {
 	ins := &RawCreate{
 		Info:              sqlembedgo.Embed("__", insert_sql),
 		Suffix:            convertSuffix(ir_cre.Suffix),
-		Return:            VarFromModel(ir_cre.Model),
 		SupportsReturning: dialect.Features().Returning,
+	}
+	if !ir_cre.NoReturn {
+		ins.Return = VarFromModel(ir_cre.Model)
 	}
 
 	// the model struct is the only arg.
@@ -77,8 +79,10 @@ func CreateFromIR(ir_cre *ir.Create, dialect sql.Dialect) *Create {
 	ins := &Create{
 		Info:              sqlembedgo.Embed("__", insert_sql),
 		Suffix:            convertSuffix(ir_cre.Suffix),
-		Return:            VarFromModel(ir_cre.Model),
 		SupportsReturning: dialect.Features().Returning,
+	}
+	if !ir_cre.NoReturn {
+		ins.Return = VarFromModel(ir_cre.Model)
 	}
 
 	args := map[string]*Var{}

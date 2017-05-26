@@ -227,8 +227,17 @@ create foo ( )
 
 create foo ( raw )
 
+create foo ( noreturn )
+
+create foo ( raw, noreturn )
+
 update foo (
 	where foo.id = ?
+)
+
+update foo (
+	where foo.id = ?
+	noreturn
 )
 
 read all paged limitoffset has count (

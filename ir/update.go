@@ -17,14 +17,19 @@ package ir
 import "fmt"
 
 type Update struct {
-	Suffix []string
-	Model  *Model
-	Joins  []*Join
-	Where  []*Where
+	Suffix   []string
+	Model    *Model
+	Joins    []*Join
+	Where    []*Where
+	NoReturn bool
 }
 
 func (r *Update) Signature() string {
-	return fmt.Sprintf("UPDATE(%q)", r.Suffix)
+	prefix := "UPDATE"
+	if r.NoReturn {
+		prefix += "_NORETURN"
+	}
+	return fmt.Sprintf("%s(%q)", prefix, r.Suffix)
 }
 
 func (upd *Update) AutoUpdatableFields() (fields []*Field) {

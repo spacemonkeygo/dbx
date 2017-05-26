@@ -194,18 +194,20 @@ type Delete struct {
 }
 
 type Update struct {
-	Pos    scanner.Position
-	Model  *ModelRef
-	Joins  []*Join
-	Where  []*Where
-	Suffix *Suffix
+	Pos      scanner.Position
+	Model    *ModelRef
+	Joins    []*Join
+	Where    []*Where
+	NoReturn *Bool
+	Suffix   *Suffix
 }
 
 type Create struct {
-	Pos    scanner.Position
-	Model  *ModelRef
-	Raw    *Bool
-	Suffix *Suffix
+	Pos      scanner.Position
+	Model    *ModelRef
+	Raw      *Bool
+	NoReturn *Bool
+	Suffix   *Suffix
 }
 
 type View struct {

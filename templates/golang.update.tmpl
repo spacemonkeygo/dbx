@@ -1,11 +1,17 @@
 {{- define "signature" -}}
+{{- if .Return -}}
 Update_{{ .Suffix }}({{ ctxparam .AllArgs }},
 	update {{ .Struct.UpdateStructName }}) (
 	{{ param .Return }}, err error)
+{{- else -}}
+UpdateNoReturn_{{ .Suffix }}({{ ctxparam .AllArgs }},
+	update {{ .Struct.UpdateStructName }}) (
+	err error)
+{{- end -}}
 {{- end -}}
 
 {{- define "invoke" -}}
-Update_{{ .Suffix }}({{ ctxarg .AllArgs }}, update)
+Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}({{ ctxarg .AllArgs }}, update)
 {{- end -}}
 
 {{- define "body" -}}
@@ -52,6 +58,13 @@ Update_{{ .Suffix }}({{ ctxarg .AllArgs }}, update)
 	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, __values...)
 
+	{{ if not .Return }}
+	_, err = obj.driver.Exec(__stmt, __values...)
+	if err != nil {
+		return obj.makeErr(err)
+	}
+	return nil
+	{{ else -}}
 	{{ init .Return }}
 	{{ if .SupportsReturning }}
 	err = obj.driver.QueryRow(__stmt, __values...).Scan({{ addrof (flatten .Return) }})
@@ -80,4 +93,5 @@ Update_{{ .Suffix }}({{ ctxarg .AllArgs }}, update)
 	}
 	{{ end -}}
 	return {{ arg .Return }}, nil
+	{{ end -}}
 {{- end -}}
