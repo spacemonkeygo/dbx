@@ -192,6 +192,11 @@ update b (
 	where b.id = ?
 )
 
+update b (
+	where b.id = ?
+	noreturn
+)
+
 model foo (
 	key id
 

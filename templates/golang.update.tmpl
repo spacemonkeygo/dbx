@@ -37,7 +37,11 @@ Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}
 
 	{{ if not .AutoFields }}
 	if len(__sets_sql.SQLs) == 0 {
+		{{ if .Return }}
 		return nil, emptyUpdate()
+		{{ else }}
+		return emptyUpdate()
+		{{ end }}
 	}
 	{{ end }}
 
