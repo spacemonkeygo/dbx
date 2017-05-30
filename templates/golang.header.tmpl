@@ -189,7 +189,7 @@ func (obj *DB) Open(ctx context.Context) (*Tx, error) {
 	}
 
 	return &Tx{
-		tx: tx,
+		Tx: tx,
 		txMethods: obj.wrapTx(tx),
 	}, nil
 }
@@ -217,7 +217,7 @@ func DeleteAll(ctx context.Context, db *DB) (int64, error) {
 }
 
 type Tx struct {
-	tx *sql.Tx
+	Tx *sql.Tx
 	txMethods
 }
 
