@@ -4,6 +4,14 @@ type Rx struct {
 	tx *Tx
 }
 
+func (rx *Rx) UnsafeTx(ctx context.Context) (unsafe_tx *sql.Tx, err error) {
+	tx, err := rx.getTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return tx.Tx, nil
+}
+
 func (rx *Rx) getTx(ctx context.Context) (tx *Tx, err error) {
 	if rx.tx == nil {
 		if rx.tx, err = rx.db.Open(ctx); err != nil {
@@ -28,6 +36,7 @@ func (rx *Rx) Rollback() (err error) {
 	}
 	return err
 }
+
 {{ range .Methods }}
 func (rx *Rx) {{ .Signature }} {
 	var tx *Tx
