@@ -37,11 +37,11 @@ Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}
 
 	{{ if not .AutoFields }}
 	if len(__sets_sql.SQLs) == 0 {
-		{{ if .Return }}
+		{{- if .Return }}
 		return nil, emptyUpdate()
-		{{ else }}
+		{{- else }}
 		return emptyUpdate()
-		{{ end }}
+		{{- end }}
 	}
 	{{ end }}
 
@@ -59,16 +59,17 @@ Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}
 
 	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
 	obj.logStmt(__stmt, __values...)
+	{{- if not .Return }}
 
-	{{ if not .Return }}
 	_, err = obj.driver.Exec(__stmt, __values...)
 	if err != nil {
 		return obj.makeErr(err)
 	}
 	return nil
-	{{ else -}}
+	{{- else }}
+
 	{{ init .Return }}
-	{{ if .SupportsReturning }}
+	{{- if .SupportsReturning }}
 	err = obj.driver.QueryRow(__stmt, __values...).Scan({{ addrof (flatten .Return) }})
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -76,7 +77,7 @@ Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}
 	if err != nil {
 		return nil, obj.makeErr(err)
 	}
-	{{ else -}}
+	{{- else }}
 	_, err = obj.driver.Exec(__stmt, __values...)
 	if err != nil {
 		return nil, obj.makeErr(err)
@@ -93,7 +94,7 @@ Update{{ if not .Return }}NoReturn{{ end }}_{{ .Suffix }}
 	if err != nil {
 		return nil, obj.makeErr(err)
 	}
-	{{ end -}}
+	{{- end }}
 	return {{ arg .Return }}, nil
-	{{ end -}}
+	{{- end }}
 {{- end -}}
