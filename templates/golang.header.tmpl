@@ -245,6 +245,10 @@ type {{ $impltype }} struct {
 	driver  driver
 }
 
+func (obj *{{ $impltype }}) Rebind(s string) string {
+	return obj.dialect.Rebind(s)
+}
+
 func (obj *{{ $impltype }}) logStmt(stmt string, args... interface{}) {
 	{{ .Name }}LogStmt(stmt, args...)
 }
