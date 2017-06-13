@@ -142,7 +142,15 @@ type DB struct {
 }
 
 func Open(driver, source string) (db *DB, err error) {
-	sql_db, err := sql.Open(driver, source)
+	var sql_db *sql.DB
+	switch driver {
+{{- range .Dialects }}
+	case {{ .Name | printf "%q" }}:
+		sql_db, err = open{{ .Name }}(source)
+{{- end }}
+	default:
+		return nil, unsupportedDriver(driver)
+	}
 	if err != nil {
 		return nil, makeErr(err)
 	}
@@ -165,11 +173,6 @@ func Open(driver, source string) (db *DB, err error) {
 {{- range .Dialects }}
 	case {{ .Name | printf "%q" }}:
 		db.dbMethods = new{{ .Name }}(db)
-{{- range .ExecOnOpen }}
-		if _,  err := sql_db.Exec({{ printf "%q" . }}); err != nil {
-			return nil, db.makeErr(err)
-		}
-{{- end }}
 {{- end }}
 	default:
 		return nil, unsupportedDriver(driver)

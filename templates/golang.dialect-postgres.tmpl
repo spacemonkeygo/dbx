@@ -13,3 +13,9 @@ func (impl {{ .Receiver }}) isConstraintError(err error) (
 	return "", false
 }
 {{ end -}}
+
+{{- define "open" }}
+func openpostgres(source string) (*sql.DB, error) {
+	return sql.Open("postgres", source)
+}
+{{ end -}}

@@ -298,6 +298,10 @@ func (r *Renderer) RenderCode(root *ir.Root, dialects []sql.Dialect) (
 		return nil, err
 	}
 
+	if err := r.renderDialectOpens(&buf, dialects); err != nil {
+		return nil, err
+	}
+
 	rendered, err = format.Source(buf.Bytes())
 	if err != nil {
 		return nil, Error.Wrap(err)
@@ -310,9 +314,8 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 	dialects []sql.Dialect) error {
 
 	type headerDialect struct {
-		Name       string
-		SchemaSQL  string
-		ExecOnOpen []string
+		Name      string
+		SchemaSQL string
 	}
 
 	type headerParams struct {
@@ -349,9 +352,8 @@ func (r *Renderer) renderHeader(w io.Writer, root *ir.Root,
 
 		params.ExtraImports = append(params.ExtraImports, dialect_import)
 		params.Dialects = append(params.Dialects, headerDialect{
-			Name:       dialect.Name(),
-			SchemaSQL:  dialect_schema,
-			ExecOnOpen: dialect.ExecOnOpen(),
+			Name:      dialect.Name(),
+			SchemaSQL: dialect_schema,
 		})
 	}
 
@@ -562,6 +564,22 @@ func (r *Renderer) renderDialectFuncs(w io.Writer, dialect sql.Dialect) (
 	}
 
 	return tmplutil.Render(tmpl, w, "is-constraint-error", dialect_func)
+}
+
+func (r *Renderer) renderDialectOpens(w io.Writer, dialects []sql.Dialect) (
+	err error) {
+
+	for _, dialect := range dialects {
+		tmpl, err := r.loadDialect(dialect)
+		if err != nil {
+			return err
+		}
+		if err := tmplutil.Render(tmpl, w, "open", nil); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *Renderer) loadDialect(dialect sql.Dialect) (

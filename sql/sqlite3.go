@@ -71,12 +71,6 @@ func (s *sqlite3) Rebind(sql string) string {
 	return sql
 }
 
-func (s *sqlite3) ExecOnOpen() []string {
-	return []string{
-		"PRAGMA foreign_keys = ON;",
-	}
-}
-
 var sqlite3Replacer = strings.NewReplacer(
 	`'`, `''`,
 )

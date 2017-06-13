@@ -18,3 +18,34 @@ func (impl {{ .Receiver }}) isConstraintError(err error) (
 	return "", false
 }
 {{ end -}}
+
+{{- define "open" }}
+var sqlite3DriverName = "sqlite3_" + fmt.Sprint(time.Now().UnixNano())
+
+func init() {
+	sql.Register(sqlite3DriverName, &sqlite3.SQLiteDriver{
+			ConnectHook: sqlite3SetupConn,
+	})
+}
+
+// SQLite3JournalMode controls the journal_mode pragma for all new connections.
+// Since it is read without a mutex, it must be changed to the value you want
+// before any Open calls.
+var SQLite3JournalMode = "WAL"
+
+func sqlite3SetupConn(conn *sqlite3.SQLiteConn) (err error) {
+	_, err = conn.Exec("PRAGMA foreign_keys = ON", nil)
+	if err != nil {
+		return makeErr(err)
+	}
+	_, err = conn.Exec("PRAGMA journal_mode = " + SQLite3JournalMode, nil)
+	if err != nil {
+		return makeErr(err)
+	}
+	return nil
+}
+
+func opensqlite3(source string) (*sql.DB, error) {
+	return sql.Open(sqlite3DriverName, source)
+}
+{{ end -}}
