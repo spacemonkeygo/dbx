@@ -163,6 +163,9 @@ func modelDepth(model *Model) (depth int) {
 		if field.Relation == nil {
 			continue
 		}
+		if field.Relation.Field.Model == model {
+			continue
+		}
 		reldepth := modelDepth(field.Relation.Field.Model) + 1
 		if reldepth > depth {
 			depth = reldepth
