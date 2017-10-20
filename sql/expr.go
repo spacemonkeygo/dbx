@@ -31,7 +31,7 @@ func ExprSQL(expr *ir.Expr, dialect Dialect) sqlgen.SQL {
 	case expr.NumberLit != nil:
 		return L(*expr.NumberLit)
 	case expr.BoolLit != nil:
-		return Lf("%t", *expr.BoolLit)
+		return L(dialect.BoolLit(*expr.BoolLit))
 	case expr.Placeholder:
 		return L("?")
 	case expr.Field != nil:

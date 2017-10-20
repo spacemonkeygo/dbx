@@ -113,3 +113,10 @@ var postgresEscaper = strings.NewReplacer(
 func (p *postgres) EscapeString(s string) string {
 	return postgresEscaper.Replace(s)
 }
+
+func (p *postgres) BoolLit(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
+}

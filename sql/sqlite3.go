@@ -78,3 +78,10 @@ var sqlite3Replacer = strings.NewReplacer(
 func (p *sqlite3) EscapeString(s string) string {
 	return sqlite3Replacer.Replace(s)
 }
+
+func (p *sqlite3) BoolLit(v bool) string {
+	if v {
+		return "1"
+	}
+	return "0"
+}
