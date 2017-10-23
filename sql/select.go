@@ -115,7 +115,7 @@ func SQLFromSelect(sel *Select) sqlgen.SQL {
 	stmt := Build(nil)
 
 	if sel.Has {
-		stmt.Add(L("SELECT COALESCE(("))
+		stmt.Add(L("SELECT EXISTS("))
 	}
 
 	fields := J(", ", Strings(sel.Fields)...)
@@ -142,7 +142,7 @@ func SQLFromSelect(sel *Select) sqlgen.SQL {
 	}
 
 	if sel.Has {
-		stmt.Add(L("), 0)"))
+		stmt.Add(L(")"))
 	}
 
 	return sqlcompile.Compile(stmt.SQL())
