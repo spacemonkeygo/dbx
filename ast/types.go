@@ -247,14 +247,54 @@ func (j *JoinType) Get() consts.JoinType {
 }
 
 type Where struct {
+	Pos    scanner.Position
+	Or     *WhereOr
+	And    *WhereAnd
+	Clause *WhereClause
+}
+
+func (w *Where) String() string {
+	switch {
+	case w.Or != nil:
+		return w.Or.String()
+	case w.And != nil:
+		return w.And.String()
+	case w.Clause != nil:
+		return w.Clause.String()
+	default:
+		return "<invalid where>"
+	}
+}
+
+type WhereOr struct {
+	Pos   scanner.Position
+	Left  *Where
+	Right *Where
+}
+
+func (w *WhereOr) String() string {
+	return fmt.Sprintf("(%s or %s)", w.Left, w.Right)
+}
+
+type WhereAnd struct {
+	Pos   scanner.Position
+	Left  *Where
+	Right *Where
+}
+
+func (w *WhereAnd) String() string {
+	return fmt.Sprintf("(%s and %s)", w.Left, w.Right)
+}
+
+type WhereClause struct {
 	Pos   scanner.Position
 	Left  *Expr
 	Op    *Operator
 	Right *Expr
 }
 
-func (w *Where) String() string {
-	return fmt.Sprintf("%s %s %s", w.Left, w.Op, w.Right)
+func (w *WhereClause) String() string {
+	return fmt.Sprintf("(%s %s %s)", w.Left, w.Op, w.Right)
 }
 
 type Expr struct {
@@ -286,7 +326,7 @@ func (e *Expr) String() string {
 	case e.FuncCall != nil:
 		return e.FuncCall.String()
 	default:
-		return ""
+		return "<invalid expr>"
 	}
 }
 

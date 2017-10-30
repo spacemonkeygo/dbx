@@ -37,19 +37,19 @@ func transformWheres(lookup *lookup, models map[string]scanner.Position,
 func transformWhere(lookup *lookup, models map[string]scanner.Position,
 	ast_where *ast.Where) (where *ir.Where, err error) {
 
-	lexpr, err := transformExpr(lookup, models, ast_where.Left, true)
+	lexpr, err := transformExpr(lookup, models, ast_where.Clause.Left, true)
 	if err != nil {
 		return nil, err
 	}
 
-	rexpr, err := transformExpr(lookup, models, ast_where.Right, false)
+	rexpr, err := transformExpr(lookup, models, ast_where.Clause.Right, false)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ir.Where{
 		Left:  lexpr,
-		Op:    ast_where.Op.Value,
+		Op:    ast_where.Clause.Op.Value,
 		Right: rexpr,
 	}, nil
 }

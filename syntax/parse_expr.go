@@ -21,7 +21,7 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 )
 
-func parseExpr(node *tupleNode) (*ast.Expr, error) {
+func parseExpr(node *tupleNode) (expr *ast.Expr, err error) {
 	// expressions are one of the following:
 	//  placeholder      : ?
 	//  string literal   : "foo"
@@ -30,9 +30,8 @@ func parseExpr(node *tupleNode) (*ast.Expr, error) {
 	//  dotted field ref : model.field
 	//  function         : foo(<expr>)
 
-	expr := &ast.Expr{
-		Pos: node.getPos(),
-	}
+	expr = new(ast.Expr)
+	expr.Pos = node.getPos()
 
 	first, err := node.consumeToken(Question, String, Int, Float, Ident)
 	if err != nil {

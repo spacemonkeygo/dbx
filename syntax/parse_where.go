@@ -23,7 +23,20 @@ func parseWhere(node *tupleNode) (where *ast.Where, err error) {
 	where = new(ast.Where)
 	where.Pos = node.getPos()
 
-	where.Left, err = parseExpr(node)
+	clause, err := parseWhereClause(node)
+	if err != nil {
+		return nil, err
+	}
+
+	where.Clause = clause
+	return where, nil
+}
+
+func parseWhereClause(node *tupleNode) (clause *ast.WhereClause, err error) {
+	clause = new(ast.WhereClause)
+	clause.Pos = node.getPos()
+
+	clause.Left, err = parseExpr(node)
 	if err != nil {
 		return nil, err
 	}
@@ -34,30 +47,30 @@ func parseWhere(node *tupleNode) (where *ast.Where, err error) {
 			if err != nil {
 				return err
 			}
-			where.Op = operatorFromValue(token, consts.NE)
+			clause.Op = operatorFromValue(token, consts.NE)
 			return nil
 		},
 		{Ident, "like"}: func(token *tokenNode) error {
-			where.Op = operatorFromValue(token, consts.Like)
+			clause.Op = operatorFromValue(token, consts.Like)
 			return nil
 		},
 		Equal.tokenCase(): func(token *tokenNode) error {
-			where.Op = operatorFromValue(token, consts.EQ)
+			clause.Op = operatorFromValue(token, consts.EQ)
 			return nil
 		},
 		LeftAngle.tokenCase(): func(token *tokenNode) error {
 			if node.consumeIfToken(Equal) != nil {
-				where.Op = operatorFromValue(token, consts.LE)
+				clause.Op = operatorFromValue(token, consts.LE)
 			} else {
-				where.Op = operatorFromValue(token, consts.LT)
+				clause.Op = operatorFromValue(token, consts.LT)
 			}
 			return nil
 		},
 		RightAngle.tokenCase(): func(token *tokenNode) error {
 			if node.consumeIfToken(Equal) != nil {
-				where.Op = operatorFromValue(token, consts.GE)
+				clause.Op = operatorFromValue(token, consts.GE)
 			} else {
-				where.Op = operatorFromValue(token, consts.GT)
+				clause.Op = operatorFromValue(token, consts.GT)
 			}
 			return nil
 		},
@@ -66,10 +79,10 @@ func parseWhere(node *tupleNode) (where *ast.Where, err error) {
 		return nil, err
 	}
 
-	where.Right, err = parseExpr(node)
+	clause.Right, err = parseExpr(node)
 	if err != nil {
 		return nil, err
 	}
 
-	return where, nil
+	return clause, nil
 }
