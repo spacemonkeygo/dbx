@@ -16,13 +16,29 @@ package ir
 
 import "gopkg.in/spacemonkeygo/dbx.v1/consts"
 
-type Where struct {
+type WhereExpr struct {
 	Left  *Expr
 	Op    consts.Operator
 	Right *Expr
 }
 
-func (w *Where) NeedsCondition() bool {
+type WhereOr struct {
+	Left  *Where
+	Right *Where
+}
+
+type WhereAnd struct {
+	Left  *Where
+	Right *Where
+}
+
+type Where struct {
+	Expr *WhereExpr
+	Or   *WhereOr
+	And  *WhereAnd
+}
+
+func (w *WhereExpr) NeedsCondition() bool {
 	// only EQ and NE need a condition to switch on "=" v.s. "is", etc.
 	switch w.Op {
 	case consts.EQ, consts.NE:

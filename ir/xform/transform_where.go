@@ -38,24 +38,78 @@ func transformWheres(lookup *lookup, models map[string]scanner.Position,
 func transformWhere(lookup *lookup, models map[string]scanner.Position,
 	ast_where *ast.Where) (where *ir.Where, err error) {
 
-	if len(ast_where.And) > 0 || len(ast_where.Or) > 0 ||
-		ast_where.Clause == nil {
-		return nil, errutil.New(ast_where.Pos, "unsupported where")
+	where = new(ir.Where)
+	switch {
+	case ast_where.Clause != nil:
+		where.Clause, err = transformWhereClause(lookup, models,
+			ast_where.Clause)
+	case ast_where.Or != nil:
+		where.Or, err = transformWhereOr(lookup, models, ast_where.Or)
+	case ast_where.And != nil:
+		where.And, err = transformWhereAnd(lookup, models, ast_where.And)
+	default:
+		err = errutil.New(ast_read.Pos, "no fields defined to select")
 	}
+	if err != nil {
+		return nil, err
+	}
+	return where, nil
+}
 
-	lexpr, err := transformExpr(lookup, models, ast_where.Clause.Left, true)
+func transformWhereClause(lookup *lookup, models map[string]scanner.Position,
+	ast_where_clause *ast.Where) (where *ir.WhereClause, err error) {
+
+	lexpr, err := transformExpr(lookup, models, ast_where_clause.Left, true)
 	if err != nil {
 		return nil, err
 	}
 
-	rexpr, err := transformExpr(lookup, models, ast_where.Clause.Right, false)
+	rexpr, err := transformExpr(lookup, models, ast_where_clause.Right, false)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ir.Where{
 		Left:  lexpr,
-		Op:    ast_where.Clause.Op.Value,
+		Op:    ast_where_clause.Op.Value,
 		Right: rexpr,
+	}, nil
+}
+
+func transformWhereOr(lookup *lookup, models map[string]scanner.Position,
+	ast_where_or *ast.WhereOr) (where *ir.WhereOr, err error) {
+
+	lwhere, err := transformWhere(lookup, models, ast_where_or.Left)
+	if err != nil {
+		return nil, err
+	}
+
+	rwhere, err := transformWhere(lookup, models, ast_where_or.Right)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ir.WhereOr{
+		Left:  lwhere,
+		Right: rwhere,
+	}, nil
+}
+
+func transformWhereAnd(lookup *lookup, models map[string]scanner.Position,
+	ast_where_or *ast.WhereAnd) (where *ir.WhereAnd, err error) {
+
+	lwhere, err := transformWhere(lookup, models, ast_where_or.Left)
+	if err != nil {
+		return nil, err
+	}
+
+	rwhere, err := transformWhere(lookup, models, ast_where_or.Right)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ir.WhereAnd{
+		Left:  lwhere,
+		Right: rwhere,
 	}, nil
 }

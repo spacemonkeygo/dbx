@@ -57,7 +57,7 @@ func fieldSetPrune(all, bad []*Field) (out []*Field) {
 	return out
 }
 
-func whereUnique(wheres []*Where) (unique map[string]bool) {
+func whereUnique(where *Where) (unique map[string]bool) {
 	fields := map[*Model][]*Field{}
 	for _, where := range wheres {
 		if where.Op != consts.EQ {
