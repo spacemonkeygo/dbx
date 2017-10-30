@@ -71,7 +71,7 @@ func whereUnique(wheres []*Where) (unique map[string]bool) {
 			fields[left.Model] = append(fields[left.Model], left)
 		}
 		if right != nil {
-			fields[right.Model] = append(fields[right.Model], left)
+			fields[right.Model] = append(fields[right.Model], right)
 		}
 	}
 
