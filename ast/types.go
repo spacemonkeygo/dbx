@@ -181,6 +181,7 @@ type Read struct {
 	Joins   []*Join
 	Where   []*Where
 	OrderBy *OrderBy
+	GroupBy *GroupBy
 	View    *View
 	Suffix  *Suffix
 }
@@ -331,4 +332,9 @@ type OrderBy struct {
 	Pos        scanner.Position
 	Fields     *FieldRefs
 	Descending *Bool
+}
+
+type GroupBy struct {
+	Pos    scanner.Position
+	Fields *FieldRefs
 }

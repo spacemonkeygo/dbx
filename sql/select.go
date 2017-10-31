@@ -49,6 +49,7 @@ type Select struct {
 	Joins   []Join
 	Where   []sqlgen.SQL
 	OrderBy *OrderBy
+	GroupBy *GroupBy
 	Limit   string
 	Offset  string
 	Has     bool
@@ -67,6 +68,9 @@ func SelectFromIRRead(ir_read *ir.Read, dialect Dialect) *Select {
 
 	if ir_read.OrderBy != nil {
 		sel.OrderBy = OrderByFromIROrderBy(ir_read.OrderBy)
+	}
+	if ir_read.GroupBy != nil {
+		sel.GroupBy = GroupByFromIRGroupBy(ir_read.GroupBy)
 	}
 
 	switch ir_read.View {
@@ -131,6 +135,10 @@ func SQLFromSelect(sel *Select) sqlgen.SQL {
 
 	if sel.OrderBy != nil {
 		stmt.Add(SQLFromOrderBy(sel.OrderBy))
+	}
+
+	if sel.GroupBy != nil {
+		stmt.Add(SQLFromGroupBy(sel.GroupBy))
 	}
 
 	if sel.Limit != "" {

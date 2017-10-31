@@ -125,6 +125,25 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 	}
 
+	// Finalize GroupBy and make sure referenced fields are part of the select
+	if ast_read.GroupBy != nil {
+		fields, err := resolveFieldRefs(lookup, ast_read.GroupBy.Fields.Refs)
+		if err != nil {
+			return nil, err
+		}
+		for _, group_by_field := range ast_read.GroupBy.Fields.Refs {
+			if _, ok := models[group_by_field.Model.Value]; !ok {
+				return nil, errutil.New(group_by_field.Pos,
+					"invalid groupby field %q; model %q is not joined",
+					group_by_field, group_by_field.Model.Value)
+			}
+		}
+
+		tmpl.GroupBy = &ir.GroupBy{
+			Fields: fields,
+		}
+	}
+
 	// Now emit one select per view type (or one for all if unspecified)
 	view := ast_read.View
 	if view == nil {
@@ -170,6 +189,15 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		if tmpl.OrderBy != nil {
 			return nil, errutil.New(view.Paged.Pos,
 				"cannot page on model %q with order by",
+				tmpl.From.Name)
+		}
+		if tmpl.GroupBy != nil {
+			// Unless the primary key is part of the group by, then you can't
+			// know which row the primary key would be chosen by. Not sure
+			// this type of query would be useful, even if we could verify
+			// that it was ok, so disabling for now.
+			return nil, errutil.New(view.Paged.Pos,
+				"cannot page on model %q with group by",
 				tmpl.From.Name)
 		}
 		if tmpl.From.BasicPrimaryKey() == nil {

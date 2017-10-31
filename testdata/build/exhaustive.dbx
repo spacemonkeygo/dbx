@@ -324,3 +324,13 @@ read scalar (
 )
 
 delete foo ( )
+
+read scalar (
+    select foo
+    orderby asc foo.string
+)
+
+read scalar (
+    select foo
+    groupby foo.string
+)

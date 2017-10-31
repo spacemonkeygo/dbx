@@ -69,6 +69,16 @@ func DefaultReadSuffix(read *ir.Read) []string {
 			parts = append(parts, field.Name)
 		}
 	}
+	if read.GroupBy != nil {
+		parts = append(parts, "group_by")
+		for _, field := range read.GroupBy.Fields {
+			if full {
+				parts = append(parts, field.Model.Name)
+			}
+			parts = append(parts, field.Name)
+		}
+	}
+
 	return parts
 }
 

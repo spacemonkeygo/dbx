@@ -78,6 +78,20 @@ func parseRead(node *tupleNode) (*ast.Read, error) {
 
 			return nil
 		},
+		"groupby": func(node *tupleNode) error {
+			if read.GroupBy != nil {
+				return previouslyDefined(node.getPos(), "read", "groupby",
+					read.GroupBy.Pos)
+			}
+
+			group_by, err := parseGroupBy(node)
+			if err != nil {
+				return err
+			}
+			read.GroupBy = group_by
+
+			return nil
+		},
 		"suffix": func(node *tupleNode) error {
 			if read.Suffix != nil {
 				return previouslyDefined(node.getPos(), "read", "suffix",

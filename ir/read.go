@@ -33,6 +33,7 @@ type Read struct {
 	Joins       []*Join
 	Where       []*Where
 	OrderBy     *OrderBy
+	GroupBy     *GroupBy
 	View        View
 }
 
@@ -81,4 +82,8 @@ type Join struct {
 type OrderBy struct {
 	Fields     []*Field
 	Descending bool
+}
+
+type GroupBy struct {
+	Fields []*Field
 }
