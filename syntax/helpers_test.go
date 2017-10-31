@@ -15,44 +15,65 @@
 package syntax
 
 import (
+	"fmt"
+	"os"
 	"reflect"
 	"text/scanner"
 
+	"github.com/spacemonkeygo/errors"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
 )
 
 var positionType = reflect.TypeOf(scanner.Position{})
 
 func redactPos(val interface{}) {
-	rv := reflect.ValueOf(val).Elem() // ptr to struct
+	// it's a ptr to struct
+	rv := reflect.ValueOf(val)
+	if rv.IsNil() {
+		return
+	}
+	rv = rv.Elem()
 	for i := 0; i < rv.NumField(); i++ {
 		fi := rv.Field(i)
 		if fi.Type() == positionType {
 			fi.Set(reflect.Zero(positionType))
 			continue
 		}
-		if fi.Kind() == reflect.Ptr && fi.Elem().Kind() == reflect.Struct {
+		switch ft := fi.Type(); {
+		// field is a *struct
+		case ft.Kind() == reflect.Ptr && ft.Elem().Kind() == reflect.Struct:
 			redactPos(fi.Interface())
+
+		// field is a []*struct
+		case ft.Kind() == reflect.Slice && ft.Elem().Kind() == reflect.Ptr &&
+			ft.Elem().Elem().Kind() == reflect.Struct:
+			for i := 0; i < fi.Len(); i++ {
+				redactPos(fi.Index(i).Interface())
+			}
 		}
 	}
 }
 
 func assertWhere(tw *testutil.T, data string, exp *ast.Where) {
-	scanner, err := NewScanner("", []byte(data))
+	scanner, err := NewScanner("<memory>", []byte(data))
 	tw.AssertNoError(err)
-	list, err := scanRoot(scanner)
-	tw.AssertNoError(err)
-	tuple, err := list.consumeTuple()
+	node, err := newTupleNode(scanner)
 	tw.AssertNoError(err)
 
-	got, err := parseWhere(tuple)
-	tw.AssertNoError(err)
+	got, err := parseWhere(node)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, errors.GetMessage(err))
+		fmt.Fprintln(os.Stderr, errutil.GetContext([]byte(data), err))
+		fmt.Fprintln(os.Stderr, errors.GetStack(err))
+		tw.FailNow()
+	}
 	redactPos(got)
 
 	if !reflect.DeepEqual(got, exp) {
-		tw.Errorf("got: %#v", got)
-		tw.Errorf("exp: %#v", exp)
+		tw.Errorf("got: %s", got)
+		tw.Errorf("exp: %s", exp)
 		tw.FailNow()
 	}
 }

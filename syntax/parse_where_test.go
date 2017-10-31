@@ -15,6 +15,7 @@
 package syntax
 
 import (
+	"fmt"
 	"testing"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
@@ -26,26 +27,69 @@ func TestParseWhere(t *testing.T) {
 	tw := testutil.Wrap(t)
 	tw.Parallel()
 
+	// helpers to construct ast values
+	eq := &ast.Operator{Value: consts.EQ}
+	number := func(n int) *ast.Expr {
+		return &ast.Expr{NumberLit: &ast.String{Value: fmt.Sprint(n)}}
+	}
+	clause := func(l *ast.Expr, op *ast.Operator, r *ast.Expr) *ast.Where {
+		return &ast.Where{Clause: &ast.WhereClause{Left: l, Op: op, Right: r}}
+	}
+	and := func(wheres ...*ast.Where) *ast.Where {
+		return &ast.Where{And: wheres}
+	}
+	or := func(wheres ...*ast.Where) *ast.Where {
+		return &ast.Where{Or: wheres}
+	}
+	field := func(model, field string) *ast.Expr {
+		return &ast.Expr{FieldRef: &ast.FieldRef{
+			Model: &ast.String{Value: model},
+			Field: &ast.String{Value: field},
+		}}
+	}
+
 	tw.Run("Basic", func(tw *testutil.T) {
 		tw.Parallel()
 
 		assertWhere(tw, "foo.bar = 3",
-			&ast.Where{Clause: &ast.WhereClause{
-				Left: &ast.Expr{FieldRef: &ast.FieldRef{
-					Model: &ast.String{Value: "foo"},
-					Field: &ast.String{Value: "bar"},
-				}},
-				Op: &ast.Operator{Value: consts.EQ},
-				Right: &ast.Expr{NumberLit: &ast.String{
-					Value: "3",
-				}},
-			}})
-
-		// TODO(jeff): add some exhaustive cases
+			clause(field("foo", "bar"), eq, number(3)),
+		)
 	})
 
 	tw.Run("Compound", func(tw *testutil.T) {
 		tw.Parallel()
 
+		assertWhere(tw, "1 = 1 and (barf.baz = 2 or 3 = 3)",
+			and(clause(number(1), eq, number(1)),
+				or(clause(field("barf", "baz"), eq, number(2)),
+					clause(number(3), eq, number(3)),
+				),
+			),
+		)
+
+		assertWhere(tw, "1 = 1 and 2 = 2 and 3 = 3",
+			and(clause(number(1), eq, number(1)),
+				clause(number(2), eq, number(2)),
+				clause(number(3), eq, number(3)),
+			),
+		)
+
+		assertWhere(tw, "1 = 1 or 2 = 2 or 3 = 3",
+			or(clause(number(1), eq, number(1)),
+				clause(number(2), eq, number(2)),
+				clause(number(3), eq, number(3)),
+			),
+		)
+	})
+
+	tw.Run("CompoundGrouping", func(tw *testutil.T) {
+		tw.Parallel()
+
+		scanner, err := NewScanner("", []byte("1 = 1 and 2 = 2 or 3 = 3"))
+		tw.AssertNoError(err)
+		node, err := newTupleNode(scanner)
+		tw.AssertNoError(err)
+		_, err = parseWhere(node)
+		tw.AssertError(err, "distinct compound statements must be grouped")
 	})
 }

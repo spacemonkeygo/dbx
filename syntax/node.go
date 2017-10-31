@@ -26,6 +26,7 @@ import (
 type node interface {
 	nodeType() string
 	getPos() scanner.Position
+	equal(node) bool // equality without position
 }
 
 type listNode struct {
@@ -63,6 +64,43 @@ func (t tupleNode) String() string {
 
 func (t tokenNode) String() string {
 	return fmt.Sprintf("%q", t.text)
+}
+
+func (l listNode) equal(n node) bool {
+	ln, ok := n.(*listNode)
+	if !ok {
+		return false
+	}
+	if len(l.value) != len(ln.value) {
+		return false
+	}
+	for i := range l.value {
+		if !l.value[i].equal(ln.value[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (t tupleNode) equal(n node) bool {
+	tn, ok := n.(*tupleNode)
+	if !ok {
+		return false
+	}
+	if len(t.value) != len(tn.value) {
+		return false
+	}
+	for i := range t.value {
+		if !t.value[i].equal(tn.value[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (t tokenNode) equal(n node) bool {
+	tn, ok := n.(*tokenNode)
+	return ok && t.tok == tn.tok && t.text == tn.text
 }
 
 func stringNodes(values []node, join string) string {

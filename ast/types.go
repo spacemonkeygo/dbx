@@ -248,42 +248,30 @@ func (j *JoinType) Get() consts.JoinType {
 
 type Where struct {
 	Pos    scanner.Position
-	Or     *WhereOr
-	And    *WhereAnd
+	Or     []*Where
+	And    []*Where
 	Clause *WhereClause
 }
 
 func (w *Where) String() string {
 	switch {
 	case w.Or != nil:
-		return w.Or.String()
+		out := make([]string, 0, len(w.Or))
+		for _, where := range w.Or {
+			out = append(out, where.String())
+		}
+		return fmt.Sprintf("(%s)", strings.Join(out, " or "))
 	case w.And != nil:
-		return w.And.String()
+		out := make([]string, 0, len(w.And))
+		for _, where := range w.And {
+			out = append(out, where.String())
+		}
+		return fmt.Sprintf("(%s)", strings.Join(out, " and "))
 	case w.Clause != nil:
 		return w.Clause.String()
 	default:
 		return "<invalid where>"
 	}
-}
-
-type WhereOr struct {
-	Pos   scanner.Position
-	Left  *Where
-	Right *Where
-}
-
-func (w *WhereOr) String() string {
-	return fmt.Sprintf("(%s or %s)", w.Left, w.Right)
-}
-
-type WhereAnd struct {
-	Pos   scanner.Position
-	Left  *Where
-	Right *Where
-}
-
-func (w *WhereAnd) String() string {
-	return fmt.Sprintf("(%s and %s)", w.Left, w.Right)
 }
 
 type WhereClause struct {
@@ -294,7 +282,7 @@ type WhereClause struct {
 }
 
 func (w *WhereClause) String() string {
-	return fmt.Sprintf("(%s %s %s)", w.Left, w.Op, w.Right)
+	return fmt.Sprintf("%s %s %s", w.Left, w.Op, w.Right)
 }
 
 type Expr struct {

@@ -18,6 +18,7 @@ import (
 	"text/scanner"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
@@ -36,6 +37,11 @@ func transformWheres(lookup *lookup, models map[string]scanner.Position,
 
 func transformWhere(lookup *lookup, models map[string]scanner.Position,
 	ast_where *ast.Where) (where *ir.Where, err error) {
+
+	if len(ast_where.And) > 0 || len(ast_where.Or) > 0 ||
+		ast_where.Clause == nil {
+		return nil, errutil.New(ast_where.Pos, "unsupported where")
+	}
 
 	lexpr, err := transformExpr(lookup, models, ast_where.Clause.Left, true)
 	if err != nil {
