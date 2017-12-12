@@ -68,6 +68,7 @@ type Renderer struct {
 	get_one_all     *template.Template
 	get_first       *template.Template
 	upd             *template.Template
+	upd_all         *template.Template
 	del             *template.Template
 	del_all         *template.Template
 	del_world       *template.Template
@@ -185,6 +186,11 @@ func New(loader tmplutil.Loader, options *Options) (
 	}
 
 	r.upd, err = loader.Load("golang.update.tmpl", funcs)
+	if err != nil {
+		return nil, err
+	}
+
+	r.upd_all, err = loader.Load("golang.update-all.tmpl", funcs)
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +420,11 @@ func (r *Renderer) renderUpdate(w io.Writer, ir_upd *ir.Update,
 	dialect sql.Dialect) error {
 
 	upd := UpdateFromIR(ir_upd, dialect)
-	return r.renderFunc(r.upd, w, upd, dialect)
+	if ir_upd.All {
+		return r.renderFunc(r.upd_all, w, upd, dialect)
+	} else {
+		return r.renderFunc(r.upd, w, upd, dialect)
+	}
 }
 
 func (r *Renderer) renderDelete(w io.Writer, ir_del *ir.Delete,

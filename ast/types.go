@@ -201,6 +201,7 @@ type Update struct {
 	Where    []*Where
 	NoReturn *Bool
 	Suffix   *Suffix
+	Unique   *Bool
 }
 
 type Create struct {

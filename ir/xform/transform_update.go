@@ -54,9 +54,11 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 		return nil, err
 	}
 
-	if !upd.One() {
-		return nil, errutil.New(ast_upd.Pos,
-			"updates for more than one row are unsupported")
+	upd.All = !upd.One() && ast_upd.Unique == nil
+
+	if upd.All && upd.NoReturn {
+		return nil, errutil.New(ast_upd.NoReturn.Pos,
+			`noreturn does not make sense on an "all" update`)
 	}
 
 	if upd.Suffix == nil {

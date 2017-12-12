@@ -22,6 +22,7 @@ type Update struct {
 	Joins    []*Join
 	Where    []*Where
 	NoReturn bool
+	All      bool
 }
 
 func (r *Update) Signature() string {

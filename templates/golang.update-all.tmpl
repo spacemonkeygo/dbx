@@ -1,0 +1,69 @@
+{{- define "name" -}}
+Update_{{ .Suffix }}
+{{- end -}}
+
+{{- define "signature" -}}
+{{- template "name" . }}({{ ctxparam .AllArgs }},
+	update {{ .Struct.UpdateStructName }}) (
+	count int64, err error)
+{{- end -}}
+
+{{- define "invoke" -}}
+{{- template "name" . }}({{ ctxarg .AllArgs }}, update)
+{{- end -}}
+
+{{- define "body" -}}
+	{{ embedplaceholders .Info }}
+	{{ embedsql .Info "__embed_stmt" }}
+
+	__sets_sql := __sqlbundle_Literals{Join: ", "}
+	var __values []interface{}
+	var __args []interface{}
+
+	{{ range .Struct.UpdatableFields }}
+	if update.{{ .Name }}._set {
+		__values = append(__values, update.{{ .Name }}.value())
+		__sets_sql.SQLs = append(__sets_sql.SQLs, __sqlbundle_Literal("{{ .Column }} = ?"))
+	}
+	{{ end }}
+
+	{{- if .NeedsNow }}
+	__now := obj.db.Hooks.Now().UTC()
+	{{ end -}}
+	{{ range .AutoFields }}
+	__values = append(__values, {{ .InitVal }})
+	__sets_sql.SQLs = append(__sets_sql.SQLs, __sqlbundle_Literal("{{ .Name }} = ?"))
+	{{ end }}
+
+	{{ if not .AutoFields }}
+	if len(__sets_sql.SQLs) == 0 {
+		return 0, emptyUpdate()
+	}
+	{{ end }}
+
+	__args = append(__args, {{ fieldvalue .StaticArgs }})
+
+	{{ range $i, $arg := .NullableArgs }}
+	if !{{ $arg.Name }}.isnull() {
+		__cond_{{ $i }}.Null = false
+		__args = append(__args, {{ $arg.Name }}.value())
+	}
+	{{ end }}
+
+	__values = append(__values, __args...)
+	__sets.SQL = __sets_sql
+
+	var __stmt = __sqlbundle_Render(obj.dialect, __embed_stmt)
+	obj.logStmt(__stmt, __values...)
+
+	result, err := obj.driver.Exec(__stmt, __values...)
+	if err != nil {
+		return 0, obj.makeErr(err)
+	}
+
+	count, err = result.RowsAffected()
+	if err != nil {
+		return 0, obj.makeErr(err)
+	}
+	return count, nil
+{{- end -}}

@@ -50,6 +50,7 @@ func parseUpdate(node *tupleNode) (*ast.Update, error) {
 
 			return nil
 		},
+		"unique":   tupleFlagField("update", "unique", &upd.Unique),
 		"noreturn": tupleFlagField("update", "noreturn", &upd.NoReturn),
 		"suffix": func(node *tupleNode) error {
 			if upd.Suffix != nil {

@@ -334,3 +334,14 @@ read scalar (
     select foo
     groupby foo.string
 )
+
+update foo ()
+
+update foo (
+	where foo.string = ?
+)
+
+update foo (
+	where foo.null_string = ?
+	unique
+)
