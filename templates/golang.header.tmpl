@@ -385,6 +385,7 @@ type {{ $updatestruct }} struct {
 
 type {{ $fstruct }} struct {
 	_set bool
+	_null bool
 	_value {{ .Type }}
 }
 
@@ -403,13 +404,13 @@ func {{ $ctor }}_Raw(v {{ .Type }}) {{ $fstruct }} {
 }
 
 func {{ $ctor }}_Null() {{ $fstruct }} {
-	return {{ $fstruct }}{ _set: true }
+	return {{ $fstruct }}{ _set: true, _null: true }
 }
 
-func (f {{ $fstruct }}) isnull() bool {	return !f._set || f._value == nil }
+func (f {{ $fstruct }}) isnull() bool {	return !f._set || f._null || f._value == nil }
 {{ end }}
 
-func (f {{ $fstruct }}) value() interface{} { if !f._set { return nil }; return f._value }
+func (f {{ $fstruct }}) value() interface{} { if !f._set || f._null { return nil }; return f._value }
 
 func ({{ $fstruct }}) _Column() string { return "{{ .Column }}" }
 
