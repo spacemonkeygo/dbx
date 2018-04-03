@@ -119,15 +119,15 @@ func queryUnique(targets []*Model, joins []*Join, wheres []*Where) (out bool) {
 		}
 	}
 
-	// if any table from the set of targets is unique, then only one row would
+	// if all tables from the set of targets is unique, then only one row would
 	// ever be returned, so it is a "unique" query.
 	for _, target := range targets {
-		if unique[target.Name] {
-			return true
+		if !unique[target.Name] {
+			return false
 		}
 	}
 
-	return false
+	return true
 }
 
 func SortModels(models []*Model) (sorted []*Model, err error) {

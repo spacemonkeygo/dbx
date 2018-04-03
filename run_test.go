@@ -43,12 +43,6 @@ func testRunFile(t *testutil.T, dbx_file string) {
 	t.Context("dbx", linedSource(dbx_source))
 	d := loadDirectives(t, dbx_source)
 
-	ext := filepath.Ext(dbx_file)
-	go_file := dbx_file[:len(dbx_file)-len(ext)] + ".go"
-	go_source, err := ioutil.ReadFile(go_file)
-	t.AssertNoError(err)
-	t.Context("go", linedSource(go_source))
-
 	dir, err := ioutil.TempDir("", "dbx")
 	t.AssertNoError(err)
 	defer os.RemoveAll(dir)
@@ -63,6 +57,12 @@ func testRunFile(t *testutil.T, dbx_file string) {
 	} else {
 		t.AssertNoError(err)
 	}
+
+	ext := filepath.Ext(dbx_file)
+	go_file := dbx_file[:len(dbx_file)-len(ext)] + ".go"
+	go_source, err := ioutil.ReadFile(go_file)
+	t.AssertNoError(err)
+	t.Context("go", linedSource(go_source))
 
 	t.Logf("[%s] copying go source...", dbx_file)
 	t.AssertNoError(ioutil.WriteFile(

@@ -1,0 +1,39 @@
+model a (
+	table a
+	key   id
+	field id serial64
+)
+
+model b (
+	table b
+	key   id
+	field id   serial64
+	field a_id a.id     restrict
+)
+
+model c (
+	table  c
+	key    id
+	unique b_id
+	field  id   serial64
+	field  lat  float
+	field  lon  float
+	field  b_id b.id     restrict
+)
+
+create a ()
+create b ()
+create c ()
+
+read all (
+	select a b c
+
+	join a.id = b.a_id
+	join b.id = c.b_id
+
+	where a.id  = ?
+	where c.lat < ?
+	where c.lat > ?
+	where c.lon < ?
+	where c.lon > ?
+)
