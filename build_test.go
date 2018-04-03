@@ -17,25 +17,24 @@ import (
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
 )
 
-func TestCompilation(t *testing.T) {
+func TestBuild(t *testing.T) {
 	tw := testutil.Wrap(t)
 	tw.Parallel()
 
 	data_dir := filepath.Join("testdata", "build")
 
-	fileinfos, err := ioutil.ReadDir(data_dir)
+	names, err := filepath.Glob(filepath.Join(data_dir, "*.dbx"))
 	tw.AssertNoError(err)
 
-	for _, fileinfo := range fileinfos {
-		fileinfo := fileinfo
-		tw.Runp(fileinfo.Name(), func(tw *testutil.T) {
-			path := filepath.Join(data_dir, fileinfo.Name())
-			testFile(tw, path)
+	for _, name := range names {
+		name := name
+		tw.Runp(filepath.Base(name), func(tw *testutil.T) {
+			testBuildFile(tw, name)
 		})
 	}
 }
 
-func testFile(t *testutil.T, file string) {
+func testBuildFile(t *testutil.T, file string) {
 	defer func() {
 		if val := recover(); val != nil {
 			t.Fatalf("%s\n%s", val, string(debug.Stack()))

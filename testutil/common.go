@@ -56,6 +56,13 @@ func (t *T) AssertError(err error, msg string) {
 	}
 }
 
+func (t *T) AssertContains(msg, needle string) {
+	if !strings.Contains(msg, needle) {
+		t.dumpContext()
+		t.Fatalf("expected the message to contain %q. got %s", needle, msg)
+	}
+}
+
 func (t *T) Run(name string, f func(*T)) bool {
 	return t.T.Run(name, func(t *testing.T) { f(Wrap(t)) })
 }

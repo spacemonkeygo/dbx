@@ -16,23 +16,36 @@ import (
 	"text/scanner"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
 
-func transformJoins(lookup *lookup, ast_joins []*ast.Join) (
-	models map[string]scanner.Position, joins []*ir.Join, err error) {
+func transformJoins(lookup *lookup, in_scope []*ir.Model,
+	ast_joins []*ast.Join) (models map[string]scanner.Position,
+	joins []*ir.Join, err error) {
 
 	models = make(map[string]scanner.Position)
+
+	in_scope_set := make(map[*ir.Model]bool)
+	for _, model := range in_scope {
+		in_scope_set[model] = true
+	}
 
 	for _, ast_join := range ast_joins {
 		left, err := lookup.FindField(ast_join.Left)
 		if err != nil {
 			return nil, nil, err
 		}
+		if !in_scope_set[left.Model] {
+			return nil, nil, errutil.New(ast_join.Left.Pos,
+				"model %q not in scope to join on", left.Model.Name)
+		}
+
 		right, err := lookup.FindField(ast_join.Right)
 		if err != nil {
 			return nil, nil, err
 		}
+		in_scope_set[right.Model] = true
 
 		joins = append(joins, &ir.Join{
 			Type:  ast_join.Type.Get(),

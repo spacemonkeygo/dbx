@@ -38,7 +38,8 @@ func transformDelete(lookup *lookup, ast_del *ast.Delete) (
 		Suffix: transformSuffix(ast_del.Suffix),
 	}
 
-	models, joins, err := transformJoins(lookup, ast_del.Joins)
+	models, joins, err := transformJoins(
+		lookup, []*ir.Model{model}, ast_del.Joins)
 	if err != nil {
 		return nil, err
 	}

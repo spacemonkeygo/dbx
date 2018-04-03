@@ -1,0 +1,29 @@
+model session (
+	key id
+
+	field id      serial64
+	field user_pk user.pk  restrict
+)
+
+model user (
+	key   pk
+	field pk serial64
+)
+
+model associated_account (
+	key pk
+
+	field pk      serial64
+	field user_pk user.pk  restrict
+)
+
+create session            ( )
+create user               ( )
+create associated_account ( )
+
+read all (
+	select session.id
+	join   session.user_pk       = user.pk
+	join   user.pk               = associated_account.user_pk
+	where  associated_account.pk = ?
+)

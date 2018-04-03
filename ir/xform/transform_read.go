@@ -34,7 +34,14 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 	// Figure out which models are needed for the fields and that the field
 	// references aren't repetetive.
 	selected := map[string]map[string]*ast.FieldRef{}
+	in_scope := []*ir.Model{}
 	for _, ast_fieldref := range ast_read.Select.Refs {
+		model, err := lookup.FindModel(ast_fieldref.ModelRef())
+		if err != nil {
+			return nil, err
+		}
+		in_scope = append(in_scope, model)
+
 		fields := selected[ast_fieldref.Model.Value]
 		if fields == nil {
 			fields = map[string]*ast.FieldRef{}
@@ -67,7 +74,7 @@ func transformRead(lookup *lookup, ast_read *ast.Read) (
 		}
 	}
 
-	models, joins, err := transformJoins(lookup, ast_read.Joins)
+	models, joins, err := transformJoins(lookup, in_scope, ast_read.Joins)
 	if err != nil {
 		return nil, err
 	}
