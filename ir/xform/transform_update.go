@@ -27,6 +27,10 @@ func transformUpdate(lookup *lookup, ast_upd *ast.Update) (
 	if err != nil {
 		return nil, err
 	}
+	if !model.HasUpdatableFields() {
+		return nil, errutil.New(ast_upd.Pos,
+			"update on model with no updatable fields")
+	}
 
 	if len(model.PrimaryKey) > 1 && len(ast_upd.Joins) > 0 {
 		return nil, errutil.New(ast_upd.Joins[0].Pos,

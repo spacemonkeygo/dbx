@@ -1,6 +1,7 @@
 model foo (
 	key pk
 	field pk serial64
+	field u int (updatable)
 )
 
 read all (

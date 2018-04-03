@@ -1,0 +1,9 @@
+//test:fail_gen no updatable fields
+
+model foo (
+    key pk
+    field pk serial64
+    field foo int
+)
+
+update foo ( where foo.pk = ? )

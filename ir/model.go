@@ -66,6 +66,15 @@ func (m *Model) AutoUpdatableFields() (fields []*Field) {
 	return fields
 }
 
+func (m *Model) HasUpdatableFields() bool {
+	for _, field := range m.Fields {
+		if field.Updatable {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Model) FieldUnique(field *Field) bool {
 	return m.FieldSetUnique([]*Field{field})
 }

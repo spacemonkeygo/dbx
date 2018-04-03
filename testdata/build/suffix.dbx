@@ -2,6 +2,7 @@ model foo (
 	key id
 
 	field id serial64
+	field u int (autoupdate)
 )
 
 create foo (

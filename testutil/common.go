@@ -39,6 +39,7 @@ func (t *T) dumpContext() {
 }
 
 func (t *T) AssertNoError(err error) {
+	t.Helper()
 	if err != nil {
 		t.dumpContext()
 		t.Fatalf("expected no error. got %v", err)
@@ -46,6 +47,7 @@ func (t *T) AssertNoError(err error) {
 }
 
 func (t *T) AssertError(err error, msg string) {
+	t.Helper()
 	if err == nil {
 		t.dumpContext()
 		t.Fatalf("expected an error containing %q. got nil", msg)
@@ -57,6 +59,7 @@ func (t *T) AssertError(err error, msg string) {
 }
 
 func (t *T) AssertContains(msg, needle string) {
+	t.Helper()
 	if !strings.Contains(msg, needle) {
 		t.dumpContext()
 		t.Fatalf("expected the message to contain %q. got %s", needle, msg)

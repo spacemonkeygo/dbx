@@ -1,7 +1,0 @@
-model foo (
-	key pk
-
-	field pk serial64
-)
-
-update foo ( where foo.pk = ? )
