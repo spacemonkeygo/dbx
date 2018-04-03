@@ -1,0 +1,9 @@
+model t1 ( key id, field id serial64 )
+model t2 ( key id, field id serial64 )
+model t3 ( key id, field id serial64 )
+
+read all (
+	select t1 t2.id t3.id
+	join t1.id = t2.id
+	join t2.id = t3.id
+)

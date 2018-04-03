@@ -42,17 +42,39 @@ func VarFromSelectable(selectable ir.Selectable, full_name bool) (v *Var) {
 }
 
 func VarsFromSelectables(selectables []ir.Selectable) (vars []*Var) {
-	nmodels := 0
+	// we use a full name unless:
+	// 1. it is a single model as the selectable.
+	// 2. every selectable is a field with the same model.
+
+	full_name := false
+	field_model := (*ir.Model)(nil)
+
+selectables:
 	for _, selectable := range selectables {
-		if _, ok := selectable.(*ir.Model); ok {
-			nmodels++
+		switch selectable := selectable.(type) {
+		case *ir.Model:
+			full_name = len(selectables) != 1
+
+		case *ir.Field:
+			if field_model == nil {
+				field_model = selectable.Model
+			}
+			if selectable.Model != field_model {
+				full_name = true
+				break selectables
+			}
+
+		default:
+			full_name = true
+			break selectables
 		}
 	}
 
 	for _, selectable := range selectables {
-		v := VarFromSelectable(selectable, nmodels > 1)
+		v := VarFromSelectable(selectable, full_name)
 		vars = append(vars, v)
 	}
+
 	return vars
 }
 
