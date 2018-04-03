@@ -1,0 +1,13 @@
+//test:fail_gen part of a cycle
+
+model a (
+	key   a
+	field a serial64
+	field b b.b      restrict
+)
+
+model b (
+	key   b
+	field b serial64
+	field a a.a      restrict
+)

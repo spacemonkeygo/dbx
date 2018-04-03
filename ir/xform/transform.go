@@ -26,7 +26,10 @@ func Transform(ast_root *ast.Root) (root *ir.Root, err error) {
 	if err != nil {
 		return nil, err
 	}
-	models = ir.SortModels(models)
+	models, err = ir.SortModels(models)
+	if err != nil {
+		return nil, err
+	}
 
 	root = &ir.Root{
 		Models: models,

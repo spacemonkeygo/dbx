@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
+	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 )
 
 // returns true if left is a subset of right
@@ -129,11 +130,17 @@ func queryUnique(targets []*Model, joins []*Join, wheres []*Where) (out bool) {
 	return false
 }
 
-func SortModels(models []*Model) (sorted []*Model) {
+func SortModels(models []*Model) (sorted []*Model, err error) {
+	// check for cycles
+	if err := findCycles(models); err != nil {
+		return nil, err
+	}
+
 	// sort the slice copy
 	sorted = append([]*Model(nil), models...)
 	sort.Sort(byModelDepth(sorted))
-	return sorted
+
+	return sorted, nil
 }
 
 type byModelDepth []*Model
@@ -156,6 +163,47 @@ func (by byModelDepth) Less(a, b int) bool {
 		return false
 	}
 	return by[a].Name < by[b].Name
+}
+
+func findCycles(models []*Model) (err error) {
+	seen_ever := map[*Model]bool{}
+	seen_this := map[*Model]bool{}
+
+	var traverse func(*Model) error
+	traverse = func(model *Model) (err error) {
+		if seen_this[model] {
+			return errutil.Error.New("model %q part of a cycle", model.Name)
+		}
+		if seen_ever[model] {
+			return nil
+		}
+
+		seen_this[model] = true
+		seen_ever[model] = true
+
+		for _, field := range model.Fields {
+			if field.Relation == nil {
+				continue
+			}
+			if field.Relation.Field.Model == model {
+				continue
+			}
+			if err := traverse(field.Relation.Field.Model); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	for _, model := range models {
+		if err := traverse(model); err != nil {
+			return err
+		}
+		seen_this = map[*Model]bool{}
+	}
+
+	return nil
 }
 
 func modelDepth(model *Model) (depth int) {

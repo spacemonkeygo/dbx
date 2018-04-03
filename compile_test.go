@@ -57,10 +57,20 @@ func testFile(t *testutil.T, file string) {
 		t.Logf("using dialects: %q", dialects)
 	}
 
-	runBuild := func(rx, userdata bool) {
-		t.Logf("[%s] generating... (rx=%t, userdata=%t)", file, rx, userdata)
-		err = golangCmd("", dialects, "", rx, userdata, file, dir)
-		t.AssertNoError(err)
+	type options struct {
+		rx       bool
+		userdata bool
+	}
+
+	runBuild := func(opts options) {
+		t.Logf("[%s] generating... %+v", file, opts)
+		err = golangCmd("", dialects, "", opts.rx, opts.userdata, file, dir)
+		if d.has("fail_gen") {
+			t.AssertError(err, d.get("fail_gen"))
+			return
+		} else {
+			t.AssertNoError(err)
+		}
 
 		t.Logf("[%s] loading...", file)
 		go_file := filepath.Join(dir, filepath.Base(file)+".go")
@@ -86,8 +96,8 @@ func testFile(t *testutil.T, file string) {
 		}
 	}
 
-	runBuild(false, false)
-	runBuild(false, true)
-	runBuild(true, false)
-	runBuild(true, true)
+	runBuild(options{rx: false, userdata: false})
+	runBuild(options{rx: false, userdata: true})
+	runBuild(options{rx: true, userdata: false})
+	runBuild(options{rx: true, userdata: true})
 }
