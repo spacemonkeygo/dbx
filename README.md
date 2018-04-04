@@ -95,7 +95,10 @@ type DBMethods interface {
 ```
 
 The `Methods` interface is shared between the `Tx` and `DB` interfaces and will
-contain methods to interact with the database when they are generated.
+contain methods to interact with the database when they are generated. If you
+were to pass the userdata option on the generate command, then the `User`
+struct would come with an `interface{}` and a `sync.Mutex` to store some
+arbitrary data on a value.
 
 The package comes with some customizable hooks.
 
