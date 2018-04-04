@@ -1,0 +1,6 @@
+//test:fail_gen must specify some field references
+
+model foo (
+    key
+    field pk serial64
+)

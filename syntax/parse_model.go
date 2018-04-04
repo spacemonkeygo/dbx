@@ -14,7 +14,9 @@
 
 package syntax
 
-import "gopkg.in/spacemonkeygo/dbx.v1/ast"
+import (
+	"gopkg.in/spacemonkeygo/dbx.v1/ast"
+)
 
 func parseModel(node *tupleNode) (*ast.Model, error) {
 	model := new(ast.Model)

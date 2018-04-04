@@ -74,6 +74,10 @@ func parseRelativeFieldRefs(node *tupleNode) (*ast.RelativeFieldRefs, error) {
 			return nil, err
 		}
 		if ref_token == nil {
+			if len(refs.Refs) == 0 {
+				return nil, errutil.New(node.getPos(),
+					"must specify some field references")
+			}
 			return refs, nil
 		}
 		refs.Refs = append(refs.Refs, relativeFieldRefFromToken(ref_token))
