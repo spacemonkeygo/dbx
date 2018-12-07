@@ -50,7 +50,7 @@ func transformModels(lookup *lookup, ast_models []*ast.Model) (
 
 		if existing := table_names[model.Table]; existing != nil {
 			return nil, errutil.New(ast_model.Pos,
-				"%s: table %q already used by model %q (%s)",
+				"table %q already used by model %q (%s)",
 				model.Table, existing.Name.Get(), existing.Pos)
 		}
 		table_names[model.Table] = ast_model

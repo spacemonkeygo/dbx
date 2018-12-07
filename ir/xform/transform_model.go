@@ -44,7 +44,7 @@ func transformModel(lookup *lookup, model_entry *modelEntry) (err error) {
 
 		if existing := column_names[field.Column]; existing != nil {
 			return errutil.New(ast_field.Pos,
-				"%s: column %q already used by field %q at %s",
+				"column %q already used by field %q at %s",
 				field.Column, existing.Name.Get(), existing.Pos)
 		}
 		column_names[field.Column] = ast_field
