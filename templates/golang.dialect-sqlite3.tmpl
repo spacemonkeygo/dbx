@@ -23,8 +23,8 @@ func (impl {{ .Receiver }}) isConstraintError(err error) (
 {{- define "open" }}
 var sqlite3DriverName = func() string {
 	var id [32]byte
-	rand.Read(data[:])
-	return "sqlite3_" + string(data)
+	rand.Read(id[:])
+	return "sqlite3_" + string(id[:])
 }()
 
 func init() {
