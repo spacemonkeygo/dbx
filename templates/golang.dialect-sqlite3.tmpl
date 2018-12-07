@@ -1,4 +1,5 @@
 {{- define "import" }}
+	"math/rand"
 	"github.com/mattn/go-sqlite3"
 {{ end -}}
 
@@ -20,11 +21,15 @@ func (impl {{ .Receiver }}) isConstraintError(err error) (
 {{ end -}}
 
 {{- define "open" }}
-var sqlite3DriverName = "sqlite3_" + fmt.Sprint(time.Now().UnixNano())
+var sqlite3DriverName = func() string {
+	var id [32]byte
+	rand.Read(data[:])
+	return "sqlite3_" + string(data)
+}()
 
 func init() {
 	sql.Register(sqlite3DriverName, &sqlite3.SQLiteDriver{
-			ConnectHook: sqlite3SetupConn,
+		ConnectHook: sqlite3SetupConn,
 	})
 }
 
