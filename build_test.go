@@ -3,17 +3,15 @@
 package main
 
 import (
-	"go/ast"
-	"go/importer"
 	"go/parser"
 	"go/token"
-	"go/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"testing"
 
+	"golang.org/x/tools/go/packages"
 	"gopkg.in/spacemonkeygo/dbx.v1/testutil"
 )
 
@@ -79,14 +77,11 @@ func testBuildFile(t *testutil.T, file string) {
 
 		t.Logf("[%s] parsing...", file)
 		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, go_file, go_source, parser.AllErrors)
+		_, err = parser.ParseFile(fset, go_file, go_source, parser.AllErrors)
 		t.AssertNoError(err)
 
 		t.Logf("[%s] compiling...", file)
-		config := types.Config{
-			Importer: importer.Default(),
-		}
-		_, err = config.Check(dir, fset, []*ast.File{f}, nil)
+		_, err = packages.Load(nil, go_file)
 
 		if d.has("fail") {
 			t.AssertError(err, d.get("fail"))
