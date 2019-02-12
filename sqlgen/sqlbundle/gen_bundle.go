@@ -87,6 +87,7 @@ func loadBundle() string {
 		"-prefix", prefix,
 		"gopkg.in/spacemonkeygo/dbx.v1/sqlgen").Output()
 	if err != nil {
+		fmt.Fprintln(os.Stdout, `ensure "golang.org/x/tools/cmd/bundle" is installed`)
 		panic(err)
 	}
 
