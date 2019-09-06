@@ -105,7 +105,7 @@ func formatTupleGroup(indent int, group []*tupleNode) (
 		lists = append(lists, list)
 	}
 
-	alignWords(wordss)
+	alignWordsGroupedByFirstWord(wordss)
 
 	var line []byte
 	addLine := func() {
@@ -230,6 +230,33 @@ func stringifyTuple(tuple *tupleNode) (words []string, list *listNode,
 		words = append(words, word)
 	}
 	return words, nil, nil
+}
+
+func alignWordsGroupedByFirstWord(lines [][]string) {
+	groups := [][][]string{}
+	prev := ""
+	group := [][]string{}
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		if prev == "" {
+			prev = line[0]
+			group = append(group, line)
+		} else if line[0] == prev {
+			group = append(group, line)
+		} else {
+			prev = line[0]
+			groups = append(groups, group)
+			group = [][]string{line}
+		}
+	}
+	if len(group) > 0 {
+		groups = append(groups, group)
+	}
+	for _, group := range groups {
+		alignWords(group)
+	}
 }
 
 func alignWords(wordss [][]string) {
