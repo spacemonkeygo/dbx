@@ -46,7 +46,7 @@ func UpdateFromIRUpdate(ir_upd *ir.Update, dialect Dialect) *Update {
 		}
 	}
 
-	pk_column := ir_upd.Model.PrimaryKey[0].Column
+	pk_column := ir_upd.Model.PrimaryKey[0].ColumnRef()
 	sel := SQLFromSelect(&Select{
 		From:   ir_upd.Model.Table,
 		Fields: []string{pk_column},
