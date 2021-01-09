@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"bitbucket.org/pkg/inflect"
+	"github.com/markbates/inflect"
 )
 
 type Loader interface {

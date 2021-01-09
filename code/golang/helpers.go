@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"bitbucket.org/pkg/inflect"
+	"github.com/markbates/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 	"gopkg.in/spacemonkeygo/dbx.v1/sqlgen/sqlembedgo"
 )

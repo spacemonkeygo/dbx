@@ -17,7 +17,7 @@ package xform
 import (
 	"fmt"
 
-	"bitbucket.org/pkg/inflect"
+	"github.com/markbates/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/ast"
 	"gopkg.in/spacemonkeygo/dbx.v1/errutil"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
