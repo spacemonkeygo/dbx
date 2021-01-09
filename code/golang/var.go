@@ -17,7 +17,7 @@ package golang
 import (
 	"fmt"
 
-	"bitbucket.org/pkg/inflect"
+	"github.com/markbates/inflect"
 	"gopkg.in/spacemonkeygo/dbx.v1/consts"
 	"gopkg.in/spacemonkeygo/dbx.v1/ir"
 )
